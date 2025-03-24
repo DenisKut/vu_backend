@@ -10,6 +10,7 @@ CONFIG += c++11 cmdline
 
 SOURCES += \
         core/CoreManager.cpp \
+        core/Logger.cpp \
         main.cpp \
         network/NetworkManager.cpp \
         network/handlers/EthHandler.cpp \
@@ -26,12 +27,25 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
+# WinPCap in Windows for Ethernet raw data MAC packets:
+#--------------------------------------------
+win32: INCLUDEPATH += /wpdpack/Include
+win32: LIBS += "/wpdpack/Lib/Packet.lib"
+win32: LIBS += "/wpdpack/Lib/wpcap.lib"
+win32: LIBS += "/wpdpack/Lib/x64/Packet.lib"
+win32: LIBS += "/wpdpack/Lib/x64/wpcap.lib"
+#win32: DEFINES += WIN32
+win32: DEFINES += WPCAP
+win32: DEFINES += HAVE_REMOTE
+#--------------------------------------------
+
 DISTFILES += \
     docs/git_guide.md \
     readme.md
 
 HEADERS += \
     core/CoreManager.h \
+    core/Logger.h \
     network/NetworkManager.h \
     network/handlers/EthHandler.h \
     network/handlers/TcpHandler.h \

@@ -5,6 +5,7 @@
 // в потоках подключения
 #include <QObject>
 #include <QThread>
+#include <QTimer>
 #include <QScopedPointer>
 #include "handlers/TcpHandler.h"
 #include "handlers/UdpHandler.h"
@@ -17,13 +18,14 @@ public:
     explicit NetworkManager(TimeProvider* timeProvider, QObject* parent = nullptr);
     ~NetworkManager();
 
+    QTimer *timerReceive; // Таймер запуска обработчика принятых MAC-пакетов
+
     void start();    // Запуск всех обработчиков
     void stop();     // Остановка всех обработчиков
 
-signals:
+public slots:
     void tcpMessageReceived(const TcpMessage& msg);
     void udpDatagramReceived(const Message& msg);
-    void ethFrameReceived(const Message& msg);
 
 private:
     TimeProvider* m_timeProvider;

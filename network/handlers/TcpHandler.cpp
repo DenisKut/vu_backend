@@ -6,8 +6,8 @@ TcpHandler::TcpHandler(TimeProvider* timeProvider, QObject* parent)
 {
     connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnected);
-    connect(m_socket, &QTcpSocket::errorOccurred,
-            this, &TcpHandler::onError);
+//    connect(m_socket, &QTcpSocket::errorOccurred,
+//            this, &TcpHandler::onError);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
 }
 

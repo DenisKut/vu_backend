@@ -52,3 +52,13 @@ void NetworkManager::stop() {
     m_udpThread.wait();
     m_ethThread.wait();
 }
+
+void NetworkManager::tcpMessageReceived(const TcpMessage &msg)
+{
+
+}
+
+void NetworkManager::udpDatagramReceived(const Message &msg)
+{
+
+}
