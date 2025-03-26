@@ -153,3 +153,6 @@ Makefile*
 
 ### !!! Git-patches !!! ###
 patches/
+*.patch
+
+!libs/**/**/*
