@@ -32,13 +32,20 @@ HEADERS += \
 # Windows (WinPcap)
 win32 {
     INCLUDEPATH += $$PWD/libs/wpdpack/Include
-    LIBS += -L$$PWD/libs/wpdpack/Lib -lPacket -lwpcap
-
-    # Для x64
-    win32:contains(QMAKE_HOST.arch, x86_64) {
-        LIBS += -L$$PWD/libs/wpdpack/Lib/x64 -lPacket -lwpcap
+    
+    # Определяем архитектуру
+    contains(QMAKE_HOST.arch, x86_64) {
+        # 64-битная сборка
+        LIBS += -L$$PWD/libs/wpdpack/Lib/x64 \
+                -lPacket \
+                -lwpcap
+    } else {
+        # 32-битная сборка
+        LIBS += -L$$PWD/libs/wpdpack/Lib \
+                -lPacket \
+                -lwpcap
     }
-
+    
     DEFINES += WPCAP HAVE_REMOTE
 }
 
@@ -80,6 +87,12 @@ CONFIG += lrelease embed_translations
 DISTFILES += \
     docs/git_guide.md \
     libs/wpdpack/Lib/Packet.lib \
+    libs/wpdpack/Lib/libpacket.a \
+    libs/wpdpack/Lib/libwpcap.a \
+    libs/wpdpack/Lib/wpcap.lib \
+    libs/wpdpack/Lib/x64/Packet.lib \
+    libs/wpdpack/Lib/x64/wpcap.lib \
+    libs/json/json.hpp \
     readme.md
 
 # Очистка дубликатов
