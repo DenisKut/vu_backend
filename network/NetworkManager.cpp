@@ -48,7 +48,7 @@ void NetworkManager::start() {
     // Инициализация обработчиков через сигналы (потокобезопасно)
     QMetaObject::invokeMethod(m_tcpHandler.data(), "start", Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_udpHandler.data(), "startListening", Qt::QueuedConnection, Q_ARG(quint16, 12345));
-    // QMetaObject::invokeMethod(m_ethHandler.data(), "start", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_macHandler.data(), "start", Qt::QueuedConnection);
 
     // Запуск таймера вызова обработчика принятых MAC-пакетов:
     macTimerReceive->start();
