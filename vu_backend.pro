@@ -10,29 +10,33 @@ CONFIG += c++11 cmdline
 # Общие для всех платформ настройки
 SOURCES += \
     core/CoreManager.cpp \
-    core/Logger.cpp \
+    core/logger/Logger.cpp \
     main.cpp \
     network/NetworkManager.cpp \
     network/handlers/MacHandler.cpp \
     network/handlers/TcpHandler.cpp \
     network/handlers/UdpHandler.cpp \
-    utils/TimeProvider.cpp
+    utils/time_provider/TimeProvider.cpp \
+    utils/env_loader/EnvLoader.cpp \
+    utils/AppDefines.cpp
 
 HEADERS += \
     core/CoreManager.h \
-    core/Logger.h \
+    core/logger/Logger.h \
     network/NetworkManager.h \
     network/handlers/MacHandler.h \
     network/handlers/TcpHandler.h \
     network/handlers/UdpHandler.h \
     network/messages/Message.h \
     network/messages/TcpMessage.h \
-    utils/TimeProvider.h
+    utils/time_provider/TimeProvider.h \
+    utils/env_loader/EnvLoader.h \
+    utils/AppDefines.h
 
 # Windows (WinPcap)
 win32 {
     INCLUDEPATH += $$PWD/libs/wpdpack/Include
-    
+
     # Определяем архитектуру
     contains(QMAKE_HOST.arch, x86_64) {
         # 64-битная сборка
@@ -45,7 +49,7 @@ win32 {
                 -lPacket \
                 -lwpcap
     }
-    
+
     DEFINES += WPCAP HAVE_REMOTE
 }
 
@@ -54,10 +58,6 @@ linux {
     # Установить libpcap: `sudo apt-get install libpcap-dev`
     CONFIG += link_pkgconfig
     PKGCONFIG += libpcap
-
-    # Или явное указание путей
-    # INCLUDEPATH += /usr/include/pcap
-    # LIBS += -lpcap
 }
 
 #-------------------------------
@@ -93,8 +93,29 @@ DISTFILES += \
     libs/wpdpack/Lib/x64/Packet.lib \
     libs/wpdpack/Lib/x64/wpcap.lib \
     libs/json/json.hpp \
-    readme.md
+    readme.md \
+    .env
 
-# Очистка дубликатов
+#-------------------------------
+# 5. Копирование .env в выходную директорию
+#-------------------------------
+
+# Определение DESTDIR в зависимости от конфигурации
+CONFIG(debug, debug|release) {
+    DESTDIR = $$OUT_PWD/debug
+} else {
+    DESTDIR = $$OUT_PWD/release
+}
+
+# Копирование .env
+win32 {
+    QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR & copy /Y $$shell_path($$PWD/.env) $$shell_path($$DESTDIR))
+} else {
+    QMAKE_POST_LINK += $$quote(mkdir -p $$DESTDIR && cp -f $$shell_path($$PWD/.env) $$shell_path($$DESTDIR))
+}
+
+# ===================================
+# !!!!!! Очистка дубликатов !!!!!!
+# ===================================
 DISTFILES = $$unique(DISTFILES)
 HEADERS = $$unique(HEADERS)

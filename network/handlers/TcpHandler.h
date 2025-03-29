@@ -5,11 +5,10 @@
 #include <QTcpSocket>
 #include <QDataStream>
 #include "../messages/TcpMessage.h"
-#include "utils/TimeProvider.h"
+#include "utils/time_provider/TimeProvider.h"
 
 class TcpHandler : public QObject {
     Q_OBJECT
-
 public:
     explicit TcpHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
     ~TcpHandler();
@@ -17,7 +16,7 @@ public:
 public slots:
     void connectToHost(const QString& host, quint16 port);
     void sendMessage(const TcpMessage& msg);
-    void disconnect();  // Переименуем в closeConnection для ясности
+    void disconnect();
 
 signals:
     void messageReceived(const TcpMessage& msg);
@@ -25,8 +24,8 @@ signals:
 
 private slots:
     void onReadyRead();
-    void onConnected();       // Добавляем реализацию
-    void onDisconnected();    // Добавляем реализацию
+    void onConnected();
+    void onDisconnected();
     void onError(QAbstractSocket::SocketError error);
 
 private:

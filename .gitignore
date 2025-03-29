@@ -156,3 +156,4 @@ patches/
 *.patch
 
 !libs/**/**/*
+!.env

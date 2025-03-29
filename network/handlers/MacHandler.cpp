@@ -1,15 +1,16 @@
 #include "MacHandler.h"
 
-// Обработчик принятых MAC пакетов:
+// Конструктор обработчика принятых MAC пакетов:
 MacHandler::MacHandler(TimeProvider* timeProvider, QObject* parent)
-    : QObject(parent), m_timeProvider(timeProvider)
+    : QObject(parent), m_timeProvider(timeProvider) 
 {
-
+    pcapAllDevs = nullptr;
+    pcapTx = pcapRx = nullptr;
 }
 
-MacHandler::~MacHandler()
-{
-
+MacHandler::~MacHandler() {
+    disconnectAdapter();
+    if (pcapAllDevs) pcap_freealldevs(pcapAllDevs);
 }
 
 // Возвращает список имён существующих адаптеров Fast Ethernet:

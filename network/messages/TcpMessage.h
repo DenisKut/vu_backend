@@ -92,4 +92,24 @@ enum class PBU_MessageNumbers: uint16_t {
 											// настраиваемых параметров»;
 };
 
+// =========================================
+// Общий заголовок для сообщений
+// =========================================
+// #pragma pack(push, 1)
+// struct tcpHeader
+// {
+//     name() {}
+// };
+
+// sender
+// idxModule
+// vMajor
+// vMinor
+// idxPack
+// sizeData
+// isAsku
+// typePack
+// CheckSum
+
+
 #endif // TCPMESSAGE_H

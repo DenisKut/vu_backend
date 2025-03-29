@@ -6,7 +6,7 @@
 
 #include <QObject>
 #include "network/NetworkManager.h"
-#include "utils/TimeProvider.h"
+#include "utils/time_provider/TimeProvider.h"
 
 class CoreManager : public QObject {
     Q_OBJECT

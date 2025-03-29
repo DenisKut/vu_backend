@@ -3,8 +3,8 @@
 
 #include <QObject>
 #include <QUdpSocket>
-#include "../messages/Message.h"     // Убедитесь, что файл существует
-#include "utils/TimeProvider.h"   // Исправлен путь
+#include "../messages/Message.h"
+#include "utils/time_provider/TimeProvider.h"
 
 class UdpHandler : public QObject {
     Q_OBJECT
@@ -14,6 +14,7 @@ public:
 
 public slots:
     void startListening(quint16 port);
+    void stopListening();
     void sendDatagram(const QHostAddress& address, quint16 port, const QByteArray& data);
 
 signals:
