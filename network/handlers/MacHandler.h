@@ -8,19 +8,28 @@
 #include <QDataStream>
 #include "../messages/Message.h"
 #include "utils/time_provider/TimeProvider.h"
+#include "utils/AppConfig.h"
+
+#include <chrono>
 
 // Библиотека WinPCap для работы с
 // Ethernet raw data под Windows:
 #ifdef _WIN32
 #include <pcap.h>
+#else
+// Заголовочные файлы для работы с
+// Ethernet raw data под Linux:
+#include <QSocketNotifier>
+#include <arpa/inet.h>
+#include <linux/if_packet.h>
+#include <linux/ip.h>
+#include <linux/udp.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <netinet/ether.h>
+#include <unistd.h>
 #endif
-
-// Структура MAC пакета:
-struct TMacPacket
-{
-    long long timeStump;                    // Метка времени приёма пакета
-    QByteArray data;
-};
 
 class MacHandler : public QObject {
     Q_OBJECT
@@ -29,28 +38,39 @@ public:
     explicit MacHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
     ~MacHandler();
 
-    QVector<TMacPacket*> vecPackets; // Данные MAC пакетов
-
     // Адаптеры FastEthernet:
     //---------------------------------------------------------------------
+#ifdef _WIN32
     pcap_if_t *pcapAllDevs;                 // Список доступных адаптеров
     pcap_t *pcapTx;                         // Передатчик
     pcap_t *pcapRx;                         // Приёмник
+#else
+    int macSocketID;
+    char ifName[IFNAMSIZ];
+    void print_mac(const uint8_t* mac);
+    void print_hex_dump(const uint8_t* buf, size_t len);
+    std::string getTimestampStr();
+#endif
+    quint64 getTimestamp();
 
-    QStringList strAdapterNames;            // Список имён подключённых адаптеров
-    QVector<QString> getNamesAdapters();    // Возвращает список имён существующих адаптеров Fast Ethernet
-    void connectAdapter(int inum);          // Подключиться к адаптеру Fast Ethernet под номером inum в списке адаптеров
+    void connectAdapter();                  // Подключиться к адаптеру Fast Ethernet под номером inum в списке адаптеров
     void disconnectAdapter();               // Отключиться от адаптера Fast Ethernet
     //---------------------------------------------------------------------
-
-    void messageProccess(const Message& msg); // Обработчик принятых MAC пакетов
 
 public slots:
     void start();
     void checkReceived(); // Проверка сокета на наличие принятых MAC пакетов
 
 signals:
+    void messageReceived(const Message& msg);
+
+#ifdef _WIN32
+signals:
     void macTimerReceiveRestart(); // Запуск таймера вызова обработчика принятых MAC пакетов
+#else
+private:
+    QSocketNotifier* m_notifier = nullptr;
+#endif
 
 private:
     TimeProvider* m_timeProvider;

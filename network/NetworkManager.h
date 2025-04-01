@@ -19,8 +19,9 @@ public:
     void stop();
 
 public slots:
-    void onTcpMessage(const TcpMessage& msg);
-    void onUdpDatagram(const Message& msg);
+    void onTcpReceived(const TcpMessage& msg);
+    void onUdpReceived(const Message& msg);
+    void onMacReceived(const Message& msg);
 
 private:
     TimeProvider* m_timeProvider;

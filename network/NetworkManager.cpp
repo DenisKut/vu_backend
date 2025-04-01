@@ -8,8 +8,9 @@ NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
       m_udpHandler(timeProvider),
       m_macHandler(timeProvider)
 {
-    connect(&m_tcpHandler, &TcpHandler::messageReceived, this, &NetworkManager::onTcpMessage);
-    connect(&m_udpHandler, &UdpHandler::datagramReceived, this, &NetworkManager::onUdpDatagram);
+    connect(&m_tcpHandler, &TcpHandler::messageReceived, this, &NetworkManager::onTcpReceived);
+    connect(&m_udpHandler, &UdpHandler::datagramReceived, this, &NetworkManager::onUdpReceived);
+    connect(&m_macHandler, &MacHandler::messageReceived, this, &NetworkManager::onMacReceived);
     connect(&m_macTimer, &QTimer::timeout, &m_macHandler, &MacHandler::checkReceived);
     connect(&m_macHandler, &MacHandler::macTimerReceiveRestart, [this](){ m_macTimer.start(1); });
 }
@@ -37,10 +38,14 @@ void NetworkManager::stop() {
     m_macHandler.disconnectAdapter();
 }
 
-void NetworkManager::onTcpMessage(const TcpMessage& msg) {
+void NetworkManager::onTcpReceived(const TcpMessage& msg) {
     qDebug() << "TCP Message:" << msg.payload;
 }
 
-void NetworkManager::onUdpDatagram(const Message& msg) {
+void NetworkManager::onUdpReceived(const Message& msg) {
     qDebug() << "UDP Datagram:" << msg.payload;
+}
+
+void NetworkManager::onMacReceived(const Message& msg) {
+    qDebug() << "MAC Datagram:" << msg.payload;
 }

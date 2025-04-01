@@ -52,13 +52,6 @@ win32 {
     DEFINES += WPCAP HAVE_REMOTE
 }
 
-# Linux (libpcap)
-linux {
-    # Установить libpcap: `sudo apt-get install libpcap-dev`
-    CONFIG += link_pkgconfig
-    PKGCONFIG += libpcap
-}
-
 #-------------------------------
 # 2. Кастомные цели сборки
 #-------------------------------

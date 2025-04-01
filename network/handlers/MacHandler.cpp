@@ -1,24 +1,82 @@
 #include "MacHandler.h"
 
+
 // Конструктор обработчика принятых MAC пакетов:
 MacHandler::MacHandler(TimeProvider* timeProvider, QObject* parent)
     : QObject(parent), m_timeProvider(timeProvider) 
 {
+#ifdef _WIN32
     pcapAllDevs = nullptr;
     pcapTx = pcapRx = nullptr;
+#else
+    strcpy(ifName, AppConstants::ETH_INTERFACE_DEFAULT.c_str());
+#endif
 }
 
 MacHandler::~MacHandler() {
     disconnectAdapter();
+#ifdef _WIN32
     if (pcapAllDevs) pcap_freealldevs(pcapAllDevs);
+#else
+    close(macSocketID);
+//    this->consts->
+#endif
 }
 
-// Возвращает список имён существующих адаптеров Fast Ethernet:
-QVector<QString> MacHandler::getNamesAdapters()
+
+#ifndef _WIN32
+std::string MacHandler::getTimestampStr()
 {
+    auto now = std::chrono::system_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::microseconds>(
+                now.time_since_epoch()) % 1000000;
+    auto timer = std::chrono::system_clock::to_time_t(now);
+    struct tm tm = *std::localtime(&timer);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%H:%M:%S") << "."
+        << std::setfill('0') << std::setw(6) << ms.count();
+    return oss.str();
+}
+#endif
+
+quint64 MacHandler::getTimestamp()
+{
+    auto now_ns = std::chrono::high_resolution_clock::now();
+    auto ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(now_ns);
+    quint64 time_ns = ns.time_since_epoch().count();
+    return time_ns;
+}
+
+#ifndef _WIN32
+void MacHandler::print_mac(const uint8_t *mac)
+{
+    printf("%02x:%02x:%02x:%02x:%02x:%02x",
+           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
+void MacHandler::print_hex_dump(const uint8_t *buf, size_t len)
+{
+    for (size_t i = 0; i < len; i++) {
+        if (i % 16 == 0) {
+            printf("\n\t0x%04x:  ", (unsigned int)i);
+        }
+        printf("%02x", buf[i]); // Убрали пробел между байтами
+        if (i % 2 == 1) printf(" "); // Пробел только после каждой пары байтов
+    }
+    printf("\n");
+}
+#endif
+
+// Подключиться к адаптеру Fast Ethernet под номером inum в списке адаптеров:
+void MacHandler::connectAdapter()
+{
+#ifdef _WIN32
     pcap_if_t *d;
-    QVector<QString> out;
     char errbuf[PCAP_ERRBUF_SIZE];
+
+    QStringList strAdapterNames;            // Список имён подключённых адаптеров
+    int numAdapters = 0;
     if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING), nullptr, &pcapAllDevs, errbuf) == -1)
     {
         qDebug() << "Not found Ethernet adapters";
@@ -34,27 +92,34 @@ QVector<QString> MacHandler::getNamesAdapters()
         {
             ds = QString("%1").arg(d->name);
         }
-        out.append(ds);
+        strAdapterNames.append(ds);
+        numAdapters++;
     }
-    return out;
-}
 
-// Подключиться к адаптеру Fast Ethernet под номером inum в списке адаптеров:
-void MacHandler::connectAdapter(int inum)
-{
-    pcap_if_t *d;
-    char errbuf[PCAP_ERRBUF_SIZE];
+    // Выбрать адаптер, если он есть:
+    int inum = 0;
+    for (inum = 0; inum < numAdapters; inum++)
+    {
+        if (strAdapterNames[inum].contains("Microsoft"))
+        {
+            continue;
+        }
+        else
+        {
+            break;
+        }
+    }
 
     // Переход к выбранному адаптеру:
-    //------------------------------------------------------------------
     int i = 0;
+    //------------------------------------------------------------------
     for (d = pcapAllDevs, i = 0; i < inum; d = d->next, i++);
     //------------------------------------------------------------------
 
     // Подключить передатчик к выбранному адаптеру:
     //------------------------------------------------------------------
     if ( (pcapTx = pcap_open(d->name,     // name of the device
-                               65536,     // portion of the packet to capture.
+                               2048,     // portion of the packet to capture.
                                             // 65536 guarantees that the whole packet will be captured on all the link layers
                                PCAP_OPENFLAG_PROMISCUOUS| PCAP_OPENFLAG_MAX_RESPONSIVENESS|PCAP_OPENFLAG_NOCAPTURE_LOCAL,    // promiscuous mode
 //                               PCAP_OPENFLAG_PROMISCUOUS,    // promiscuous mode
@@ -119,53 +184,59 @@ void MacHandler::connectAdapter(int inum)
     strAdapterNames.append(ds);
 
     qDebug() << QString("Opened Ethernet adapter: %1").arg(strAdapterNames.at(0));
+#else
+    Q_UNUSED(inum);
+
+    // ETH_P_ALL                - принимать пакеты с любым ether type
+    // ETH_SOCKET_ETHER_TYPE    - принимать пакеты только с ether type = 0x2020
+    if ((macSocketID = socket(PF_PACKET, SOCK_RAW, htons(ETH_SOCKET_ETHER_TYPE))) == -1) {
+        perror("socket");
+    }
+
+    struct ifreq ifopts;
+    strncpy(ifopts.ifr_name, ifName, IFNAMSIZ-1);
+    ioctl(macSocketID, SIOCGIFFLAGS, &ifopts);
+    ifopts.ifr_flags |= IFF_PROMISC;
+    ioctl(macSocketID, SIOCSIFFLAGS, &ifopts);
+
+    if (setsockopt(macSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
+        perror("SO_BINDTODEVICE");
+        close(macSocketID);
+    }
+
+    qDebug() << "Starting capture on interface" << ifName << "...\n";
+
+    // Создание SocketNotifier
+    m_notifier = new QSocketNotifier(macSocketID, QSocketNotifier::Read, this);
+
+    // Подключение сигнала к слоту
+    connect(m_notifier, &QSocketNotifier::activated,
+            this, &MacHandler::checkReceived);
+#endif
 }
 
 // Отключиться от адаптера Fast Ethernet:
 void MacHandler::disconnectAdapter()
 {
+#ifdef _WIN32
     if (pcapTx != nullptr) pcap_close(pcapTx);
     if (pcapRx != nullptr) pcap_close(pcapRx);
-//    emit adapterUpdatePM(nullptr);  // Обновить указатель на адаптер для менеджера пакетов
     pcapTx = nullptr;
     pcapRx = nullptr;
-//    emit adapterDisconnected();
-}
-
-// Обработчик принятых MAC пакетов:
-void MacHandler::messageProccess(const Message &msg)
-{
-
+#else
+    close(macSocketID);
+#endif
 }
 
 void MacHandler::start()
 {
-    QVector<QString> vecAdapterNames;
-    vecAdapterNames.append(getNamesAdapters());
-    qDebug() << vecAdapterNames;
-
-//-------------------------DEBUG----------------------------
-    // Выбрать адаптер, если он есть:
-    int i = 0;
-    for (i = 0; i < vecAdapterNames.size(); i++)
-    {
-        if (vecAdapterNames[i].contains("Microsoft"))
-        {
-            continue;
-        }
-        else
-        {
-            break;
-        }
-    }
-//----------------------------------------------------------
-
-    connectAdapter(i);
+    connectAdapter();
 }
 
 // Проверка сокета на наличие принятых MAC пакетов:
 void MacHandler::checkReceived()
 {
+#ifdef _WIN32
     struct pcap_pkthdr *header;
     const u_char *data;
     int res = 0;
@@ -179,14 +250,48 @@ void MacHandler::checkReceived()
             long long time = static_cast<long long>(header->ts.tv_sec)*1000000 + static_cast<long long>(header->ts.tv_usec);
             int length = static_cast<int>(header->len);
 
-//            vecRecTime.append(time);                      // Метка времени пакета
-//            vecRecData.append(QByteArray(data, length));  // Пакет
-
             // Вывод метки времени и длины пакета:
             qDebug() << QString("%1  -  %2").arg(time).arg(length);
         }
     }
+#else
+    // Чтение пакета из интерфейса:
+    //---------------------------------------------------------------------
+    uint8_t *buf = static_cast<uint8_t*>(malloc(AppConstants::ETH_SOCKET_BUF_SIZE * sizeof(uint8_t)));
+    ssize_t numbytes = recvfrom(macSocketID, buf, AppConstants::ETH_SOCKET_BUF_SIZE, 0, NULL, NULL);
+    if (numbytes > 0)
+    {
+        Message *msg = new Message();
+        msg->timestamp = getTimestamp();
+        msg->payload.append(QByteArray(reinterpret_cast<const char*>(buf), numbytes));
 
-    // Перезапуск таймера вызова обработчика принятых MAC пакетов:
-    macTimerReceiveRestart();
+        struct ethhdr* eth = (struct ethhdr*)buf;
+
+        // Вывод данных пакета:
+        //---------------------------------------------------------------------
+        printf("%s ", getTimestampStr().c_str());
+
+        print_mac(eth->h_source);
+        printf(" > ");
+        print_mac(eth->h_dest);
+        printf(", ");
+
+        uint16_t ethertype = ntohs(eth->h_proto);
+        switch (ethertype) {
+            case ETH_P_IP:  printf("ethertype IPv4 (0x%04x), ", ethertype); break;
+            case ETH_P_ARP: printf("ethertype ARP (0x%04x), ", ethertype); break;
+            default:        printf("ethertype Unknown (0x%04x), ", ethertype); break;
+        }
+
+        printf("length %zd:", numbytes);
+
+        print_hex_dump(buf, numbytes);
+        printf("\n");
+        //---------------------------------------------------------------------
+
+        emit messageReceived(*msg);
+    }
+    free(buf);
+    //---------------------------------------------------------------------
+#endif
 }
