@@ -33,14 +33,25 @@ public:
 																		// 	 регистрации *
 
     // Геттеры параметров из .env
+    std::string TCP_HOST_IP() const {
+        return this->_tcpHostIP;
+    }
+    int TCP_HOST_PORT() const {
+        return this->_tcpHostPort;
+    }
+    int UDP_PORT() const {
+        return this->_udpPort;
+    }
+
+
     uint8_t PBU_PROTO_MAJOR_VERSION() const {
-        return _pbuProtoMajorVersion;
+        return this->_pbuProtoMajorVersion;
     }
     uint8_t PBU_PROTO_MINOR_VERSION() const {
-        return _pbuProtoMinorVersion;
+        return this->_pbuProtoMinorVersion;
     }
     uint32_t PBU_PROTO_HEAD_SENDER() const {
-        return _pbuProtoHeadSender;
+        return this->_pbuProtoHeadSender;
     }
 
     // *******************************************
@@ -72,6 +83,10 @@ public:
 
     // Инициализация из .env
     void initFromEnv(const QHash<QString, QString>& env) {
+        this->_tcpHostIP = env.value("TCP_HOST_IP", "127.0.0.1").toStdString();
+        this->_tcpHostPort = env.value("TCP_HOST_PORT", "12345").toInt();
+        this->_udpPort = env.value("UDP_PORT", "54321").toInt();
+
         this->_pbuProtoMajorVersion = UINT8(env.value("PBU_PROTO_MAJOR_VERSION", "2").toUShort());
         this->_pbuProtoMinorVersion = UINT8(env.value("PBU_PROTO_MINOR_VERSION", "0").toUShort());
         this->_pbuProtoHeadSender = UINT32(env.value("PBU_PROTO_HEAD_ID_SENDER", "0x524C4E").toUShort());
@@ -94,6 +109,10 @@ private:
     AppConfig() = default;
 
     // !!! Параметры для .env !!!
+    std::string _tcpHostIP;
+    int _tcpHostPort;
+    int _udpPort;
+
     uint8_t _pbuProtoMajorVersion;          // * Версия протокола (minor & major)*
     uint8_t _pbuProtoMinorVersion;
     uint32_t _pbuProtoHeadSender: 24;       // * Идентификатор отправителя данных *

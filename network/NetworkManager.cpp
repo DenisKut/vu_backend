@@ -19,8 +19,13 @@ NetworkManager::~NetworkManager() {
 }
 
 void NetworkManager::start() {
-    m_tcpHandler.connectToHost("127.0.0.1", 12345);
-    m_udpHandler.startListening(54321);
+    // m_tcpHandler.connectToHost("127.0.0.1", 12345);
+    m_tcpHandler.connectToHost(
+        QString::fromStdString(
+            AppConfig::instance().TCP_HOST_IP()),
+            AppConfig::instance().TCP_HOST_PORT()
+        );
+    m_udpHandler.startListening(AppConfig::instance().UDP_PORT());
     m_macHandler.start();
     m_macTimer.start(1);
 }

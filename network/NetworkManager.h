@@ -7,6 +7,7 @@
 #include "handlers/UdpHandler.h"
 #include "handlers/MacHandler.h"
 #include "utils/time_provider/TimeProvider.h"
+#include "utils/AppConfig.h"
 
 class NetworkManager : public QObject {
     Q_OBJECT
