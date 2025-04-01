@@ -9,7 +9,7 @@
 #endif
 
 #include "utils/env_loader/EnvLoader.h"
-#include "utils/AppDefines.h"
+#include "utils/AppConfig.h"
 #include "core/CoreManager.h"
 
 int main(int argc, char* argv[]) {
@@ -47,14 +47,14 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    // Инициализация констант
-    AppConstants::init(env.variables());
+    // Инициализация конфига
+    AppConfig::instance().init(env.variables());
 
     // Вывод кириллицы
     qDebug().noquote() << QString::fromUtf8("▐▀▄▀▌ Загружена версия протокола:")
-                       << AppConstants::PBU_PROTOCOL_MAJOR_VERSION
+                       << AppConfig::instance().PBU_PROTO_MAJOR_VERSION()
                        << "."
-                       << AppConstants::PBU_PROTOCOL_MINOR_VERSION;
+                       << AppConfig::instance().PBU_PROTO_MINOR_VERSION();
 
     CoreManager core;
     core.initialize();

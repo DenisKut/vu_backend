@@ -17,8 +17,7 @@ SOURCES += \
     network/handlers/TcpHandler.cpp \
     network/handlers/UdpHandler.cpp \
     utils/time_provider/TimeProvider.cpp \
-    utils/env_loader/EnvLoader.cpp \
-    utils/AppDefines.cpp
+    utils/env_loader/EnvLoader.cpp
 
 HEADERS += \
     core/CoreManager.h \
@@ -29,9 +28,9 @@ HEADERS += \
     network/handlers/UdpHandler.h \
     network/messages/Message.h \
     network/messages/TcpMessage.h \
+    utils/AppConfig.h \
     utils/time_provider/TimeProvider.h \
-    utils/env_loader/EnvLoader.h \
-    utils/AppDefines.h
+    utils/env_loader/EnvLoader.h
 
 # Windows (WinPcap)
 win32 {

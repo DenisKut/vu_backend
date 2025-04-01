@@ -27,7 +27,8 @@ void TcpHandler::onDisconnected() {
 }
 
 void TcpHandler::onError(QAbstractSocket::SocketError error) {
-    emit errorOccurred(m_socket->errorString());
+    if(error)
+        emit errorOccurred(m_socket->errorString());
 }
 
 void TcpHandler::connectToHost(const QString& host, quint16 port) {

@@ -7,9 +7,9 @@
 #include <iostream>
 #include <QByteArray>
 
-#include "libs/json/json.hpp"
+#include "utils/AppConfig.h"
 
-// !!! #define UINT16(X) static_cast<uint16_t>(X)
+#include "libs/json/json.hpp"
 
 using json = nlohmann::json;
 
@@ -95,21 +95,49 @@ enum class PBU_MessageNumbers: uint16_t {
 // =========================================
 // Общий заголовок для сообщений
 // =========================================
-// #pragma pack(push, 1)
-// struct tcpHeader
-// {
-//     name() {}
-// };
+#pragma pack(push, 1)
+struct TcpHeader
+{
+	// Word - 1
+	// * Идентификатор отправителя данных *
+    uint32_t sender: 24;
+	// * Номер модуля в комплексе *
+	uint8_t idxModule;
+	// Word - 2
+	// * Версия протокола мажор *
+	uint8_t vMajor;
+	// * Версия протокола минор *
+	uint8_t vMinor;
+	// * Сквозной порядковый номер пакета *
+	uint16_t idxPack;
+	// Word - 3
+	// * Размер блока данных *
+	uint32_t sizeData: 31;
+	// * Флаг ПО АСКУ *
+	uint8_t isAsku: 1;
+	// Word - 4
+	// * № типа передаваемого пакета *
+	// !!! из PBU_MessageNumbers !!!
+	uint16_t typePack;
+	// * Контрольная сумма заголовка *
+	uint16_t checkSum;
 
-// sender
-// idxModule
-// vMajor
-// vMinor
-// idxPack
-// sizeData
-// isAsku
-// typePack
-// CheckSum
+    TcpHeader()
+        :sender(AppConfig::instance().PBU_PROTO_HEAD_SENDER()),
+        idxModule(AppConfig::instance().PBU_PROTO_HEAD_IDX_MODULE()),
+        vMajor(AppConfig::instance().PBU_PROTO_MAJOR_VERSION()),
+        vMinor(AppConfig::instance().PBU_PROTO_MINOR_VERSION()),
+        idxPack(AppConfig::instance().PBU_PROTO_HEAD_IDX_PACK()),
+        isAsku(AppConfig::instance().PBU_PROTO_HEAD_IS_ASKU())
+            {}
+	
+	~TcpHeader() {}
+};
+#pragma pack(pop)
 
+// * От ВУ на ПБУ [ОБРАБОТКА ИНФ] *
+// *********************************
+// REQ_REGISTRATION (0x01)
+// *********************************
 
 #endif // TCPMESSAGE_H
