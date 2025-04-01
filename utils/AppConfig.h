@@ -3,11 +3,20 @@
 #include <QString>
 #include <QHash>
 
-// Макросы для приведения типов
-#define UINT32(X) static_cast<uint32_t>(X)	// * Приведение к uint_32 *
-#define UINT16(X) static_cast<uint16_t>(X)	// * Приведение к uint_16 *
-#define UINT8(X)  static_cast<uint8_t>(X)	// * Приведение к uint_8 *
-#define STR(X)    QString::fromUtf8(X)     	// * Получение строки формата UTF-8 *
+// Inline функции для приведения типов
+template<typename T>
+inline uint32_t to_uint32(T x) { return static_cast<uint32_t>(x); }     // * Приведение к uint_32 *
+
+template<typename T>
+inline uint16_t to_uint16(T x) { return static_cast<uint16_t>(x); }     // * Приведение к uint_16 *
+
+template<typename T>
+inline uint8_t  to_uint8(T x)  { return static_cast<uint8_t>(x); }      // * Приведение к uint_8 *
+
+// * Получение строки QString (например, для QSocket)*
+inline QString to_qstring(const char* x) { return QString::fromUtf8(x); }
+inline QString to_qstring(const std::string& x) { return QString::fromStdString(x); }
+inline QString to_qstring(const QString& x) { return x; }
 
 class AppConfig {
 public:
@@ -41,6 +50,12 @@ public:
     }
     int UDP_PORT() const {
         return this->_udpPort;
+    }
+    std::string ETH_INTERFACE_NAME() const {
+        return this->_ethInterfaceName;
+    }
+    int MAC_SOCKET_BUF_SIZE() const {
+        return this->_macSocketBuffSize;
     }
 
 
@@ -86,10 +101,12 @@ public:
         this->_tcpHostIP = env.value("TCP_HOST_IP", "127.0.0.1").toStdString();
         this->_tcpHostPort = env.value("TCP_HOST_PORT", "12345").toInt();
         this->_udpPort = env.value("UDP_PORT", "54321").toInt();
+        this->_ethInterfaceName = env.value("ETH_INTERFACE_NAME", "eth0").toStdString();
+        this->_macSocketBuffSize = env.value("MAC_SOCKET_BUF_SIZE", "2048").toInt();
 
-        this->_pbuProtoMajorVersion = UINT8(env.value("PBU_PROTO_MAJOR_VERSION", "2").toUShort());
-        this->_pbuProtoMinorVersion = UINT8(env.value("PBU_PROTO_MINOR_VERSION", "0").toUShort());
-        this->_pbuProtoHeadSender = UINT32(env.value("PBU_PROTO_HEAD_ID_SENDER", "0x524C4E").toUShort());
+        this->_pbuProtoMajorVersion = to_uint8(env.value("PBU_PROTO_MAJOR_VERSION", "2").toUShort());
+        this->_pbuProtoMinorVersion = to_uint8(env.value("PBU_PROTO_MINOR_VERSION", "0").toUShort());
+        this->_pbuProtoHeadSender = to_uint32(env.value("PBU_PROTO_HEAD_ID_SENDER", "0x524C4E").toUInt());
     }
 
     void initBase() {
@@ -112,6 +129,8 @@ private:
     std::string _tcpHostIP;
     int _tcpHostPort;
     int _udpPort;
+    std::string _ethInterfaceName;
+    int _macSocketBuffSize;
 
     uint8_t _pbuProtoMajorVersion;          // * Версия протокола (minor & major)*
     uint8_t _pbuProtoMinorVersion;

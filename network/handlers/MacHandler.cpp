@@ -9,7 +9,7 @@ MacHandler::MacHandler(TimeProvider* timeProvider, QObject* parent)
     pcapAllDevs = nullptr;
     pcapTx = pcapRx = nullptr;
 #else
-    strcpy(ifName, AppConstants::ETH_INTERFACE_DEFAULT.c_str());
+    strcpy(ifName, AppConfig::instance().ETH_INTERFACE_NAME().c_str());
 #endif
 }
 
@@ -257,8 +257,9 @@ void MacHandler::checkReceived()
 #else
     // Чтение пакета из интерфейса:
     //---------------------------------------------------------------------
-    uint8_t *buf = static_cast<uint8_t*>(malloc(AppConstants::ETH_SOCKET_BUF_SIZE * sizeof(uint8_t)));
-    ssize_t numbytes = recvfrom(macSocketID, buf, AppConstants::ETH_SOCKET_BUF_SIZE, 0, NULL, NULL);
+    const buf_size = AppConfig::instance().MAC_SOCKET_BUF_SIZE();
+    uint8_t *buf = static_cast<uint8_t*>(malloc(buf_size * sizeof(uint8_t)));
+    ssize_t numbytes = recvfrom(macSocketID, buf, buf_size, 0, NULL, NULL);
     if (numbytes > 0)
     {
         Message *msg = new Message();

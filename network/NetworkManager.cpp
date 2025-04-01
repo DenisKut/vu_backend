@@ -20,9 +20,8 @@ NetworkManager::~NetworkManager() {
 }
 
 void NetworkManager::start() {
-    // m_tcpHandler.connectToHost("127.0.0.1", 12345);
     m_tcpHandler.connectToHost(
-        QString::fromStdString(
+        to_qstring(
             AppConfig::instance().TCP_HOST_IP()),
             AppConfig::instance().TCP_HOST_PORT()
         );
