@@ -37,8 +37,8 @@ void NetworkManager::stop() {
     m_macHandler.disconnectAdapter();
 }
 
-void NetworkManager::onTcpReceived(const TcpMessage& msg) {
-    qDebug() << "TCP Message:" << msg.payload;
+void NetworkManager::onTcpReceived(const TcpHeader& msg) {
+    qDebug() << "TCP Message:" << msg.checkSum;
 }
 
 void NetworkManager::onUdpReceived(const Message& msg) {

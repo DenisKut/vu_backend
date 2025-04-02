@@ -15,11 +15,11 @@ public:
 
 public slots:
     void connectToHost(const QString& host, quint16 port);
-    void sendMessage(const TcpMessage& msg);
+    void sendMessage(const TcpHeader& msg);
     void disconnect();
 
 signals:
-    void messageReceived(const TcpMessage& msg);
+    void messageReceived(const TcpHeader& msg);
     void errorOccurred(const QString& error);
 
 private slots:

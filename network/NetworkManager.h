@@ -19,7 +19,7 @@ public:
     void stop();
 
 public slots:
-    void onTcpReceived(const TcpMessage& msg);
+    void onTcpReceived(const TcpHeader& msg);
     void onUdpReceived(const Message& msg);
     void onMacReceived(const Message& msg);
 

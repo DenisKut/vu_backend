@@ -35,11 +35,11 @@ void TcpHandler::connectToHost(const QString& host, quint16 port) {
     m_socket->connectToHost(host, port, QIODevice::ReadWrite, QAbstractSocket::AnyIPProtocol);
 }
 
-void TcpHandler::sendMessage(const TcpMessage& msg) {
+void TcpHandler::sendMessage(const TcpHeader& msg) {
     if (m_socket->state() == QAbstractSocket::ConnectedState) {
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
-        stream << msg.timestamp << msg.payload;
+        stream << msg.sizeData << msg.checkSum;
         m_socket->write(data);
     }
 }
@@ -51,11 +51,11 @@ void TcpHandler::disconnect() {
 }
 
 void TcpHandler::onReadyRead() {
-    while (m_socket->bytesAvailable() > 0) {
-        QByteArray data = m_socket->readAll();
-        TcpMessage msg;
-        msg.timestamp = m_timeProvider->currentTimestamp();
-        msg.payload = data;
-        emit messageReceived(msg);
-    }
+    // while (m_socket->bytesAvailable() > 0) {
+    //     QByteArray data = m_socket->readAll();
+    //     TcpMessage msg;
+    //     msg.timestamp = m_timeProvider->currentTimestamp();
+    //     msg.payload = data;
+    //     emit messageReceived(msg);
+    // }
 }
