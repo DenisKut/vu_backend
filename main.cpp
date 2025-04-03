@@ -56,6 +56,16 @@ int main(int argc, char* argv[]) {
                        << "."
                        << AppConfig::instance().PBU_PROTO_MINOR_VERSION();
 
+    // Инициализация Логгера (обязательно, иначе Логгер не запустится)
+    Logger::initialize();
+//    qDebug() << "Состояние Логгера:" << Logger::instance().isRunning();
+
+//    // Тест запуска Логгера без явного вызова writeText():
+//    QTimer::singleShot(0, []{
+//        Logger::instance().writeText("Тест Логгера");
+//    });
+
+    // Запуск ядра приложения
     CoreManager core;
     core.initialize();
 

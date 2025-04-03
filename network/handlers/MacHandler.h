@@ -1,5 +1,5 @@
-#ifndef ETHHANDLER_H
-#define ETHHANDLER_H
+#ifndef MACHANDLER_H
+#define MACHANDLER_H
 
 #include <QTimer>
 #include <QObject>
@@ -8,6 +8,7 @@
 #include <QDataStream>
 #include "../messages/Message.h"
 #include "utils/time_provider/TimeProvider.h"
+#include "core/logger/Logger.h"
 #include "utils/AppConfig.h"
 
 #include <chrono>
@@ -76,4 +77,4 @@ private:
     TimeProvider* m_timeProvider;
 };
 
-#endif // ETHHANDLER_H
+#endif // MACHANDLER_H

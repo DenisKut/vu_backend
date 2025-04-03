@@ -80,6 +80,7 @@ void MacHandler::connectAdapter()
     if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING), nullptr, &pcapAllDevs, errbuf) == -1)
     {
         qDebug() << "Not found Ethernet adapters";
+        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - Не найден сетевой адаптер");
     }
     for(d = pcapAllDevs; d; d = d->next)
     {
@@ -129,6 +130,7 @@ void MacHandler::connectAdapter()
                                ) ) == nullptr)
     {
         qDebug() << "Failed to open pcapTx";
+        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - Не получилось открыть pcapTx");
         // Free the device list
         return;
     }
@@ -137,6 +139,7 @@ void MacHandler::connectAdapter()
 //        emit adapterUpdatePM(pcapTx);  // Обновить указатель на адаптер для менеджера пакетов
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapTx";
+        Logger::instance().writeText("MacHandler::connectAdapter() - Успешно открыт pcapTx");
     }
 
     pcap_setbuff(pcapTx, 160*1024*1024);
@@ -156,6 +159,7 @@ void MacHandler::connectAdapter()
                                ) ) == nullptr)
     {
         qDebug() << "Failed to open pcapRx";
+        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - Не получилось открыть pcapTx");
         // Free the device list
         return;
     }
@@ -163,6 +167,7 @@ void MacHandler::connectAdapter()
     {
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapRx";
+        Logger::instance().writeText("MacHandler::connectAdapter() - Успешно открыт pcapTx");
     }
 
     pcap_setbuff(pcapRx, 160*1024*1024);
@@ -184,6 +189,7 @@ void MacHandler::connectAdapter()
     strAdapterNames.append(ds);
 
     qDebug() << QString("Opened Ethernet adapter: %1").arg(strAdapterNames.at(0));
+    Logger::instance().writeText(QString("Подключен Ethernet адаптер: %1").arg(strAdapterNames.at(0)));
 #else
     Q_UNUSED(inum);
 
@@ -191,6 +197,7 @@ void MacHandler::connectAdapter()
     // ETH_SOCKET_ETHER_TYPE    - принимать пакеты только с ether type = 0x2020
     if ((macSocketID = socket(PF_PACKET, SOCK_RAW, htons(ETH_SOCKET_ETHER_TYPE))) == -1) {
         perror("socket");
+        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - socket");
     }
 
     struct ifreq ifopts;
@@ -201,10 +208,12 @@ void MacHandler::connectAdapter()
 
     if (setsockopt(macSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
         perror("SO_BINDTODEVICE");
+        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - SO_BINDTODEVICE");
         close(macSocketID);
     }
 
     qDebug() << "Starting capture on interface" << ifName << "...\n";
+    Logger::instance().writeText(QString("Подключен Ethernet адаптер: %1").arg(ifName));
 
     // Создание SocketNotifier
     m_notifier = new QSocketNotifier(macSocketID, QSocketNotifier::Read, this);
@@ -226,6 +235,7 @@ void MacHandler::disconnectAdapter()
 #else
     close(macSocketID);
 #endif
+    Logger::instance().writeText("Ethernet адаптер отключен");
 }
 
 void MacHandler::start()
@@ -238,7 +248,7 @@ void MacHandler::checkReceived()
 {
 #ifdef _WIN32
     struct pcap_pkthdr *header;
-    const u_char *data;
+    const unsigned char *data;
     int res = 0;
 
     // Проверка приёмника на наличие пакета:
@@ -252,6 +262,8 @@ void MacHandler::checkReceived()
 
             // Вывод метки времени и длины пакета:
             qDebug() << QString("%1  -  %2").arg(time).arg(length);
+            //Logger::instance().writeText(QString("%1  -  %2").arg(time).arg(length));
+            Logger::instance().writeBinary("Принят Ethernet пакет:", data, length);
         }
     }
 #else

@@ -34,7 +34,7 @@ void UdpHandler::onReadyRead() {
     while (m_socket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = m_socket->receiveDatagram();
         Message msg;
-        msg.timestamp = m_timeProvider->currentTimestamp();
+        //msg.timestamp = m_timeProvider->currentTimestamp();
         msg.payload = datagram.data();
         emit datagramReceived(msg);
     }

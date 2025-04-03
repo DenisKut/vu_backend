@@ -5,6 +5,7 @@
 #include <QUdpSocket>
 #include "../messages/Message.h"
 #include "utils/time_provider/TimeProvider.h"
+#include "core/logger/Logger.h"
 
 class UdpHandler : public QObject {
     Q_OBJECT

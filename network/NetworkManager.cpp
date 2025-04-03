@@ -47,4 +47,5 @@ void NetworkManager::onUdpReceived(const Message& msg) {
 
 void NetworkManager::onMacReceived(const Message& msg) {
     qDebug() << "MAC Datagram:" << msg.payload;
+
 }

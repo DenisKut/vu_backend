@@ -4,26 +4,38 @@
 #pragma once
 
 #include <QObject>
-#include <QElapsedTimer>
-#include <QDateTime>
-#include <QMutex>
+
+// Для кроссплатформенности (Windows/Linux) используется библиотека <chrono>:
+#include <chrono>
 
 class TimeProvider : public QObject {
     Q_OBJECT
 public:
-    explicit TimeProvider(QObject* parent = nullptr);
+    // Удалить копирование и присваивание:
+    TimeProvider(const TimeProvider&) = delete;
+    TimeProvider& operator=(const TimeProvider&) = delete;
 
-    // Текущее время приложения (уже корректенное)
-    quint64 currentTimestamp() const;
+    // Получить экземпляр синглтона:
+    static TimeProvider& instance();
 
-    // Синхронизация с внешним источником времени (предположительно БС)
-    void syncWithExternalTime(quint64 externalTimeMs, quint64 networkDelayMs = 0);
+    // Получить время с точностью до миллисекунд:
+    int64_t getMs() const;
+
+    // Получить время с точностью до микросекунд:
+    int64_t getMks() const;
+
+    // Получить время с точностью до наносекунд:
+    int64_t getNs() const;
+
+    // Получить дату в текстовом виде:
+    std::string currentDateString();
+
+    // Получить время в текстовом виде:
+    std::string currentTimeString();
 
 private:
-    mutable QMutex m_mutex; // Для потокобезопасности
-    QElapsedTimer m_timer;
-    qint64 m_startEpoch; // Начальная эпоха (локальное время старта)
-    qint64 m_timeCorrection = 0; // Коррекция времени (мс)
+    // Приватный конструктор:
+    TimeProvider() = default;
 };
 
 #endif // TIMEPROVIDER_H
