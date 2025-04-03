@@ -78,6 +78,7 @@ CONFIG += lrelease embed_translations
 
 DISTFILES += \
     docs/git_guide.md \
+    docs/doxygen_guide.md \
     libs/wpdpack/Lib/Packet.lib \
     libs/wpdpack/Lib/libpacket.a \
     libs/wpdpack/Lib/libwpcap.a \
