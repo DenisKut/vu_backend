@@ -1,5 +1,5 @@
-#ifndef MACHANDLER_H
-#define MACHANDLER_H
+#ifndef ETHHANDLER_H
+#define ETHHANDLER_H
 
 #include <QTimer>
 #include <QObject>
@@ -32,12 +32,12 @@
 #include <unistd.h>
 #endif
 
-class MacHandler : public QObject {
+class EthHandler : public QObject {
     Q_OBJECT
 
 public:
-    explicit MacHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
-    ~MacHandler();
+    explicit EthHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
+    ~EthHandler();
 
     // Адаптеры FastEthernet:
     //---------------------------------------------------------------------
@@ -54,20 +54,20 @@ public:
 #endif
     quint64 getTimestamp();
 
-    void connectAdapter();                  // Подключиться к адаптеру Fast Ethernet под номером inum в списке адаптеров
-    void disconnectAdapter();               // Отключиться от адаптера Fast Ethernet
+    void connectAdapter();                  // Подключиться к адаптеру Ethernet под номером inum в списке адаптеров
+    void disconnectAdapter();               // Отключиться от адаптера Ethernet
     //---------------------------------------------------------------------
 
 public slots:
     void start();
-    void checkReceived(); // Проверка сокета на наличие принятых MAC пакетов
+    void checkReceived(); // Проверка сокета на наличие принятых Ethernet пакетов
 
 signals:
     void messageReceived(const Message& msg);
 
 #ifdef _WIN32
 signals:
-    void macTimerReceiveRestart(); // Запуск таймера вызова обработчика принятых MAC пакетов
+    void ethTimerReceiveRestart(); // Запуск таймера вызова обработчика принятых Ethernet пакетов
 #else
 private:
     QSocketNotifier* m_notifier = nullptr;
@@ -77,4 +77,4 @@ private:
     TimeProvider* m_timeProvider;
 };
 
-#endif // MACHANDLER_H
+#endif // ETHHANDLER_H

@@ -13,7 +13,7 @@ SOURCES += \
     core/logger/Logger.cpp \
     main.cpp \
     network/NetworkManager.cpp \
-    network/handlers/MacHandler.cpp \
+    network/handlers/EthHandler.cpp \
     network/handlers/TcpHandler.cpp \
     network/handlers/UdpHandler.cpp \
     utils/time_provider/TimeProvider.cpp \
@@ -23,9 +23,10 @@ HEADERS += \
     core/CoreManager.h \
     core/logger/Logger.h \
     network/NetworkManager.h \
-    network/handlers/MacHandler.h \
+    network/handlers/EthHandler.h \
     network/handlers/TcpHandler.h \
     network/handlers/UdpHandler.h \
+    network/messages/EthMessage.h \
     network/messages/Message.h \
     network/messages/TcpMessage.h \
     utils/AppConfig.h \

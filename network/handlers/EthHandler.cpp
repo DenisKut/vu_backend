@@ -1,8 +1,8 @@
-#include "MacHandler.h"
+#include "EthHandler.h"
 
 
 // Конструктор обработчика принятых MAC пакетов:
-MacHandler::MacHandler(TimeProvider* timeProvider, QObject* parent)
+EthHandler::EthHandler(TimeProvider* timeProvider, QObject* parent)
     : QObject(parent), m_timeProvider(timeProvider) 
 {
 #ifdef _WIN32
@@ -13,7 +13,7 @@ MacHandler::MacHandler(TimeProvider* timeProvider, QObject* parent)
 #endif
 }
 
-MacHandler::~MacHandler() {
+EthHandler::~EthHandler() {
     disconnectAdapter();
 #ifdef _WIN32
     if (pcapAllDevs) pcap_freealldevs(pcapAllDevs);
@@ -25,7 +25,7 @@ MacHandler::~MacHandler() {
 
 
 #ifndef _WIN32
-std::string MacHandler::getTimestampStr()
+std::string EthHandler::getTimestampStr()
 {
     auto now = std::chrono::system_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -40,7 +40,7 @@ std::string MacHandler::getTimestampStr()
 }
 #endif
 
-quint64 MacHandler::getTimestamp()
+quint64 EthHandler::getTimestamp()
 {
     auto now_ns = std::chrono::high_resolution_clock::now();
     auto ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(now_ns);
@@ -49,13 +49,13 @@ quint64 MacHandler::getTimestamp()
 }
 
 #ifndef _WIN32
-void MacHandler::print_mac(const uint8_t *mac)
+void EthHandler::print_mac(const uint8_t *mac)
 {
     printf("%02x:%02x:%02x:%02x:%02x:%02x",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
-void MacHandler::print_hex_dump(const uint8_t *buf, size_t len)
+void EthHandler::print_hex_dump(const uint8_t *buf, size_t len)
 {
     for (size_t i = 0; i < len; i++) {
         if (i % 16 == 0) {
@@ -69,7 +69,7 @@ void MacHandler::print_hex_dump(const uint8_t *buf, size_t len)
 #endif
 
 // Подключиться к адаптеру Fast Ethernet под номером inum в списке адаптеров:
-void MacHandler::connectAdapter()
+void EthHandler::connectAdapter()
 {
 #ifdef _WIN32
     pcap_if_t *d;
@@ -80,7 +80,7 @@ void MacHandler::connectAdapter()
     if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING), nullptr, &pcapAllDevs, errbuf) == -1)
     {
         qDebug() << "Not found Ethernet adapters";
-        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - Не найден сетевой адаптер");
+        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не найден сетевой адаптер");
     }
     for(d = pcapAllDevs; d; d = d->next)
     {
@@ -130,7 +130,7 @@ void MacHandler::connectAdapter()
                                ) ) == nullptr)
     {
         qDebug() << "Failed to open pcapTx";
-        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - Не получилось открыть pcapTx");
+        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не получилось открыть pcapTx");
         // Free the device list
         return;
     }
@@ -139,7 +139,7 @@ void MacHandler::connectAdapter()
 //        emit adapterUpdatePM(pcapTx);  // Обновить указатель на адаптер для менеджера пакетов
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapTx";
-        Logger::instance().writeText("MacHandler::connectAdapter() - Успешно открыт pcapTx");
+        Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
     }
 
     pcap_setbuff(pcapTx, 160*1024*1024);
@@ -159,7 +159,7 @@ void MacHandler::connectAdapter()
                                ) ) == nullptr)
     {
         qDebug() << "Failed to open pcapRx";
-        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - Не получилось открыть pcapTx");
+        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не получилось открыть pcapTx");
         // Free the device list
         return;
     }
@@ -167,7 +167,7 @@ void MacHandler::connectAdapter()
     {
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapRx";
-        Logger::instance().writeText("MacHandler::connectAdapter() - Успешно открыт pcapTx");
+        Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
     }
 
     pcap_setbuff(pcapRx, 160*1024*1024);
@@ -197,7 +197,7 @@ void MacHandler::connectAdapter()
     // ETH_SOCKET_ETHER_TYPE    - принимать пакеты только с ether type = 0x2020
     if ((macSocketID = socket(PF_PACKET, SOCK_RAW, htons(ETH_SOCKET_ETHER_TYPE))) == -1) {
         perror("socket");
-        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - socket");
+        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - socket");
     }
 
     struct ifreq ifopts;
@@ -208,7 +208,7 @@ void MacHandler::connectAdapter()
 
     if (setsockopt(macSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
         perror("SO_BINDTODEVICE");
-        Logger::instance().writeText("ОШИБКА: MacHandler::connectAdapter() - SO_BINDTODEVICE");
+        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - SO_BINDTODEVICE");
         close(macSocketID);
     }
 
@@ -220,12 +220,12 @@ void MacHandler::connectAdapter()
 
     // Подключение сигнала к слоту
     connect(m_notifier, &QSocketNotifier::activated,
-            this, &MacHandler::checkReceived);
+            this, &EthHandler::checkReceived);
 #endif
 }
 
 // Отключиться от адаптера Fast Ethernet:
-void MacHandler::disconnectAdapter()
+void EthHandler::disconnectAdapter()
 {
 #ifdef _WIN32
     if (pcapTx != nullptr) pcap_close(pcapTx);
@@ -238,13 +238,13 @@ void MacHandler::disconnectAdapter()
     Logger::instance().writeText("Ethernet адаптер отключен");
 }
 
-void MacHandler::start()
+void EthHandler::start()
 {
     connectAdapter();
 }
 
 // Проверка сокета на наличие принятых MAC пакетов:
-void MacHandler::checkReceived()
+void EthHandler::checkReceived()
 {
 #ifdef _WIN32
     struct pcap_pkthdr *header;

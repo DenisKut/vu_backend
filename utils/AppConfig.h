@@ -91,7 +91,7 @@ public:
     int TCP_HOST_PORT() const { return _tcpHostPort; }              ///< Порт TCP сервера
     int UDP_PORT() const { return _udpPort; }                       ///< Порт UDP
     std::string ETH_INTERFACE_NAME() const { return _ethInterfaceName; } ///< Сетевой интерфейс
-    int MAC_SOCKET_BUF_SIZE() const { return _macSocketBuffSize; }  ///< Размер буфера сокета
+    int ETH_SOCKET_BUF_SIZE() const { return _ethSocketBuffSize; }  ///< Размер буфера сокета
     /// @}
 
     /// @name Версии протоколов
@@ -173,6 +173,13 @@ public:
 
     /// @}
 
+    /// @name Параметры Ethernet-пакетов
+    /// @{
+    uint64_t ETH_PROTO_MAC_DST() const { return _ethProtoMacDst; } ///< MAC-адрес получателя Ethernet-пакетов
+    uint64_t ETH_PROTO_MAC_SRC() const { return _ethProtoMacSrc; } ///< MAC-адрес отправителя Ethernet-пакетов
+    uint16_t ETH_PROTO_ETHER_TYPE() const { return _ethProtoEtherType; } ///< Тип протокола Ethernet-пакетов
+    /// @}
+
     /**
      * @brief Инициализация параметров из переменных окружения
      * @param env Хэш-таблица с параметрами из .env файла
@@ -182,7 +189,7 @@ public:
         this->_tcpHostPort = env.value("TCP_HOST_PORT", "12345").toInt();
         this->_udpPort = env.value("UDP_PORT", "54321").toInt();
         this->_ethInterfaceName = env.value("ETH_INTERFACE_NAME", "eth0").toStdString();
-        this->_macSocketBuffSize = env.value("MAC_SOCKET_BUF_SIZE", "2048").toInt();
+        this->_ethSocketBuffSize = env.value("ETH_SOCKET_BUF_SIZE", "2048").toInt();
 
         this->_pbuProtoMajorVersion = to_uint8(env.value("PBU_PROTO_MAJOR_VERSION", "2").toUShort());
         this->_pbuProtoMinorVersion = to_uint8(env.value("PBU_PROTO_MINOR_VERSION", "0").toUShort());
@@ -201,6 +208,10 @@ public:
         this->_pbuProto0x05_Y_long_coord = env.value("PBU_PROTO_0X05_Y_LONG_COORD", "0").toFloat();
         this->_pbuProto0x05_Z_height_geo = env.value("PBU_PROTO_0X05_Z_HEIGHT_GEO", "0").toFloat();
         this->_pbuProto0x05_Z_height_coord = env.value("PBU_PROTO_0X05_Z_HEIGHT_COORD", "0").toFloat();
+
+        this->_ethProtoMacDst = to_uint64(env.value("ETH_PROTO_MAC_DST", "0xFFFFFFFFFFFF").toUInt());
+        this->_ethProtoMacSrc = to_uint64(env.value("ETH_PROTO_MAC_SRC", "0x010203040506").toUInt());
+        this->_ethProtoEtherType = to_uint16(env.value("ETH_PROTO_ETHER_TYPE", "0x2020").toUInt());
     }
 
     /**
@@ -239,7 +250,7 @@ private:
     int _tcpHostPort;             ///< Порт TCP сервера
     int _udpPort;                 ///< Порт UDP
     std::string _ethInterfaceName;///< Имя сетевого интерфейса
-    int _macSocketBuffSize;       ///< Размер буфера MAC сокета
+    int _ethSocketBuffSize;       ///< Размер буфера MAC сокета
     /// @}
 
     /// @name Версии протоколов
@@ -294,5 +305,12 @@ private:
 
     float _pbuProto0x05_Z_height_geo; ///< Координата Z/Высота (Геопозиция)
     float _pbuProto0x05_Z_height_coord; ///< Координата Z/Высота (Координаты в системе комплекса)
+
+    /// @name Параметры Ethernet-пакетов
+    /// @{
+    uint64_t _ethProtoMacDst: 48;     ///< MAC-адрес получателя Ethernet-пакетов
+    uint64_t _ethProtoMacSrc: 48;     ///< MAC-адрес отправителя Ethernet-пакетов
+    uint16_t _ethProtoEtherType;      ///< Тип протокола Ethernet-пакетов
+    /// @}
 };
     // uint8_t _pbuProto0x05;

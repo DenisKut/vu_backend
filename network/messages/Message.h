@@ -7,4 +7,5 @@ struct Message {
     quint64 timestamp;
     QByteArray payload;
 };
+
 #endif // MESSAGE_H

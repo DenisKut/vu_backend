@@ -3,16 +3,16 @@
 NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
     : QObject(parent),
       m_timeProvider(timeProvider),
-      m_macTimer(this),
+      m_ethTimer(this),
       m_tcpHandler(timeProvider),
       m_udpHandler(timeProvider),
-      m_macHandler(timeProvider)
+      m_ethHandler(timeProvider)
 {
     connect(&m_tcpHandler, &TcpHandler::messageReceived, this, &NetworkManager::onTcpReceived);
     connect(&m_udpHandler, &UdpHandler::datagramReceived, this, &NetworkManager::onUdpReceived);
-    connect(&m_macHandler, &MacHandler::messageReceived, this, &NetworkManager::onMacReceived);
-    connect(&m_macTimer, &QTimer::timeout, &m_macHandler, &MacHandler::checkReceived);
-    connect(&m_macHandler, &MacHandler::macTimerReceiveRestart, [this](){ m_macTimer.start(1); });
+    connect(&m_ethHandler, &EthHandler::messageReceived, this, &NetworkManager::onEthReceived);
+    connect(&m_ethTimer, &QTimer::timeout, &m_ethHandler, &EthHandler::checkReceived);
+    connect(&m_ethHandler, &EthHandler::ethTimerReceiveRestart, [this](){ m_ethTimer.start(1); });
 }
 
 NetworkManager::~NetworkManager() {
@@ -26,15 +26,15 @@ void NetworkManager::start() {
             AppConfig::instance().TCP_HOST_PORT()
         );
     m_udpHandler.startListening(AppConfig::instance().UDP_PORT());
-    m_macHandler.start();
-    m_macTimer.start(1);
+    m_ethHandler.start();
+    m_ethTimer.start(1);
 }
 
 void NetworkManager::stop() {
-    m_macTimer.stop();
+    m_ethTimer.stop();
     m_tcpHandler.disconnect();
     m_udpHandler.stopListening();
-    m_macHandler.disconnectAdapter();
+    m_ethHandler.disconnectAdapter();
 }
 
 void NetworkManager::onTcpReceived(const TcpHeader& msg) {
@@ -42,10 +42,10 @@ void NetworkManager::onTcpReceived(const TcpHeader& msg) {
 }
 
 void NetworkManager::onUdpReceived(const Message& msg) {
-    qDebug() << "UDP Datagram:" << msg.payload;
+    qDebug() << "UDP Message:" << msg.payload;
 }
 
-void NetworkManager::onMacReceived(const Message& msg) {
-    qDebug() << "MAC Datagram:" << msg.payload;
+void NetworkManager::onEthReceived(const Message& msg) {
+    qDebug() << "ETH Message:" << msg.payload;
 
 }

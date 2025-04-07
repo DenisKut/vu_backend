@@ -5,7 +5,7 @@
 #include <QTimer>
 #include "handlers/TcpHandler.h"
 #include "handlers/UdpHandler.h"
-#include "handlers/MacHandler.h"
+#include "handlers/EthHandler.h"
 #include "utils/time_provider/TimeProvider.h"
 #include "core/logger/Logger.h"
 #include "utils/AppConfig.h"
@@ -22,14 +22,14 @@ public:
 public slots:
     void onTcpReceived(const TcpHeader& msg);
     void onUdpReceived(const Message& msg);
-    void onMacReceived(const Message& msg);
+    void onEthReceived(const Message& msg);
 
 private:
     TimeProvider* m_timeProvider;
-    QTimer m_macTimer;
+    QTimer m_ethTimer;
     TcpHandler m_tcpHandler;
     UdpHandler m_udpHandler;
-    MacHandler m_macHandler;
+    EthHandler m_ethHandler;
 };
 
 #endif // NETWORKMANAGER_H
