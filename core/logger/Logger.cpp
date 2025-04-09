@@ -48,7 +48,7 @@ void Logger::writeBinary(const QString& message, const unsigned char* data, unsi
 
 // Запуск потока:
 void Logger::run() {
-    qDebug() << "[Log] Thread ID:" << QThread::currentThreadId();
+//    qDebug() << "[Log] Thread ID:" << QThread::currentThreadId();
 
     QFile file("vu_backend_log.log");
     if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
@@ -74,7 +74,7 @@ void Logger::run() {
         while (!temp.isEmpty()) {
             const auto& msg = temp.dequeue();
             file.write(msg);
-            qDebug() << "[Log] Written:" << msg.size() << "bytes";
+//            qDebug() << "[Log] Written:" << msg.size() << "bytes";
         }
 
         file.flush(); // Принудительный сброс буфера
@@ -136,7 +136,7 @@ QByteArray Logger::binaryToHex(const QByteArray& data) {
 // Поместить сообщение в очередь на запись в лог-файл:
 void Logger::enqueueMessage(QByteArray msg) {
     QMutexLocker lock(&m_mutex);
-    qDebug() << "[Log] Enqueuing message, size:" << msg.size();
+//    qDebug() << "[Log] Enqueuing message, size:" << msg.size();
     m_queue.enqueue(std::move(msg));
     m_condition.wakeOne();
 }

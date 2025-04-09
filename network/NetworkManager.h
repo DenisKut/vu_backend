@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QDebug>
 #include "handlers/TcpHandler.h"
 #include "handlers/UdpHandler.h"
 #include "handlers/EthHandler.h"
@@ -22,7 +23,7 @@ public:
 public slots:
     void onTcpReceived(const TcpHeader& msg);
     void onUdpReceived(const Message& msg);
-    void onEthReceived(const Message& msg);
+    void onEthReceived(const QByteArray &msg);
 
 private:
     TimeProvider* m_timeProvider;

@@ -6,7 +6,7 @@
 #include <QByteArray>
 #include <QDebug>
 #include <QDataStream>
-#include "../messages/Message.h"
+#include "../messages/EthMessage.h"
 #include "utils/time_provider/TimeProvider.h"
 #include "core/logger/Logger.h"
 #include "utils/AppConfig.h"
@@ -63,7 +63,7 @@ public slots:
     void checkReceived(); // Проверка сокета на наличие принятых Ethernet пакетов
 
 signals:
-    void messageReceived(const Message& msg);
+    void messageReceived(const QByteArray& msg);
 
 #ifdef _WIN32
 signals:

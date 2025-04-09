@@ -524,6 +524,7 @@ struct TcpMessage_0x09 : TcpMessage<TcpMessage_0x09, PBU_MessageNumbers::MARK_TR
 
     }
 };
+#pragma pack(pop)
 
 
 
@@ -602,7 +603,11 @@ private:
  *
  * // Парсинг
  * auto parsed = MessageFactory::parse(data);
- * if(auto* msg01 = dynamic_cast<TcpMessage_0x01*>(parsed.get())) {
+ *
+ * // Используем reinterpret_cast, а не dynamic_cast потому что
+ * // реализация unique_ptr не позволяет повторять создание
+ * // указателя на память ранее используемую в контексте исполнения
+ * if(auto* msg01 = reinterpret_cast<TcpMessage_0x01*>(parsed.get())) {
  *    // Работа с сообщением...
  * }
  * @endcode

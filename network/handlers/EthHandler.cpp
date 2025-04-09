@@ -264,6 +264,9 @@ void EthHandler::checkReceived()
             qDebug() << QString("%1  -  %2").arg(time).arg(length);
             //Logger::instance().writeText(QString("%1  -  %2").arg(time).arg(length));
             Logger::instance().writeBinary("Принят Ethernet пакет:", data, length);
+
+            QByteArray msg = QByteArray(reinterpret_cast<const char*>(data), length);
+            emit messageReceived(msg);
         }
     }
 #else
