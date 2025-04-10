@@ -607,7 +607,7 @@ private:
  * // Используем reinterpret_cast, а не dynamic_cast потому что
  * // реализация unique_ptr не позволяет повторять создание
  * // указателя на память ранее используемую в контексте исполнения
- * if(auto* msg01 = reinterpret_cast<TcpMessage_0x01*>(parsed.get())) {
+ * if(auto msg01 = reinterpret_cast<TcpMessage_0x01*>(parsed.get())) {
  *    // Работа с сообщением...
  * }
  * @endcode

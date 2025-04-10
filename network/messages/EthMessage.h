@@ -199,8 +199,10 @@ struct EthMessage_BS_SYNC : EthMessage<EthMessage_BS_SYNC, ETH_MessageNumbers::B
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
     // Данные:
     uint32_t    periodNumber;       ///< Порядковый номер нового периода
-    uint64_t    periodTime : 40;    ///< Время начала нового периода
-    uint64_t    reserv : 24;        ///< Резерв
+    uint8_t     periodTime[5];      ///< Время начала нового периода
+    uint8_t     reserv[3];          ///< Резерв
+//    uint64_t    periodTime : 40;    ///< Время начала нового периода
+//    uint64_t    reserv : 24;        ///< Резерв
     uint32_t    periodWidth;        ///< Значение периода синхронизации
 };
 #pragma pack(pop)
@@ -270,6 +272,9 @@ public:
         case ETH_MessageNumbers::BS_SYNC: {
             return parseMessage<EthMessage_BS_SYNC>(data);
         }
+        case ETH_MessageNumbers::PPU_POSITION: {
+            return parseMessage<EthMessage_PPU_POSITION>(data);
+        }
         // Обработка других типов...
         default: return nullptr;
         }
@@ -307,7 +312,7 @@ private:
  * // Парсинг
  * auto parsed = EthMessageFactory::parse(data);
  * // Используем reinterpret_cast, потому что parsed.get() - unique_ptr
- * if(auto* msgBS_SYNC = reinterpret_cast<EthMessage_BS_SYNC*>(parsed.get())) {
+ * if(auto msgBS_SYNC = reinterpret_cast<EthMessage_BS_SYNC*>(parsed.get())) {
  *    // Работа с сообщением...
  * }
  * @endcode

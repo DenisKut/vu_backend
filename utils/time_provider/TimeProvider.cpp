@@ -59,3 +59,36 @@ std::string TimeProvider::currentTimeString() {
     snprintf(buf + 8, sizeof(buf) - 8, ".%06lld", static_cast<long long>(microseconds.count()));
     return buf;
 }
+
+// Установить номер текущего периода БС:
+void TimeProvider::setBsPeriodNumber(const uint32_t value) {
+    bsPeriodNumber = value;
+}
+
+// Установить время текущего приода БС:
+void TimeProvider::setBsPeriodTime(const uint8_t *value) {
+    for (int i = 4; i >= 0; --i) { // Обратный порядок (Little-endian)
+        bsPeriodTime = (bsPeriodTime << 8) | value[i];
+    }
+    bsPeriodTime &= 0x000000FFFFFFFFFF;
+}
+
+// Установить значение периода синхронизации БС:
+void TimeProvider::setBsPeriodWidth(const uint32_t value) {
+    bsPeriodWidth = value;
+}
+
+// Получить номер текущего периода БС:
+uint32_t TimeProvider::getBsPeriodNumber() const {
+    return bsPeriodNumber;
+}
+
+// Получить время текущего приода БС:
+uint64_t TimeProvider::getBsPeriodTime() const {
+    return bsPeriodTime;
+}
+
+// Получить значение периода синхронизации БС:
+uint32_t TimeProvider::getBsPeriodWidth() const {
+    return bsPeriodWidth;
+}
