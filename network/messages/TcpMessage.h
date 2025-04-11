@@ -250,7 +250,8 @@ struct TcpMessage : TcpHeader {
  * @struct TcpMessage_0x01
  * @brief Сообщение запроса регистрации (0x01)
  */
-struct TcpMessage_0x01 : TcpMessage<TcpMessage_0x01, PBU_MessageNumbers::REQ_REGISTRATION> {
+struct TcpMessage_0x01 : TcpMessage<TcpMessage_0x01,
+        PBU_MessageNumbers::REQ_REGISTRATION> {
     uint32_t idManuf: 8;        ///< Идентификатор производителя (8 бит)
     uint32_t serialNum: 24;     ///< Серийный номер (24 бита)
 
@@ -282,7 +283,8 @@ static_assert(sizeof(TcpMessage_0x01) == 24, "Invalid size [TcpMessage_0x01]");
  * @struct TcpMessage_0x03
  * @brief Сообщение запроса времени (0x03)
  */
-struct TcpMessage_0x03 : TcpMessage<TcpMessage_0x03, PBU_MessageNumbers::REQ_TIME> {
+struct TcpMessage_0x03 : TcpMessage<TcpMessage_0x03,
+        PBU_MessageNumbers::REQ_TIME> {
     uint32_t timeRequest1; ///< Младшие 32 бита временной метки
     uint32_t timeRequest2; ///< Старшие 32 бита временной метки
 
@@ -302,7 +304,8 @@ static_assert(sizeof(TcpMessage_0x03) == 24, "Invalid size [TcpMessage_0x03]");
  * @struct TcpMessage_0x05
  * @brief Сообщение геопозиции модуля (0x05)
  */
-struct TcpMessage_0x05 : TcpMessage<TcpMessage_0x05, PBU_MessageNumbers::GEO_MODULE> {
+struct TcpMessage_0x05 : TcpMessage<TcpMessage_0x05,
+        PBU_MessageNumbers::GEO_MODULE> {
     uint32_t typeData: 3; ///< Тип данных (1 - гео, 2 - координаты)
     uint32_t isValid: 1;  ///< Флаг достоверности данных
     uint32_t reserve: 28; ///< Резервные биты
@@ -336,11 +339,12 @@ static_assert(sizeof(TcpMessage_0x05) == 32, "Invalid size [TcpMessage_0x05]");
  * @struct TcpMessage_0x09
  * @brief Сообщение отметки трассы от ВУ (0x09)
  */
-struct TcpMessage_0x09 : TcpMessage<TcpMessage_0x09, PBU_MessageNumbers::MARK_TRAICE> {
-    uint32_t time1;     ///< @brief Младшие 32 бита временной метки
-    uint32_t time2;     ///< @brief Старшие 32 бита временной метки
-    uint16_t cellVoi;   ///< @brief Порядковый номер цели модуля (16 бит)
-    uint16_t cellKOIR;  ///< @brief Порядковый номер цели боевого/оптического модуля
+struct TcpMessage_0x09 : TcpMessage<TcpMessage_0x09,
+        PBU_MessageNumbers::MARK_TRAICE> {
+    uint32_t time1;     ///< Младшие 32 бита временной метки
+    uint32_t time2;     ///< Старшие 32 бита временной метки
+    uint16_t cellVoi;   ///< Порядковый номер цели модуля (16 бит)
+    uint16_t cellKOIR;  ///< Порядковый номер цели боевого/оптического модуля
                         ///< (16 бит)
 
     uint8_t ktPrizn;    ///< @brief Признаки обнаружения
@@ -526,9 +530,71 @@ struct TcpMessage_0x09 : TcpMessage<TcpMessage_0x09, PBU_MessageNumbers::MARK_TR
 };
 #pragma pack(pop)
 
+static_assert(sizeof(TcpMessage_0x09) == 16 + 68, "Invalid size [TcpMessage_0x09]");
 
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x1021
+ * @brief Сообщение текущего состояния РЛМН
+ * @details Данное сообщение отправляется при смене любого передаваемого
+ * параметра (делаем только раз в секунду по каждой РЛМН), а также раз в секунду
+ * по каждому независимому радиолокационному каналу (РЛ‑канал), входящему в
+ * состав ВУ
+ */
+struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
+        PBU_MessageNumbers::CURRENT_STATE_RLS> {
+    uint32_t time1;     ///< Младшие 32 бита временной метки
+    uint32_t time2;     ///< Старшие 32 бита временной метки
+    uint8_t numDrive;   ///< Условный номер РЛ-канала в составе модуля (8 бит)
+    uint8_t isRemote;   ///< Признак внешнего управления (8 бит)
+    uint16_t reserve;   ///< Резервное поле (16 бит - не используется)
+    float azCur;        ///< Текущее положение по азимуту (32 бит)
+    float elCur;        ///< Текущее положение по углу места (32 бит)
+    float dAzVisible;   ///< Ширина зоны обзора/луча по азимуту (32 бит)
+    float dElVisible;   ///< Ширина поля обзора/луча по углу места (32 бит)
 
-// static_assert(sizeof(TcpMessage_0x09) == 16 + 20, "Invalid size [TcpMessage_0x09]");
+    TcpMessage_0x1021() {
+        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        time1 = to_uint32(time & 0xFFFFFFFF);
+        time2 = to_uint32(time >> 32);
+
+        /// @warning !!! Для заполнения требует наличия заведённых структур для
+        /// объектов и их траекторий
+    }
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x1022
+ * @brief Сообщение отметки цели
+ * @details Данное сообщение выдается по каждой обнаруженной в ВУ отметке
+ * цели
+ */
+struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
+        PBU_MessageNumbers::MARK_TARGET> {
+    uint8_t trackStatus: 2;     ///< @brief Статус трассы
+                                ///< @details Возможные значения:
+                                ///< - «0»: Передается в случае продолжения
+                                ///< сопровождения трассы;
+                                ///< - «1»: Передается в случае выдачи первой
+                                ///< отметки вновь обнаруженной трассы;
+                                ///< - «2»: Передается в случае сброса
+                                ///< сопровождения трассы (в этом случае
+                                ///< остальные поля сообщения, кроме Номер
+                                ///< трассы, игнорируются).
+
+    TcpMessage_0x1022() {
+//        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+//        time1 = to_uint32(time & 0xFFFFFFFF);
+//        time2 = to_uint32(time >> 32);
+
+        /// @warning !!! Для заполнения требует наличия заведённых структур для
+        /// объектов и их траекторий
+    }
+};
+#pragma pack(pop)
+
 
 /**
  * @class MessageFactory
