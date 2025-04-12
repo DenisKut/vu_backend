@@ -60,52 +60,90 @@ enum class PBU_MessageNumbers: uint16_t {
     // -----------------------------------------
     // Сообщения от ВУ на ПБУ [ОБРАБОТКА ИНФОРМАЦИИ]
     // -----------------------------------------
-    REQ_REGISTRATION    = 0x01,  ///< Запрос регистрации модуля в системе
-    REQ_TIME            = 0x03,  ///< Запрос времени (пинг)
-    GEO_MODULE          = 0x05,  ///< Геопозиция модуля
-    MARK_TRAICE         = 0x09,  ///< Отметка трассы (Отмечает наше ВУ)
-    CURRENT_STATE_RLS   = 0x1021,///< Текущие состояния РЛС-Н (1-й и 2-й отдельно)
-    MARK_TARGET         = 0x1022,///< Отметка цели
-    MODULE_CAPABILITIES = 0x1023,///< Возможности модуля
-    FORBIDDEN_SECTORS   = 0x1024,///< Слепые зоны
+    REQ_REGISTRATION    = 0x01,     ///< Запрос регистрации модуля в системе
+                                    ///
+    REQ_TIME            = 0x03,     ///< Запрос времени (пинг)
+                                    ///
+    GEO_MODULE          = 0x05,     ///< Геопозиция модуля
+                                    ///
+    MARK_TRAICE         = 0x09,     ///< Отметка трассы (Отмечает наше ВУ)
+                                    ///
+    CURRENT_STATE_RLS   = 0x1021,   ///< Текущие состояния РЛС-Н (1-й и 2-й
+                                    ///< отдельно)
+                                    ///
+    MARK_TARGET         = 0x1022,   ///< Отметка цели
+                                    ///
+    MODULE_CAPABILITIES = 0x1023,   ///< Возможности модуля
+                                    ///
+    FORBIDDEN_SECTORS   = 0x1024,   ///< Слепые зоны
 
     // -----------------------------------------
     // Сообщения от ПБУ на ВУ [ОБРАБОТКА ИНФОРМАЦИИ]
     // -----------------------------------------
     RES_REGISTRATION        = 0x02, ///< Подтверждение регистрации модуля
+                                    ///
     TIMESTAMP               = 0x04, ///< Отметка времени
-    GEO_COMPLEX             = 0x06, ///< Геопозиция комплекса (отправляется один раз)
+                                    ///
+    GEO_COMPLEX             = 0x06, ///< Геопозиция комплекса (отправляется один
+                                    ///< раз)
+                                    ///
     MARK_TRAICE_PBU         = 0x07, ///< Отметка трассы (от ПБУ)
+                                    ///
     ORIENTATION_SC_COMPLEX  = 0x08, ///< Ориентация СК комплекса
+                                    ///
     TARGET_DESIGNATION      = 0x641,///< Команда «Целеуказание»
 
     // -----------------------------------------
     // Сообщения от ВУ на ПБУ [КОНТРОЛЯ И УПРАВЛЕНИЯ]
     // -----------------------------------------
     MODULE_SCHEME                       = 0x20, ///< Схема модуля
+                                                ///
     STATUS_SCHEME_ELEMENTS              = 0x21, ///< Статус элементов схемы
-    VALUES_KP_STATUS_SCHEME_ELEMENTS    = 0x22, ///< Значения и статус КП элементов
-    RECEIPT_CONTROL_COMMAND             = 0x23, ///< Квитанция на получение команды
+                                                ///
+    VALUES_KP_STATUS_SCHEME_ELEMENTS    = 0x22, ///< Значения и статус КП
+                                                ///< элементов
+                                                ///
+    RECEIPT_CONTROL_COMMAND             = 0x23, ///< Квитанция на получение
+                                                ///< команды
+                                                ///
     STATUS_MODULE                       = 0x24, ///< Статус Модуля
-    TEXT_FOR_MESSAGE_LOG                = 0x25, ///< Текстовые сообщения в журнал
-    TEXT_FOR_OPERATOR                   = 0x26, ///< Текстовые сообщения оператору
+                                                ///
+    TEXT_FOR_MESSAGE_LOG                = 0x25, ///< Текстовые сообщения в
+                                                ///< журнал
+                                                ///
+    TEXT_FOR_OPERATOR                   = 0x26, ///< Текстовые сообщения
+                                                ///< оператору
+                                                ///
     RECEIPT_CONTROL_COMMAND_EXTENDED    = 0x27, ///< Расширенная квитанция
+                                                ///
     VALUES_CUSTOMIZEBLE_PARAMETERS      = 0x28, ///< Настраиваемые параметры
 
     // -----------------------------------------
     // Сообщения от ПБУ на ВУ [КОНТРОЛЯ И УПРАВЛЕНИЯ]
     // -----------------------------------------
     COMMAND_SWITCH_ON               = 0x40, ///< Команда «Включить»
+                                            ///
     COMMAND_SWITCH_OFF              = 0x41, ///< Команда «Выключить»
+                                            ///
     COMMAND_RESTART                 = 0x42, ///< Команда «Перезагрузить»
+                                            ///
     COMMAND_RESET_ALARM             = 0x43, ///< Команда «Сброс аварии»
+                                            ///
     COMMAND_SET_CORRECTIONS         = 0x44, ///< Команда «Установить поправки»
+                                            ///
     TEXT_FOR_OPERATOR_PBU           = 0x45, ///< Сообщения оператору от ПБУ
+                                            ///
     REQ_MODULE_SCHEME               = 0x46, ///< Запрос схемы модуля
+                                            ///
     COMMAND_SET_LANGUAGE            = 0x47, ///< Установка языка интерфейса
-    MESSAGE_SATELLITE_NAV           = 0x48, ///< Сообщение о подавлении навигации
+                                            ///
+    MESSAGE_SATELLITE_NAV           = 0x48, ///< Сообщение о подавлении
+                                            ///< навигации
+                                            ///
     COMMAND_SET_TIME                = 0x49, ///< Установка времени
+                                            ///
     COMMAND_SET_COORDINATES_MODULE  = 0x4A, ///< Установка координат модуля
+                                            ///
     COMMAND_SET_SETTINGS_VALUES     = 0x4B, ///< Установка параметров
 };
 
@@ -144,7 +182,8 @@ struct TcpHeader {
      * @return QByteArray с бинарным представлением заголовка
      */
     QByteArray serialize() const {
-        return QByteArray(reinterpret_cast<const char*>(this), sizeof(TcpHeader));
+        return QByteArray(reinterpret_cast<const char*>(this),
+                          sizeof(TcpHeader));
     }
 
     /**
@@ -210,7 +249,8 @@ static_assert(sizeof(TcpHeader) == 16, "Invalid TcpHeader size");
  */
 template <typename TDerived, PBU_MessageNumbers MsgType>
 struct TcpMessage : TcpHeader {
-    static constexpr PBU_MessageNumbers MESSAGE_TYPE = MsgType; ///< Тип сообщения
+    /// Тип сообщения
+    static constexpr PBU_MessageNumbers MESSAGE_TYPE = MsgType;
 
     /// @brief Конструктор инициализирует заголовок
     TcpMessage() : TcpHeader(MsgType, sizeof(TDerived) - sizeof(TcpHeader)) {}
@@ -336,20 +376,88 @@ static_assert(sizeof(TcpMessage_0x05) == 32, "Invalid size [TcpMessage_0x05]");
 
 #pragma pack(push, 1)
 /**
- * @struct TcpMessage_0x09
- * @brief Сообщение отметки трассы от ВУ (0x09)
+ * @struct TcpMessage_0x1021
+ * @brief Сообщение текущего состояния РЛМН
+ * @details Данное сообщение отправляется при смене любого передаваемого
+ * параметра (делаем только раз в секунду по каждой РЛМН), а также раз в секунду
+ * по каждому независимому радиолокационному каналу (РЛ‑канал), входящему в
+ * состав ВУ
  */
-struct TcpMessage_0x09 : TcpMessage<TcpMessage_0x09,
-        PBU_MessageNumbers::MARK_TRAICE> {
+struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
+                                      PBU_MessageNumbers::CURRENT_STATE_RLS> {
     uint32_t time1;     ///< Младшие 32 бита временной метки
     uint32_t time2;     ///< Старшие 32 бита временной метки
-    uint16_t cellVoi;   ///< Порядковый номер цели модуля (16 бит)
-    uint16_t cellKOIR;  ///< Порядковый номер цели боевого/оптического модуля
-                        ///< (16 бит)
+    uint8_t numDrive;   ///< Условный номер РЛ-канала в составе модуля (8 бит)
+    uint8_t isRemote;   ///< Признак внешнего управления (8 бит)
+    uint16_t reserve;   ///< Резервное поле (16 бит - не используется)
+    float azCur;        ///< Текущее положение по азимуту (32 бит)
+    float elCur;        ///< Текущее положение по углу места (32 бит)
+    float dAzVisible;   ///< Ширина зоны обзора/луча по азимуту (32 бит)
+    float dElVisible;   ///< Ширина поля обзора/луча по углу места (32 бит)
+
+    TcpMessage_0x1021() {
+        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        time1 = to_uint32(time & 0xFFFFFFFF);
+        time2 = to_uint32(time >> 32);
+
+        /// @warning !!! Для заполнения требует наличия заведённых структур для
+        /// объектов и их траекторий
+    }
+};
+#pragma pack(pop)
+
+
+
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x1022
+ * @brief Сообщение отметки цели
+ * @details Данное сообщение выдается по каждой обнаруженной в ВУ отметке
+ * цели
+ */
+struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
+                                      PBU_MessageNumbers::MARK_TARGET> {
+    uint8_t trackStatus: 2;     ///< @brief Статус трассы
+        ///< @details Возможные значения:
+        ///< - «0»: Передается в случае продолжения
+        ///< сопровождения трассы;
+        ///< - «1»: Передается в случае выдачи первой
+        ///< отметки вновь обнаруженной трассы;
+        ///< - «2»: Передается в случае сброса
+        ///< сопровождения трассы (в этом случае
+        ///< остальные поля сообщения, кроме Номер
+        ///< трассы, игнорируются).
+
+    TcpMessage_0x1022() {
+        //        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        //        time1 = to_uint32(time & 0xFFFFFFFF);
+        //        time2 = to_uint32(time >> 32);
+
+        /// @warning !!! Для заполнения требует наличия заведённых структур для
+        /// объектов и их траекторий
+    }
+};
+#pragma pack(pop)
+
+// -----------------------------------------
+// Сообщения от ПБУ на ВУ [ОБРАБОТКА ИНФОРМАЦИИ]
+// -----------------------------------------
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x07
+ * @brief Сообщение отметки трассы от ПБУ (0x07)
+ */
+struct TcpMessage_0x07 : TcpMessage<TcpMessage_0x07,
+        PBU_MessageNumbers::MARK_TRAICE_PBU> {
+    uint32_t time1;     ///< @brief Младшие 32 бита временной метки
+    uint32_t time2;     ///< @brief Старшие 32 бита временной метки
+    uint16_t cellVoi;   ///< @brief Порядковый номер цели модуля (16 бит)
+    uint16_t cellKOIR;  ///< @brief Порядковый номер цели боевого/оптического
+                        ///< модуля (16 бит)
 
     uint8_t ktPrizn;    ///< @brief Признаки обнаружения
                         ///< @details В данное поле передается набор признаков
-                        ///< обнаружение цели поразным каналам в текущем обзоре
+                        ///< обнаружение цели по разным каналам в текущем обзоре
                         ///< в соответствии с битовой маской:
                         ///< - 1 бит: Обнаружение ПРЛ
                         ///< - 2 бит: Обнаружение радиотехнической разведкой
@@ -421,6 +529,9 @@ struct TcpMessage_0x09 : TcpMessage<TcpMessage_0x09,
                             ///< - «2»: уменьшение высоты.
                             ///< - «3»: резерв.
 
+    uint8_t isH: 1;         ///< @brief Достоверность высоты
+                            ///< @details Булево значение
+
     uint8_t isVr: 1;        ///< @brief Признак достоверности радиальной
                             ///< скорости цели
                             ///< @details Описание значений:
@@ -429,64 +540,15 @@ struct TcpMessage_0x09 : TcpMessage<TcpMessage_0x09,
                             ///< - «1»: значение радиальной скорости цели
                             ///< достоверно.
 
-    uint8_t reserve1: 1;     ///< Резвервное поле
+    float ceilX;            ///< @brief Координата цели по оси X
+    float ceilY;            ///< @brief Координата цели по оси Y
+    float ceilZ;            ///< @brief Координата цели по оси Z
+    float latitude;         ///< @brief Широта
+    float longitude;        ///< @brief Долгота
+    float height;           ///< @brief Высота
 
-    float ceilAz;           ///< @brief Азимут цели (град.) относительно
-                            ///< гео-севера координат ВУ
-
-    float ceilRng;          ///< @brief Наклонная дальность до цели (м.)
-
-    float ceilHeight;       ///< @brief Высота цели по каналу ПРЛ
-                            ///< @details Передается в метрах относительно точки
-                            ///< ВУ.
-                            ///< @warning Значения меньше «-10000» служат
-                            ///< признаком отсутствия измерений высоты по каналу
-                            ///< ПРЛ.
-
-    float heightVRL;        ///< @brief Высота цели по каналу ВРЛ
-                            ///< @details Передаются значения барометрической
-                            ///< высоты цели в метрах при наличии
-                            ///< соответствующих данных
-                            ///< @warning Значения меньше «-10000» служат
-                            ///< признаком отсутствия данных.
-
-    float heightNRZ;        ///< @brief Высота цели по каналу ВРЛ
-                            ///< @details Передаются значения барометрической
-                            ///< высоты цели в метрах при наличии
-                            ///< соответствующих данных
-                            ///< @warning Значения меньше «-10000» служат
-                            ///< признаком отсутствия данных.
-
-    uint32_t flyNumUVD: 30; ///< Номер борта в формате УВД
-
-    uint32_t isNewUVD: 1;   ///< @brief Обновление номера борта в формате УВД
-                            ///< @details Значения:
-                            ///< - «0»: Код получен от ответчика в текущем
-                            ///< обзоре
-                            ///< - «1»: код предыдущего обзора
-
-    uint32_t isUVD: 1;      ///< @brief Наличие номера борта в формате УВД
-                            ///< @details Значения:
-                            ///< - «0»: нет ответа в формате УВД
-                            ///< - «1»: наличие ответа в формате УВД
-
-    uint32_t flyNumRBS: 12; ///< Код режима 3/А в восьмеричном виде
-
-    uint32_t isNew: 1;      ///< @brief Обновление кода режима 3/А
-                            ///< @details Значения:
-                            ///< - «0»: Код получен от ответчика в текущем
-                            ///< обзоре
-                            ///< - «1»: код предыдущего обзора
-
-    uint32_t Is3A: 1;       ///< @brief Наличие кода режима 3/А
-                            ///< @details Значения:
-                            ///< - «0»: нет ответа в режиме 3/А
-                            ///< - «1»: наличие ответа в режиме 3/А
-
-    uint32_t reserve2: 18;  ///< Резерв
-
-    float sizeAz;           ///< Размер строба по азимуту (в градусах)
-    float sizeD;            ///< Размер строба по дальности (в метрах)
+    float sizeAz;           ///< @brief Размер строба по азимуту (в градусах)
+    float sizeD;            ///< @brief Размер строба по дальности (в метрах)
 
     /**
      * @brief Вектор скорости цели
@@ -507,94 +569,45 @@ struct TcpMessage_0x09 : TcpMessage<TcpMessage_0x09,
      *
      * Единицы измерения: м/с
      */
-    float velX;             ///< Скорость цели (X - широта)
-    float velY;             ///< Скорость цели (Y - долгота)
-    float velZ;             ///< Скорость цели (Z - высота)
+    float velX;             ///< @brief Скорость цели (X - широта)
+    float velY;             ///< @brief Скорость цели (Y - долгота)
+    float velZ;             ///< @brief Скорость цели (Z - высота)
 
     float velR;             ///< @brief Радиальная скорость цели
                             ///< @details Передается оценка средней радиальной
                             ///< скорости цели относительно РЛС модуля в м/с
 
+    uint32_t ceilPel;       ///< @brief Номер трассы радиотехнической разведки
+                            ///< @details Передается порядковый номер трассы в
+                            ///< нумерации ПО радиотехнической разведки в том
+                            ///< случае, если в признаках сопровождения стоит
+                            ///< флаг сопровождения по данным радиотехнической
+                            ///< разведки.
+                            ///< @warning Если флаг сопровождения по данным
+                            ///< радиотехнической разведки не стоит, данное поле
+                            ///< должно игнорироваться.
 
-    /// @brief Инициализирует данные из состояний всего СПО
-    TcpMessage_0x09() {
-        uint64_t time = to_uint64(TimeProvider::instance().getMs());
-        time1 = to_uint32(time & 0xFFFFFFFF);
-        time2 = to_uint32(time >> 32);
+    uint32_t ceilAddr: 24;  ///< @brief Адрес цели от АЗН
+                            ///< @details Уникальный номер воздушного судна в
+                            ///< том случае, если в признаках сопровождения
+                            ///< стоит флаг сопровождения по данным АЗН.
+                            ///< @warning Если флаг сопровождения по данным АЗН
+                            ///< не стоит, данное поле должно игнорироваться.
 
-        /// @warning !!! Для заполнения требует наличия заведённых структур для
-        /// объектов и их траекторий
+    uint32_t ceilCat: 8;    ///< @brief Категория цели от АЗН
+                            ///< @details Тип воздушного судна в том случае,
+                            ///< если в признаках сопровождения стоит флаг
+                            ///< сопровождения по данным АЗН.
+                            ///< @warning Если флаг сопровождения по данным АЗН
+                            ///< не стоит, данное поле должно игнорироваться.
 
+    uint32_t reserve;       ///< @brief Резервное поле
 
-    }
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TcpMessage_0x09) == 16 + 68, "Invalid size [TcpMessage_0x09]");
-
-#pragma pack(push, 1)
-/**
- * @struct TcpMessage_0x1021
- * @brief Сообщение текущего состояния РЛМН
- * @details Данное сообщение отправляется при смене любого передаваемого
- * параметра (делаем только раз в секунду по каждой РЛМН), а также раз в секунду
- * по каждому независимому радиолокационному каналу (РЛ‑канал), входящему в
- * состав ВУ
- */
-struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
-        PBU_MessageNumbers::CURRENT_STATE_RLS> {
-    uint32_t time1;     ///< Младшие 32 бита временной метки
-    uint32_t time2;     ///< Старшие 32 бита временной метки
-    uint8_t numDrive;   ///< Условный номер РЛ-канала в составе модуля (8 бит)
-    uint8_t isRemote;   ///< Признак внешнего управления (8 бит)
-    uint16_t reserve;   ///< Резервное поле (16 бит - не используется)
-    float azCur;        ///< Текущее положение по азимуту (32 бит)
-    float elCur;        ///< Текущее положение по углу места (32 бит)
-    float dAzVisible;   ///< Ширина зоны обзора/луча по азимуту (32 бит)
-    float dElVisible;   ///< Ширина поля обзора/луча по углу места (32 бит)
-
-    TcpMessage_0x1021() {
-        uint64_t time = to_uint64(TimeProvider::instance().getMs());
-        time1 = to_uint32(time & 0xFFFFFFFF);
-        time2 = to_uint32(time >> 32);
-
-        /// @warning !!! Для заполнения требует наличия заведённых структур для
-        /// объектов и их траекторий
-    }
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-/**
- * @struct TcpMessage_0x1022
- * @brief Сообщение отметки цели
- * @details Данное сообщение выдается по каждой обнаруженной в ВУ отметке
- * цели
- */
-struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
-        PBU_MessageNumbers::MARK_TARGET> {
-    uint8_t trackStatus: 2;     ///< @brief Статус трассы
-                                ///< @details Возможные значения:
-                                ///< - «0»: Передается в случае продолжения
-                                ///< сопровождения трассы;
-                                ///< - «1»: Передается в случае выдачи первой
-                                ///< отметки вновь обнаруженной трассы;
-                                ///< - «2»: Передается в случае сброса
-                                ///< сопровождения трассы (в этом случае
-                                ///< остальные поля сообщения, кроме Номер
-                                ///< трассы, игнорируются).
-
-    TcpMessage_0x1022() {
-//        uint64_t time = to_uint64(TimeProvider::instance().getMs());
-//        time1 = to_uint32(time & 0xFFFFFFFF);
-//        time2 = to_uint32(time >> 32);
-
-        /// @warning !!! Для заполнения требует наличия заведённых структур для
-        /// объектов и их траекторий
-    }
-};
-#pragma pack(pop)
-
+static_assert(sizeof(TcpMessage_0x07) == 16 + 19*4,
+              "Invalid size [TcpMessage_0x07]");
 
 /**
  * @class MessageFactory
@@ -603,13 +616,26 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
 class MessageFactory {
 public:
     /**
-     * @brief Создает сообщение указанного типа
+     * @brief Создание сообщения указанного типа (по-умолчанию)
      * @tparam T Тип сообщения (должен наследовать от TcpHeader)
      * @return Экземпляр сообщения
      */
     template<typename T>
-    static typename std::enable_if<std::is_base_of<TcpHeader, T>::value, T>::type create() {
+    static typename std::enable_if<std::is_base_of<TcpHeader, T>::value, T>::
+        type create() {
         return T();
+    }
+    /**
+     * @brief Создание сообщения с произвольными параметрами
+     * @tparam T Тип сообщения (должен наследовать от TcpHeader)
+     * @tparam... Args Произвольные аргументы для конструкторов сообщений,
+     * которым необходимы параметры
+     * @return Экземпляр сообщения
+     */
+    template<typename T, typename... Args>
+    static typename std::enable_if<std::is_base_of<TcpHeader, T>::value, T>::
+        type create(Args&&... args) {
+        return T(std::forward<Args>(args)...);
     }
 
     /**
@@ -637,6 +663,7 @@ public:
         default: return nullptr;
         }
     }
+
 
 private:
     /**
