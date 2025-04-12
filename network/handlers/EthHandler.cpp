@@ -9,7 +9,16 @@ EthHandler::EthHandler(TimeProvider* timeProvider, QObject* parent)
     pcapAllDevs = nullptr;
     pcapTx = pcapRx = nullptr;
 #else
-    strcpy(ifName, AppConfig::instance().ETH_INTERFACE_NAME().c_str());
+    // Определение имени проводного интерфейса Ethernet:
+//    strcpy(ifName, "enp44s0");
+    QString interfaceName = findWiredInterface();
+    if (!interfaceName.isEmpty()) {
+        qDebug() << "Проводной интерфейс:" << interfaceName;
+        strcpy(ifName, interfaceName.toStdString().c_str());
+    } else {
+        qDebug() << "Интерфейс не найден";
+        strcpy(ifName, AppConfig::instance().ETH_INTERFACE_NAME().c_str());
+    }
 #endif
 }
 
@@ -18,25 +27,37 @@ EthHandler::~EthHandler() {
 #ifdef _WIN32
     if (pcapAllDevs) pcap_freealldevs(pcapAllDevs);
 #else
-    close(macSocketID);
-//    this->consts->
+    close(ethSocketID);
 #endif
 }
 
-
 #ifndef _WIN32
-std::string EthHandler::getTimestampStr()
+bool EthHandler::isEthernetInterface(const QNetworkInterface &interface)
 {
-    auto now = std::chrono::system_clock::now();
-    auto ms = std::chrono::duration_cast<std::chrono::microseconds>(
-                now.time_since_epoch()) % 1000000;
-    auto timer = std::chrono::system_clock::to_time_t(now);
-    struct tm tm = *std::localtime(&timer);
+    // Проверяем тип интерфейса через sysfs
+    QFile typeFile(QString("/sys/class/net/%1/type").arg(interface.name()));
+    if (!typeFile.open(QIODevice::ReadOnly)) return false;
 
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%H:%M:%S") << "."
-        << std::setfill('0') << std::setw(6) << ms.count();
-    return oss.str();
+    QByteArray data = typeFile.readAll().trimmed();
+    bool ok;
+    int type = data.toInt(&ok);
+
+    // 1 соответствует Ethernet (ARPHRD_ETHER)
+    return ok && type == 1;
+}
+
+// Поиск проводного интерфейса Ethernet:
+QString EthHandler::findWiredInterface() {
+    foreach (const QNetworkInterface &interface, QNetworkInterface::allInterfaces()) {
+        // Пропускаем loopback и выключенные интерфейсы
+        if (interface.flags() & QNetworkInterface::IsLoopBack) continue;
+        if (!(interface.flags() & QNetworkInterface::IsUp)) continue;
+
+        if (isEthernetInterface(interface)) {
+            return interface.name();
+        }
+    }
+    return QString();
 }
 #endif
 
@@ -48,27 +69,7 @@ quint64 EthHandler::getTimestamp()
     return time_ns;
 }
 
-#ifndef _WIN32
-void EthHandler::print_mac(const uint8_t *mac)
-{
-    printf("%02x:%02x:%02x:%02x:%02x:%02x",
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-}
-
-void EthHandler::print_hex_dump(const uint8_t *buf, size_t len)
-{
-    for (size_t i = 0; i < len; i++) {
-        if (i % 16 == 0) {
-            printf("\n\t0x%04x:  ", (unsigned int)i);
-        }
-        printf("%02x", buf[i]); // Убрали пробел между байтами
-        if (i % 2 == 1) printf(" "); // Пробел только после каждой пары байтов
-    }
-    printf("\n");
-}
-#endif
-
-// Подключиться к адаптеру Fast Ethernet под номером inum в списке адаптеров:
+// Подключиться к адаптеру Fast Ethernet:
 void EthHandler::connectAdapter()
 {
 #ifdef _WIN32
@@ -191,32 +192,37 @@ void EthHandler::connectAdapter()
     qDebug() << QString("Opened Ethernet adapter: %1").arg(strAdapterNames.at(0));
     Logger::instance().writeText(QString("Подключен Ethernet адаптер: %1").arg(strAdapterNames.at(0)));
 #else
-    Q_UNUSED(inum);
-
     // ETH_P_ALL                - принимать пакеты с любым ether type
-    // ETH_SOCKET_ETHER_TYPE    - принимать пакеты только с ether type = 0x2020
-    if ((macSocketID = socket(PF_PACKET, SOCK_RAW, htons(ETH_SOCKET_ETHER_TYPE))) == -1) {
+    // ETH_PROTO_ETHER_TYPE()   - принимать пакеты только с ether type = 0x2020
+    uint64_t macDst = AppConfig::instance().ETH_PROTO_MAC_DST();
+    uint64_t macSrc = AppConfig::instance().ETH_PROTO_MAC_SRC();
+    uint16_t etherType = AppConfig::instance().ETH_PROTO_ETHER_TYPE();
+    qDebug() << "macDst =" << macDst;
+    qDebug() << "macSrc =" << macSrc;
+    qDebug() << "etherType =" << etherType;
+    //if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(etherType))) == -1) {
+    if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(0x2020))) == -1) {
         perror("socket");
         Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - socket");
     }
 
     struct ifreq ifopts;
     strncpy(ifopts.ifr_name, ifName, IFNAMSIZ-1);
-    ioctl(macSocketID, SIOCGIFFLAGS, &ifopts);
+    ioctl(ethSocketID, SIOCGIFFLAGS, &ifopts);
     ifopts.ifr_flags |= IFF_PROMISC;
-    ioctl(macSocketID, SIOCSIFFLAGS, &ifopts);
+    ioctl(ethSocketID, SIOCSIFFLAGS, &ifopts);
 
-    if (setsockopt(macSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
+    if (setsockopt(ethSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
         perror("SO_BINDTODEVICE");
         Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - SO_BINDTODEVICE");
-        close(macSocketID);
+        close(ethSocketID);
     }
 
     qDebug() << "Starting capture on interface" << ifName << "...\n";
     Logger::instance().writeText(QString("Подключен Ethernet адаптер: %1").arg(ifName));
 
     // Создание SocketNotifier
-    m_notifier = new QSocketNotifier(macSocketID, QSocketNotifier::Read, this);
+    m_notifier = new QSocketNotifier(ethSocketID, QSocketNotifier::Read, this);
 
     // Подключение сигнала к слоту
     connect(m_notifier, &QSocketNotifier::activated,
@@ -233,7 +239,7 @@ void EthHandler::disconnectAdapter()
     pcapTx = nullptr;
     pcapRx = nullptr;
 #else
-    close(macSocketID);
+    close(ethSocketID);
 #endif
     Logger::instance().writeText("Ethernet адаптер отключен");
 }
@@ -243,7 +249,7 @@ void EthHandler::start()
     connectAdapter();
 }
 
-// Проверка сокета на наличие принятых MAC пакетов:
+// Проверка сокета на наличие принятых Ethernet-пакетов:
 void EthHandler::checkReceived()
 {
 #ifdef _WIN32
@@ -262,9 +268,9 @@ void EthHandler::checkReceived()
 
             // Вывод метки времени и длины пакета:
             qDebug() << QString("%1  -  %2").arg(time).arg(length);
-            //Logger::instance().writeText(QString("%1  -  %2").arg(time).arg(length));
             Logger::instance().writeBinary("Принят Ethernet пакет:", data, length);
 
+            // Отправка данных в NetworkManager для разбора:
             QByteArray msg = QByteArray(reinterpret_cast<const char*>(data), length);
             emit messageReceived(msg);
         }
@@ -272,40 +278,20 @@ void EthHandler::checkReceived()
 #else
     // Чтение пакета из интерфейса:
     //---------------------------------------------------------------------
-    const buf_size = AppConfig::instance().MAC_SOCKET_BUF_SIZE();
+    const size_t buf_size = AppConfig::instance().ETH_SOCKET_BUF_SIZE();
     uint8_t *buf = static_cast<uint8_t*>(malloc(buf_size * sizeof(uint8_t)));
-    ssize_t numbytes = recvfrom(macSocketID, buf, buf_size, 0, NULL, NULL);
-    if (numbytes > 0)
+
+    // Проверка приёмника на наличие пакета:
+    ssize_t length = 0;
+    while((length = recvfrom(ethSocketID, buf, buf_size, 0, NULL, NULL)) > 0)
     {
-        Message *msg = new Message();
-        msg->timestamp = getTimestamp();
-        msg->payload.append(QByteArray(reinterpret_cast<const char*>(buf), numbytes));
+        // Вывод метки времени и длины пакета:
+        qDebug() << QString("%1  -  %2").arg(TimeProvider::instance().getMks()).arg(length);
+        Logger::instance().writeBinary("Принят Ethernet пакет:", buf, length);
 
-        struct ethhdr* eth = (struct ethhdr*)buf;
-
-        // Вывод данных пакета:
-        //---------------------------------------------------------------------
-        printf("%s ", getTimestampStr().c_str());
-
-        print_mac(eth->h_source);
-        printf(" > ");
-        print_mac(eth->h_dest);
-        printf(", ");
-
-        uint16_t ethertype = ntohs(eth->h_proto);
-        switch (ethertype) {
-            case ETH_P_IP:  printf("ethertype IPv4 (0x%04x), ", ethertype); break;
-            case ETH_P_ARP: printf("ethertype ARP (0x%04x), ", ethertype); break;
-            default:        printf("ethertype Unknown (0x%04x), ", ethertype); break;
-        }
-
-        printf("length %zd:", numbytes);
-
-        print_hex_dump(buf, numbytes);
-        printf("\n");
-        //---------------------------------------------------------------------
-
-        emit messageReceived(*msg);
+        // Отправка данных в NetworkManager для разбора:
+        QByteArray msg = QByteArray(reinterpret_cast<const char*>(buf), length);
+        emit messageReceived(msg);
     }
     free(buf);
     //---------------------------------------------------------------------

@@ -11,8 +11,10 @@ NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
     connect(&m_tcpHandler, &TcpHandler::messageReceived, this, &NetworkManager::onTcpReceived);
     connect(&m_udpHandler, &UdpHandler::datagramReceived, this, &NetworkManager::onUdpReceived);
     connect(&m_ethHandler, &EthHandler::messageReceived, this, &NetworkManager::onEthReceived);
+#ifdef _WIN32
     connect(&m_ethTimer, &QTimer::timeout, &m_ethHandler, &EthHandler::checkReceived);
     connect(&m_ethHandler, &EthHandler::ethTimerReceiveRestart, [this](){ m_ethTimer.start(1); });
+#endif
 }
 
 NetworkManager::~NetworkManager() {
@@ -50,7 +52,7 @@ void NetworkManager::onUdpReceived(const Message& msg) {
 
 void NetworkManager::onEthReceived(const QByteArray& msg) {
     // Отладочный вывод тела Ethernet пакета целиком
-    qDebug() << endl << "ETH Message:" << msg.toHex(' ').toUpper();
+    qDebug() << Qt::endl << "ETH Message:" << msg.toHex(' ').toUpper();
     // Парсинг входящих сообщений
     auto parsed = EthMessageFactory::parse(msg);
     if (parsed)

@@ -211,7 +211,7 @@ public:
 
         this->_ethProtoMacDst = to_uint64(env.value("ETH_PROTO_MAC_DST", "0xFFFFFFFFFFFF").toUInt());
         this->_ethProtoMacSrc = to_uint64(env.value("ETH_PROTO_MAC_SRC", "0x010203040506").toUInt());
-        this->_ethProtoEtherType = to_uint16(env.value("ETH_PROTO_ETHER_TYPE", "0x2020").toUInt());
+        this->_ethProtoEtherType = to_uint16(env.value("ETH_PROTO_ETHER_TYPE", "0x2020").toUShort());
     }
 
     /**

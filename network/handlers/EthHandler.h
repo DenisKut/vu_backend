@@ -21,6 +21,7 @@
 // Заголовочные файлы для работы с
 // Ethernet raw data под Linux:
 #include <QSocketNotifier>
+#include <QNetworkInterface>
 #include <arpa/inet.h>
 #include <linux/if_packet.h>
 #include <linux/ip.h>
@@ -46,11 +47,10 @@ public:
     pcap_t *pcapTx;                         // Передатчик
     pcap_t *pcapRx;                         // Приёмник
 #else
-    int macSocketID;
+    int ethSocketID;
     char ifName[IFNAMSIZ];
-    void print_mac(const uint8_t* mac);
-    void print_hex_dump(const uint8_t* buf, size_t len);
-    std::string getTimestampStr();
+    bool isEthernetInterface(const QNetworkInterface &interface);
+    QString findWiredInterface();
 #endif
     quint64 getTimestamp();
 
