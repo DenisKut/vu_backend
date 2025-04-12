@@ -50,7 +50,7 @@ void NetworkManager::onUdpReceived(const Message& msg) {
 
 void NetworkManager::onEthReceived(const QByteArray& msg) {
     // Отладочный вывод тела Ethernet пакета целиком
-    qDebug() << endl << "ETH Message:" << msg.toHex(' ').toUpper();
+    qDebug() << Qt::endl << "ETH Message:" << msg.toHex(' ').toUpper();
     // Парсинг входящих сообщений
     auto parsed = EthMessageFactory::parse(msg);
     if (parsed)

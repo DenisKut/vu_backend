@@ -48,13 +48,21 @@ int main(int argc, char* argv[]) {
     }
 
     // Инициализация конфига
-    AppConfig::instance().init(env.variables());
+    AppConfig::instance().init(env);
 
     // Вывод кириллицы
     qDebug().noquote() << QString::fromUtf8("▐▀▄▀▌ Загружена версия протокола:")
                        << AppConfig::instance().PBU_PROTO_MAJOR_VERSION()
                        << "."
                        << AppConfig::instance().PBU_PROTO_MINOR_VERSION();
+
+    qDebug().noquote() << QString::fromUtf8("Проверка hex-значения:") << Qt::hex
+                       << AppConfig::instance().PBU_PROTO_0X01_ID_MANUF();
+
+    qDebug().noquote() << "MAC Destination:" << Qt::hex
+                       << AppConfig::instance().ETH_PROTO_MAC_DST();
+    qDebug().noquote() << "MAC Source:" << Qt::hex
+                       << AppConfig::instance().ETH_PROTO_MAC_SRC();
 
     // Инициализация Логгера (обязательно, иначе Логгер не запустится)
     Logger::initialize();
