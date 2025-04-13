@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 #include <QByteArray>
 #include <type_traits>
 
@@ -406,7 +408,8 @@ struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
 };
 #pragma pack(pop)
 
-
+static_assert(sizeof(TcpMessage_0x1021) == 16 + 28,
+              "Invalid size [TcpMessage_0x1021]");
 
 #pragma pack(push, 1)
 /**
@@ -418,26 +421,845 @@ struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
 struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
                                       PBU_MessageNumbers::MARK_TARGET> {
     uint8_t trackStatus: 2;     ///< @brief Статус трассы
-        ///< @details Возможные значения:
-        ///< - «0»: Передается в случае продолжения
-        ///< сопровождения трассы;
-        ///< - «1»: Передается в случае выдачи первой
-        ///< отметки вновь обнаруженной трассы;
-        ///< - «2»: Передается в случае сброса
-        ///< сопровождения трассы (в этом случае
-        ///< остальные поля сообщения, кроме Номер
-        ///< трассы, игнорируются).
+                                ///< @details Возможные значения:
+                                ///< - «0»: Передается в случае продолжения
+                                ///< сопровождения трассы;
+                                ///< - «1»: Передается в случае выдачи первой
+                                ///< отметки вновь обнаруженной трассы;
+                                ///< - «2»: Передается в случае сброса
+                                ///< сопровождения трассы (в этом случае
+                                ///< остальные поля сообщения, кроме Номер
+                                ///< трассы, игнорируются).
 
-    TcpMessage_0x1022() {
-        //        uint64_t time = to_uint64(TimeProvider::instance().getMs());
-        //        time1 = to_uint32(time & 0xFFFFFFFF);
-        //        time2 = to_uint32(time >> 32);
+    uint8_t isExtra: 1;         ///< @brief Признак пропуска обнаружения
+                                ///< @details Возможные значения:
+                                ///< - **0**: передается в случае обнаружения
+                                ///< отметки в текущем запланированном по трассе
+                                ///< зондировании;
+                                ///< - **1**: передается в случае \e отсутствия
+                                ///< обнаружения в текущем запланированном по
+                                ///< трассе зондировании. В этом случае в полях:
+                                ///<   - `<span style="color:#FF5733">Азимут
+                                ///< отметки</span>`
+                                ///<   - `<span style="color:#FF5733">Дальность
+                                ///< отметки</span>`
+                                ///<   - `<span style="color:#FF5733">Угол места
+                                ///< отметки</span>`
+                                ///< передаются <b>экстраполированные</b>
+                                ///< значения координат
+
+    uint8_t isTest: 1;          ///< @brief Признак тестовой отметки
+                                ///< @details Возможные значения:
+                                ///< - **0**: отметка не тестовая;
+                                ///< - **1**: отметка тестовая.
+
+    uint8_t numDrive: 2;        ///< @brief Условный номер РЛ-канала в модуле
+                                ///< @details Передается условный номер
+                                ///< РЛ-канала которым обнаружена
+                                ///< (сопровождается) трасса.
+
+    uint8_t reserve_1: 2;       ///< @brief Резервное поле (не используется)
+
+    uint8_t typeTrack;          ///< @brief Тип трассы
+                                ///< @details Передается тип, которому
+                                ///< соответствует сопровождаемая трасса, поле
+                                ///< может содержать только следующие значения:
+                                ///< - «1»: низко-скоростной БПЛА;
+                                ///< - «2»: скоростной БПЛА или легкомоторный
+                                ///< самолёт;
+                                ///< - «3»: крылатая ракета;
+                                ///< - «4»: «птица» (группа птиц);
+                                ///< - «5»: крупноразмерный самолёт;
+                                ///< - «6»: вертолет;
+                                ///< - «7»: прочее (тип не определен).
+
+    uint16_t idxCeil;           ///< @brief Порядковый индекс отметки
+                                ///< @details сквозной порядковый номер отметки
+                                ///< в ПО РЛС-Н, инкрементируется для каждой
+                                ///< новой отметки
+                                ///< @warning допустимые значения - `0…65535`.
+
+    float azimuth;              ///< @brief Азимут отметки
+                                ///< @details Передается оценка азимута отметки
+                                ///< в градусах относительно направления на
+                                ///< географический север относительно точки
+                                ///< стояния РЛС-Н.
+                                ///< @warning Допустимые значения `от 0 до
+                                ///< 360 градусов` **включительно**.
+
+    float range;                ///< @brief Дальность отметки
+                                ///< @details Передается оценка наклонной
+                                ///< дальности отметки в метрах относительно
+                                ///< точки стояния РЛС-Н.
+                                ///< @warning Отрицательные значения
+                                ///< используются как признак недостоверных
+                                ///< данных.
+
+    float eps;                  ///< @brief Угол места
+                                ///< @details Передается оценка угла места
+                                ///< отметки в градусах относительно точки
+                                ///< стояния РЛС-Н.
+                                ///< @warning Возможные значения `от -90 до 90
+                                ///< градусов` **включительно**.
+
+    float vel;                  ///< @brief Оценка радиальной скорости цели
+                                ///< @details В данном поле выдается
+                                ///< рассчитанное значение радиальной скорости
+                                ///< цели.
+                                ///< @warning Допустимые значения радиальной
+                                ///< скорости `-1300…+1300` **включительно**.
+                                ///< \e Значения вне допустимого интервала
+                                ///< используются как признак недостоверной
+                                ///< оценки.
+
+    float velAz;                ///< @brief Скорость изменения азимута объекта
+                                ///< в градусах/с
+                                ///< @details В данном поле выдается
+                                ///< рассчитанное значение скорости изменения
+                                ///< азимута цели в град/с.
+
+    float velEps;               ///< @brief	Скорость изменения угла места
+                                ///< объекта в градусах/с
+                                ///< @details В данном поле выдается
+                                ///< рассчитанное значение скорости изменения
+                                ///< угла места цели в град/с.
+
+    /// @name UTC
+    /// @details передается в виде 64-битного значения кол-ва миллисекунд,
+    /// прошедших с 00:00:00.000 1970 01 01 (Unix Epoch) на момент обнаружения
+    /// отметки.
+    /// @{
+    uint32_t time1;             ///< @brief Младшие 32 бита временной метки
+
+    uint32_t time2;             ///< @brief Старшие 32 бита временной метки
+    /// @}
+
+    float snrSum;               ///< @brief Оценка ОСШ
+                                ///< @details Передается отношение сигнал/шум на
+                                ///< выходе СДЦ в дБ.
+                                ///< @warning Допустимые значения ОСШ:
+                                ///< `-30…+130` **включительно**. Значения вне
+                                ///< этого интервала используются как признак
+                                ///< \e недостоверной оценки.
+
+    float epr;                  ///< @brief Оценка ЭПР цели
+                                ///< @details Передается оценка ЭПР отметки с
+                                ///< учетом расчетного значения потенциала
+                                ///< станции в м^2.
+                                ///< @warning Допустимые значения ЭПР 0,0…150.
+                                ///< Отрицательные значения используются как
+                                ///< признак недостоверной оценки.
+
+    float maxRange;             ///< @brief Интервал однозначного определения
+                                ///< дальности
+                                ///< @details Передается интервал однозначного
+                                ///< определения наклонной дальности в метрах.
+
+    uint16_t numbTrack;         ///< @brief Номер трассы
+                                ///< @details В данном поле передается
+                                ///< порядковый номер трассы
+                                ///< @warning Допустимые значения `1…65535`.
+
+    uint16_t numbTrackServr;	///< @brief Номер трассы от сервера
+                                ///< @details В данном поле передается
+                                ///< порядковый номер трассы ПО Сервера, которой
+                                ///< соответствует передаваемая информация.
+                                ///< @warning Порядковый номер трассы ПО Сервера
+                                ///< передается в команде «Целеуказание» (0x641)
+
+    float sigAz;                ///< @brief	Оценка погрешности измерения азимута
+                                ///< @details В данном поле передается оценка
+                                ///< погрешности определения азимута в угловых
+                                ///< минутах.
+
+    float sigEps;               ///< @brief	Оценка погрешности измерения УМ
+                                ///< @details В данном поле передается оценка
+                                ///< погрешности определения угла места в
+                                ///< угловых минутах.
+
+    float sigD;                 ///< @brief	Оценка погрешности измерения
+                                ///< дальности
+                                ///< @details В данном поле передается оценка
+                                ///< погрешности определения дальности в метрах.
+
+
+    float sigVr;                ///< @brief	Оценка погрешности измерения
+                                ///< радиальной скорости
+                                ///< @details В данном поле передается оценка
+                                ///< погрешности определения радиальной скорости
+                                ///< в м/с.
+
+    uint32_t rangeCnt: 6;       ///< @brief Количество отсчетов дальности ДСП
+                                ///< @details В данное поле записывается
+                                ///< количество передаваемых отсчетов дальности
+                                ///< дальностно-скоростного портрета (ДСП).
+                                ///< @warning
+                                ///< @{
+                                ///< @p При отсутствии дальностно-скоростного
+                                ///< портрета (при сбросе трассы) в данном поле
+                                ///< передается **ноль**.
+                                ///< @p При передаче пропуска сопровождения ДСП
+                                ///< формируется в районе экстраполированного
+                                ///< положения цели.
+                                ///< @}
+
+    uint32_t speedCnt : 12;     ///< @brief Количество отсчетов радиальной
+                                ///< скорости ДСП
+                                ///< @details В данное поле записывается
+                                ///< количество передаваемых отсчетов радиальной
+                                ///< скорости дальностно-скоростного портрета.
+                                ///< @warning При отсутствии дальностно-
+                                ///< скоростного портрета (при сбросе) в данном
+                                ///< поле передается **ноль**.
+
+    uint32_t chanCnt : 3;       ///< @brief Количество передаваемых каналов ДСП
+                                ///< **(у нас только один канал - суммарный)**
+                                ///< @details В данное поле записывается
+                                ///< количество каналов, для которых передаются
+                                ///< данные ДСП.
+                                ///< @warning Возможные значения от 1 до 4
+                                ///< **включительно**.
+                                ///< \e ОДНАКО у нас ОДИН КАНАЛ
+
+    uint32_t reserve_2 : 11;    ///< @brief Резервное поле (не используется)
+
+    float rangeStart;           ///< @brief Минимальная дальность
+                                ///< @details В данном поле передается
+                                ///< минимальная дальность (дальность первого
+                                ///< отсчета) дальностно-скоростного портрета в
+                                ///< метрах.
+
+    float rangeStep;            ///< @brief Шаг по дальности
+                                ///< @details В данном поле передается размер
+                                ///< одного отсчета по дальности передаваемого
+                                ///< дальностно-скоростного портрета в метрах.
+
+    float vradStart;            ///< @brief Минимальная радиальная скорость
+                                ///< @details В данном поле передается
+                                ///< минимальная радиальная скорость
+                                ///< передаваемого дальностно-скоростного
+                                ///< портрета в м/с.
+
+    float vradStep;             ///< @brief Шаг по радиальной скорости
+                                ///< @details В данном поле передается размер
+                                ///< одного отсчета по радиальной скорости
+                                ///< передаваемого дальностно-скоростного
+                                ///< портрета в м/с.
+
+
+    /// @brief Массив мощностей ДСП [rangeCnt][speedCnt]
+    /// @details Динамические данные (Массив \e по протоколу - **pow**)
+    float** powRangeVel = nullptr;
+
+
+    TcpMessage_0x1022(
+        float** powData
+        /* Если необходимо, доп. параметры */
+    ) {
+        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        time1 = to_uint32(time & 0xFFFFFFFF);
+        time2 = to_uint32(time >> 32);
+
+        chanCnt = 1; // Фиксированное значение (У нас один канал - суммарный)
 
         /// @warning !!! Для заполнения требует наличия заведённых структур для
         /// объектов и их траекторий
+
+        // Выделение памяти и копирование данных
+        allocatePowRangeVel();
+        copyPowData(powData);
+
+        // Обновляем размер данных в заголовке
+        updateDataSize();
+    }
+
+    /// @brief Деструктор для очистки памяти
+    ~TcpMessage_0x1022() {
+        freePowRangeVel();
+    }
+
+    /**
+     * @brief Выделяет память под массив мощностей
+     * @throws std::bad_alloc При ошибке выделения памяти
+     */
+    void allocatePowRangeVel() {
+        freePowRangeVel();
+
+        if (rangeCnt > 0 && speedCnt > 0) {
+            powRangeVel = new float*[rangeCnt];
+            for (uint8_t i = 0; i < rangeCnt; ++i) {
+                powRangeVel[i] = new float[speedCnt]{};
+            }
+        }
+    }
+
+    /**
+     * @brief Копирует внешние данные в массив мощностей
+     * @param src Исходный массив данных [rangeCnt][speedCnt]
+     */
+    void copyPowData(float** src) {
+        if (!src || !powRangeVel) return;
+
+        for (uint8_t i = 0; i < rangeCnt; ++i) {
+            std::copy(src[i], src[i] + speedCnt, powRangeVel[i]);
+        }
+    }
+
+    /**
+     * @brief Обновляет размер данных в заголовке
+     */
+    void updateDataSize() {
+        sizeData = sizeof(TcpMessage_0x1022) - sizeof(TcpHeader)
+        + rangeCnt * speedCnt * sizeof(float);
+    }
+
+    /// @brief Полная сериализация сообщения
+    /// @warning Переопределяем метод сереализации для этого сообщения, т.к.
+    /// наличие динамического массива вносит коррективы
+    QByteArray serializeFull() const {
+        // Сериализуем фиксированную часть
+        QByteArray fixedData(sizeof(TcpMessage_0x1022), 0);
+        memcpy(fixedData.data(), this, sizeof(TcpMessage_0x1022));
+
+        // Добавляем данные ДСП
+        QByteArray dspData;
+        if (powRangeVel) {
+            for (uint8_t i = 0; i < rangeCnt; ++i) {
+                dspData.append(reinterpret_cast<const char*>(powRangeVel[i]),
+                               speedCnt * sizeof(float));
+            }
+        }
+
+        return fixedData + dspData;
+    }
+
+private:
+
+    /// @brief Освобождает память массива мощностей
+    void freePowRangeVel() {
+        if (powRangeVel) {
+            for (uint8_t i = 0; i < rangeCnt; ++i) {
+                delete[] powRangeVel[i];
+            }
+            delete[] powRangeVel;
+            powRangeVel = nullptr;
+        }
     }
 };
 #pragma pack(pop)
+
+static_assert(sizeof(TcpMessage_0x1022) == 16 + 22*4 + sizeof(float**) ,
+              "Invalid size [TcpMessage_0x1022]");
+
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x1023
+ * @brief Сообщение о возможностях модуля с JSON-данными
+ * @details Данное сообщение отправляется сразу после регистрации модуля в
+ * системе.
+ * @warning До получения данного сообщения со стороны ПО СОИ **НЕ МОЖЕТ**
+ * поступать никаких команд управления модулем.
+ */
+struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
+                                      PBU_MessageNumbers::MODULE_CAPABILITIES> {
+    char* jsonData;     ///< @brief Указатель на сырые JSON-данные
+                        ///< @note ПРИМЕЧАНИЕ:
+                        ///< - 1: Название ключей в JSON должно быть в том
+                        ///< же регистре, как указано в таблице (протокол).
+                        ///< - 2: При представлении числа с плавающей точкой
+                        ///< (запятой) в виде строки – в качестве символа-
+                        ///< разделителя целой и дробной частей использовать
+                        ///< только точку, невзирая на текущую локаль на ПК
+                        ///< (например, значение 12,343454 должно быть
+                        ///< представлено как "12.343454").
+                        ///< - 3: Порядок расположения пар ключ/значение внутри
+                        ///< сообщения может быть произвольным.
+    /**
+     * @p Таблица описания возможностей модуля
+     * @brief Конфигурация радиолокационного канала модуля
+     *
+     * @details Параметры для описания характеристик РЛ-канала в составе модуля
+     *
+     * <table>
+     * <caption>Описание ключей блока данных о возможностях одной камеры
+     * </caption>
+     * <tr><th>Поле</th><th>Тип</th><th>Описание</th><th>Наличие поляth></tr>
+     *
+     * <tr><td>Number</td><td>integer</td>
+     * <td>Условный номер РЛ-канала (0 ≤ value ≤ N-1), где:<br>
+     * - N: общее количество каналов<br>
+     * - Максимальное значение: 255</td>
+     * <td><b>Обязательное</b></td></tr>
+     *
+     * <tr><td>IsRotate</td><td>bool</td>
+     * <td>Признак поворотного РЛ-канала:<br>
+     * - 0: РЛ-канал стационарный,<br>
+     * - 1: РЛ-канал может поворачиваться.</td>
+     * <td><i>Опциональное</i><br>(по умолчанию: 0)</td></tr>
+     *
+     * <tr><td>Name</td><td>string</td>
+     * <td>Условное название канала, для отображения оператору, например
+     * "РЛС-Н №1"</td>
+     * <td><i>Опциональное</i></td></tr>
+     *
+     * <tr><td>AzMin</td><td>double</td>
+     * <td rowspan="2">Ширина зоны обзора по азимуту для стационарного<br>
+     * канала или диапазон возможных направлений для поворотного канала.<br>
+     * Значение передается в градусах относительно географического севера.<br>
+     * Передача значений от 0 до 360 означает, возможность работы в любом<br>
+     * азимутальном направлении.
+     * </td>
+     * <td rowspan="2"><b>Обязательное</b></td></tr>
+     *
+     * <tr><td>AzMax</td><td>double</td></tr>
+     *
+     * <tr><td>ElevMin</td><td>double</td>
+     * <td rowspan="2">Ширина зоны обзора по углу места для стационарного<br>
+     * канала или диапазон возможных углов места для поворотного канала.<br>
+     * Значение передается в градусах.
+     * </td>
+     * <td rowspan="2"><b>Обязательное</b></td></tr>
+     *
+     * <tr><td>ElevMax</td><td>double</td></tr>
+     *
+     * <tr><td>MaxRange</td><td>double</td>
+     * <td>Максимальная инструментальная дальность обнаружения<br>
+     * Единицы измерения: километры (км)
+     * </td>
+     * <td><b>Обязательное</b></td></tr>
+     * </table>
+     */
+
+    /**
+     * @struct ModuleCapability
+     * @brief Структура, определяющая один JSON-объект
+     * @note Необходимо для вложенности
+     */
+    struct ModuleCapability {
+        int number = 0;
+        bool isRotate = false;
+        std::string name;
+        double azMin = 0.0;
+        double azMax = 0.0;
+        double elevMin = 0.0;
+        double elevMax = 0.0;
+        double maxRange = 0.0;
+
+        /**
+         * @brief Процедура выдачи объекта в формате JSON
+         * @return Объект json
+         */
+        json toJson() const {
+            return {
+                {"Number", number},
+                {"IsRotate", isRotate},
+                {"Name", name},
+                {"AzMin", azMin},
+                {"AzMax", azMax},
+                {"ElevMin", elevMin},
+                {"ElevMax", elevMax},
+                {"MaxRange", maxRange}
+            };
+        }
+
+        /**
+         * @brief Метод выдачи структуры из JSON
+         * @param json& j - Входной параметр типа nlohmann::json
+         * @return cap - Экземпляр ModuleCapability
+         */
+        static ModuleCapability fromJson(const json& j) {
+            ModuleCapability cap;
+            cap.number = j.at("Number").get<int>();
+            cap.isRotate = j.value("IsRotate", false);
+            cap.name = j.value("Name", "");
+            cap.azMin = j.at("AzMin").get<double>();
+            cap.azMax = j.at("AzMax").get<double>();
+            cap.elevMin = j.at("ElevMin").get<double>();
+            cap.elevMax = j.at("ElevMax").get<double>();
+            cap.maxRange = j.at("MaxRange").get<double>();
+            return cap;
+        }
+    };
+
+    /**
+     * @brief Конструктор из готового JSON
+     * @param jsonStr Валидная JSON-строка, соответствующая спецификации
+     */
+    explicit TcpMessage_0x1023(const std::string& jsonStr) {
+        initializeFromJson(json::parse(jsonStr));
+    }
+
+    /**
+     * @brief Конструктор из JSON-объекта
+     * @param jsonObj Валидный JSON-объект
+     */
+    explicit TcpMessage_0x1023(const json& jsonObj) {
+        initializeFromJson(jsonObj);
+    }
+
+    /**
+     * @brief Конструктор из списка возможностей
+     * @param capabilities Вектор структур с данными
+     */
+    explicit TcpMessage_0x1023(const std::vector<ModuleCapability>& capabilities) {
+        json jsonArr = json::array();
+        for (const auto& cap : capabilities) {
+            jsonArr.push_back(cap.toJson());
+        }
+        initializeFromJson(jsonArr);
+    }
+
+    /// @brief Деструктор
+    ~TcpMessage_0x1023() {
+        delete[] jsonData;
+    }
+
+    /**
+     * @brief Получение данных в виде структур
+     * @return Вектор объектов ModuleCapability
+     * @throws std::runtime_error При ошибках валидации
+     */
+    std::vector<ModuleCapability> getCapabilities() const {
+        std::vector<ModuleCapability> result;
+        const auto jsonArr = getValidatedJson();
+
+        for (const auto& item : jsonArr) {
+            result.push_back(ModuleCapability::fromJson(item));
+        }
+
+        return result;
+    }
+
+    /**
+     * @brief Полная сериализация сообщения
+     * @warning Переопределяем метод сереализации для этого сообщения, т.к.
+     * сейчас мы храним указатель на строку формата json
+     * @return Массив Байт из json-строки
+     */
+    QByteArray serializeFull() const  {
+        QByteArray buffer;
+        const size_t jsonSize = getJsonSize();
+
+        // Фиксированная часть
+        buffer.append(reinterpret_cast<const char*>(this), sizeof(TcpMessage_0x1023));
+
+        // JSON-данные
+        if (jsonSize > 0) {
+            buffer.append(jsonData, static_cast<int>(jsonSize));
+        }
+
+        return buffer;
+    }
+
+/// @warning Отключение диагностики комплилятора для метода копирования
+/// @note Мы сами перепроверяем строку при её сериализации/десериализации
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+
+    /**
+     * @brief Метод десериализации из пришедших в массиве байт
+     * @param data - массив байт
+     * @return msg - экземпляр структуры TcpMessage_0x1023
+     */
+    static TcpMessage_0x1023 deserialize(const QByteArray& data) {
+        TcpMessage_0x1023 msg;
+
+        // Копирование заголовка
+        const size_t headerSize = sizeof(TcpMessage_0x1023);
+        memcpy(&msg, data.constData(), headerSize);
+
+        // Копирование JSON
+        const size_t jsonSize = msg.getJsonSize();
+        if (jsonSize > 0) {
+            msg.jsonData = new char[jsonSize + 1];
+            memcpy(msg.jsonData, data.constData() + headerSize, jsonSize);
+            msg.jsonData[jsonSize] = '\0';
+        }
+
+        // Создаем json объект из данных и передаем его в validateJson
+        json jsonObj = json::parse(msg.jsonData, msg.jsonData + jsonSize);
+        validateJson(jsonObj); // Проверка после десериализации
+        return msg;
+    }
+#pragma GCC diagnostic pop
+
+private:
+
+    /**
+     * @brief initializeFromJson - метод преобразования json-объекта
+     * в структуре
+     * @param jsonObj - nlohmann::json
+     * @private
+     */
+    void initializeFromJson(const json& jsonObj) {
+        validateJson(jsonObj);
+        const std::string jsonStr = serializeJson(jsonObj);
+        const size_t jsonSize = jsonStr.size();
+
+        jsonData = new char[jsonSize + 1];
+        memcpy(jsonData, jsonStr.c_str(), jsonSize);
+        jsonData[jsonSize] = '\0';
+
+        sizeData = sizeof(TcpMessage_0x1023) - sizeof(TcpHeader) + jsonSize;
+    }
+
+    /**
+     * @brief serializeJson - Сериализация json-объекта с учётом требований к
+     * строке
+     * @param j - nlohmann::json
+     * @private
+     * @return Возвращает преобразованную строку
+     */
+    static std::string serializeJson(const json& j) {
+        std::ostringstream oss;
+        oss.imbue(std::locale("C"));
+        oss << std::fixed << std::setprecision(6);
+        oss << j;
+        return oss.str();
+    }
+
+    /**
+     * @brief getValidatedJson - процедура получения JSON-объекта с описанной
+     * валидацией
+     * @return nlohmann::json (Валидный)
+     */
+    json getValidatedJson() const {
+        const auto json = json::parse(jsonData, jsonData + getJsonSize());
+        validateJson(json);
+        return json;
+    }
+
+    /**
+     * @brief getJsonSize - метод получения размера JSON-строки
+     * @return size_t
+     */
+    size_t getJsonSize() const {
+        return sizeData - (sizeof(TcpMessage_0x1023) - sizeof(TcpHeader));
+    }
+
+    /**
+     * @brief validateJson - головная процедура валидации JSON-а
+     * @param j - объект JSON
+     */
+    static void validateJson(const json& j) {
+
+        if (!j.is_array()) {
+            throw std::runtime_error("Root must be JSON array");
+        }
+
+        for (const auto& item : j) {
+            validateObject(item);
+        }
+    }
+
+    /**
+     * @brief validateObject - процедура проверки внутренних полей JSON-объекта
+     * @param obj - объект JSON
+     */
+    static void validateObject(const json& obj) {
+        // Проверка обязательных полей
+        for (const auto& field : {"Number", "AzMin", "AzMax",
+                                  "ElevMin", "ElevMax", "MaxRange"}) {
+            if (!obj.contains(field)) {
+                throw std::runtime_error("Missing required field: " +
+                                         std::string(field));
+            }
+        }
+
+        // Валидация значений
+        const int number = obj["Number"].get<int>();
+        if (number < 0 || number > 255) {
+            throw std::runtime_error("Invalid Number value: " +
+                                     std::to_string(number));
+        }
+
+        const double azMin = obj["AzMin"].get<double>();
+        const double azMax = obj["AzMax"].get<double>();
+        if (azMin < 0.0 || azMax > 360.0 || azMin > azMax) {
+            throw std::runtime_error("Invalid azimuth range: [" +
+                                     std::to_string(azMin) + ", " +
+                                     std::to_string(azMax) + "]");
+        }
+
+        const double elevMin = obj["ElevMin"].get<double>();
+        const double elevMax = obj["ElevMax"].get<double>();
+        if (elevMin < -90.0 || elevMax > 90.0 || elevMin > elevMax) {
+            throw std::runtime_error("Invalid elevation range: [" +
+                                     std::to_string(elevMin) + ", " +
+                                     std::to_string(elevMax) + "]");
+        }
+
+        if (obj["MaxRange"].get<double>() <= 0.0) {
+            throw std::runtime_error("MaxRange must be positive");
+        }
+    }
+
+    TcpMessage_0x1023() : jsonData(nullptr) {} // Для десериализации
+};
+#pragma pack(pop)
+
+static_assert(sizeof(TcpMessage_0x1023) == 16 + sizeof(char*),
+              "Invalid TcpMessage_0x1023 size");
+
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x1024
+ * @brief Сообщение о запрещенных секторах (0x1024)
+ */
+struct TcpMessage_0x1024 : TcpMessage<TcpMessage_0x1024,
+                                      PBU_MessageNumbers::FORBIDDEN_SECTORS> {
+    /**
+     * @struct Sector
+     * @brief Описание одного запрещенного сектора
+     */
+    struct Sector {
+        float limAzBegin;       ///< @brief Азимут начала сектора [град]
+                                ///< @details Передается в градусах,
+                                ///< относительно географического севера
+                                ///< относительно точки стояния РЛС-Н
+                                ///< @note 0 - направление на север;
+                                ///< @warning Положительное направление
+                                ///< отсчитывается по часовой стрелке.
+
+        float limAzEnd;         ///< @brief Азимут конца сектора [град]
+                                ///< @details передается в градусах,
+                                ///< относительно географического севера
+                                ///< относительно точки стояния РЛС-Н
+                                ///< @warning направление от начального значения
+                                ///< отсчитывается вдоль положительного
+                                ///< направления координатной оси (по часовой
+                                ///< стрелке).
+
+        float limElevBegin;     ///< @brief Угол места начала сектора [град]
+                                ///< @details передается в градусах,
+                                ///< относительно точки стояния РЛС-Н
+                                ///< @note 0 – направление в горизонт,
+                                ///< 90 – направление в зенит
+
+
+        float limElevEnd;       ///< @brief Угол места конца сектора [град]
+                                ///< @details передается в градусах,
+                                ///< относительно точки стояния РЛС-Н
+                                ///< @warning направление от начального значения
+                                ///< отсчитывается вдоль положительного
+                                ///< направления координатной оси (от горизонта
+                                ///< к зениту).
+
+        /// @brief Конструктор по-умолчанию
+        Sector() = default;
+
+        /// @brief Конструктор с входными параметрами
+        Sector(float azBegin, float azEnd, float elevBegin, float elevEnd) {
+            if (azBegin > azEnd || elevBegin > elevEnd) {
+                throw std::invalid_argument("Invalid sector parameters");
+            }
+            limAzBegin = azBegin;
+            limAzEnd = azEnd;
+            limElevBegin = elevBegin;
+            limElevEnd = elevEnd;
+        }
+    };
+
+    std::vector<Sector> sectors; ///< @brief Список запрещенных секторов
+
+    /**
+     * @brief Конструктор по умолчанию
+     */
+    TcpMessage_0x1024() = default;
+
+    /**
+     * @brief Конструктор с инициализацией секторов
+     */
+    explicit TcpMessage_0x1024(const std::vector<Sector>& sectorsList) {
+        for (const auto& sector : sectorsList) {
+            addSector(sector);
+        }
+    }
+
+    /**
+     * @brief Добавление сектора с проверкой параметров
+     */
+    void addSector(const Sector& sector) {
+        if (sector.limAzBegin > sector.limAzEnd ||
+            sector.limElevBegin > sector.limElevEnd) {
+            throw std::invalid_argument("Invalid sector parameters");
+        }
+        sectors.push_back(sector);
+        updateDataSize();
+    }
+
+    /**
+     * @brief Сериализация сообщения
+     */
+    QByteArray serializeFull() const {
+        QByteArray data;
+
+        // Сериализация заголовка
+        data.append(this->serialize());
+
+        // Сериализация секторов
+        for (const auto& sector : sectors) {
+            data.append(reinterpret_cast<const char*>(&sector), sizeof(Sector));
+        }
+
+        return data;
+    }
+
+    /**
+     * @brief Десериализация сообщения
+     */
+    static TcpMessage_0x1024 deserialize(const QByteArray& data) {
+        TcpMessage_0x1024 message;
+
+        // Десериализация заголовка
+        TcpHeader header = TcpHeader::deserialize(data);
+        if (!header.isValid()) {
+            throw std::runtime_error("Invalid header");
+        }
+
+        // Проверка размера данных
+        const size_t sectorsCount = (data.size() - sizeof(TcpHeader)) /
+                                    sizeof(Sector);
+        if ((data.size() - sizeof(TcpHeader)) % sizeof(Sector) != 0) {
+            throw std::runtime_error("Invalid data size");
+        }
+
+        // Десериализация секторов
+        const char* sectorsData = data.constData() + sizeof(TcpHeader);
+        for (size_t i = 0; i < sectorsCount; ++i) {
+            Sector sector;
+            memcpy(&sector, sectorsData + i * sizeof(Sector), sizeof(Sector));
+            message.sectors.push_back(sector);
+        }
+
+        return message;
+    }
+
+    /**
+     * @brief Получение сектора по индексу
+     */
+    const Sector& getSector(size_t index) const {
+        if (index >= sectors.size()) {
+            throw std::out_of_range("Sector index out of range");
+        }
+        return sectors[index];
+    }
+
+private:
+    /**
+     * @brief Обновление размера данных в заголовке
+     */
+    void updateDataSize() {
+        sizeData = sectors.size() * sizeof(Sector);
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(TcpMessage_0x1024::Sector) == 16,
+              "Invalid Sector size");
+static_assert(sizeof(TcpMessage_0x1024) == sizeof(TcpHeader) +
+                                sizeof(std::vector<TcpMessage_0x1024::Sector>),
+                                    "Invalid TcpMessage_0x1024 size");
 
 // -----------------------------------------
 // Сообщения от ПБУ на ВУ [ОБРАБОТКА ИНФОРМАЦИИ]
