@@ -1,4 +1,4 @@
-QT += core network
+QT += core network sql
 
 TARGET = lun_vu
 CONFIG += c++11 cmdline
@@ -78,6 +78,8 @@ TRANSLATIONS +=
 CONFIG += lrelease embed_translations
 
 DISTFILES += \
+    docs/db_info.md \
+    docs/dev_info.md \
     docs/git_guide.md \
     docs/doxygen_guide.md \
     libs/wpdpack/Lib/Packet.lib \
