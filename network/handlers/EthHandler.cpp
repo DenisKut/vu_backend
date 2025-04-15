@@ -81,7 +81,7 @@ void EthHandler::connectAdapter()
     if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING), nullptr, &pcapAllDevs, errbuf) == -1)
     {
         qDebug() << "Not found Ethernet adapters";
-        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не найден сетевой адаптер");
+       // Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не найден сетевой адаптер");
     }
     for(d = pcapAllDevs; d; d = d->next)
     {
@@ -131,7 +131,7 @@ void EthHandler::connectAdapter()
                                ) ) == nullptr)
     {
         qDebug() << "Failed to open pcapTx";
-        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не получилось открыть pcapTx");
+        // Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не получилось открыть pcapTx");
         // Free the device list
         return;
     }
@@ -140,7 +140,7 @@ void EthHandler::connectAdapter()
 //        emit adapterUpdatePM(pcapTx);  // Обновить указатель на адаптер для менеджера пакетов
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapTx";
-        Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
+        // Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
     }
 
     pcap_setbuff(pcapTx, 160*1024*1024);
@@ -160,7 +160,7 @@ void EthHandler::connectAdapter()
                                ) ) == nullptr)
     {
         qDebug() << "Failed to open pcapRx";
-        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не получилось открыть pcapTx");
+        // Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не получилось открыть pcapTx");
         // Free the device list
         return;
     }
@@ -168,7 +168,7 @@ void EthHandler::connectAdapter()
     {
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapRx";
-        Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
+        // Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
     }
 
     pcap_setbuff(pcapRx, 160*1024*1024);
@@ -190,7 +190,7 @@ void EthHandler::connectAdapter()
     strAdapterNames.append(ds);
 
     qDebug() << QString("Opened Ethernet adapter: %1").arg(strAdapterNames.at(0));
-    Logger::instance().writeText(QString("Подключен Ethernet адаптер: %1").arg(strAdapterNames.at(0)));
+    // Logger::instance().writeText(QString("Подключен Ethernet адаптер: %1").arg(strAdapterNames.at(0)));
 #else
     // ETH_P_ALL                - принимать пакеты с любым ether type
     // ETH_PROTO_ETHER_TYPE()   - принимать пакеты только с ether type = 0x2020
