@@ -65,7 +65,14 @@ int main(int argc, char* argv[]) {
                        << AppConfig::instance().ETH_PROTO_MAC_SRC();
 
     // Инициализация Логгера (обязательно, иначе Логгер не запустится)
-    Logger::initialize();
+    QString connectionString = QString("host=%1 port=%2 dbname=%3 user=%4 password=%5")
+                               .arg(env.getStr("DB_HOST"))
+                               .arg(env.getInt("DB_PORT"))
+                               .arg(env.getStr("DB_NAME"))
+                               .arg(env.getStr("DB_USER"))
+                               .arg(env.getStr("DB_PASSWORD"));
+
+	Logger::instance().initialize(connectionString);
 //    qDebug() << "Состояние Логгера:" << Logger::instance().isRunning();
 
 //    // Тест запуска Логгера без явного вызова writeText():
