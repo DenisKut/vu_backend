@@ -543,56 +543,56 @@ static_assert(sizeof(EthMessage_MCFS_STATUS) == 19 + 29, "Invalid size [EthMessa
 // MCFS_SGNL_REC       = 0x020C,    ///< 12.2  - приём сигнала МЦФОС;
 // MCFS_SGNL_GEN_REC   = 0x030C,    ///< 12.3  - генерация и приём сигнала МЦФОС;
 
-/**
- * @struct EthMessage_MCFS_SGNL_GEN_REC
- * @brief Генерация и приём сигнала МЦФОС (12.3)
- */
-#pragma pack(push, 1)
-struct EthMessage_MCFS_SGNL_GEN_REC : EthMessage<EthMessage_MCFS_SGNL_GEN_REC, ETH_MessageNumbers::MCFS_SGNL_GEN_REC> {
-    // Метки времени:
-    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
-    // Данные:
-    uint8_t     timeStartGen[5];    ///<  0-4  Код времени начала генерации первого импульса в пачке
-    uint32_t    taskNum;            ///<  5-8  Номер задания
-    uint8_t     signalType;         ///<    9  Код вида сигнала
-    uint8_t     impulseNum : 4;     ///<   10 [0-3] Код количества импульсов сигнала СОТС в пачке
-    uint8_t     reserv1 : 2;        ///<   10 [4-5] Резерв
-    uint8_t     isFreqMod : 1;      ///<   10  [6]  Признак изменения частоты ЛЧМ сигналов СОТС
-    uint8_t     reserv2 : 1;        ///<   10  [7]  Резерв
-    uint16_t    period;             ///< 11-12 Код периода повторения импульсов в пачке
-    uint8_t     reserv3[12];        ///< 13-24 Резерв
-    uint16_t    duration;           ///< 25-26 Код длительности одного интервала обработки сигнала
-                                    ///<       (без учета длительности импульса)
-    uint8_t     reserv4;            ///<   27  Резерв
-    uint8_t     amplify;            ///<   28  Код коэффициента передачи приемных каналов УПЧ,
-                                    ///<       (внешний модуль усиления)
-    uint8_t     koefFalse;          ///<   29  Коэффициент, определяющий вероятность ложной тревоги
-    uint16_t    treshold;           ///< 30-31 Уровень постоянного порога
-    uint8_t     regType : 1;        ///<   32 [0] Признак вида регистрации
-    uint8_t     regCh1 : 1;         ///<   32 [1] Признак регистрации сигнатур в 1-ом канале
-    uint8_t     regCh2 : 1;         ///<   32 [2] Признак регистрации сигнатур во 2-ом канале
-    uint8_t     regCh3 : 1;         ///<   32 [3] Признак регистрации сигнатур в 3-ем канале
-    uint8_t     regCh4 : 1;         ///<   32 [4] Признак регистрации сигнатур в 4-ом канале
-    uint8_t     regCh5 : 1;         ///<   32 [5] Признак регистрации сигнатур в 5-ом канале
-                                    ///<          УЦП (в приемном канале КИБ)
-    uint8_t     reserv5 : 2;        ///<   32 [6-7] Резерв
-    uint8_t     reserv6[3];         ///<   33-35 Резерв
+///**
+// * @struct EthMessage_MCFS_SGNL_GEN_REC
+// * @brief Генерация и приём сигнала МЦФОС (12.3)
+// */
+//#pragma pack(push, 1)
+//struct EthMessage_MCFS_SGNL_GEN_REC : EthMessage<EthMessage_MCFS_SGNL_GEN_REC, ETH_MessageNumbers::MCFS_SGNL_GEN_REC> {
+//    // Метки времени:
+//    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+//    // Данные:
+//    uint8_t     timeStartGen[5];    ///<  0-4  Код времени начала генерации первого импульса в пачке
+//    uint32_t    taskNum;            ///<  5-8  Номер задания
+//    uint8_t     signalType;         ///<    9  Код вида сигнала
+//    uint8_t     impulseNum : 4;     ///<   10 [0-3] Код количества импульсов сигнала СОТС в пачке
+//    uint8_t     reserv1 : 2;        ///<   10 [4-5] Резерв
+//    uint8_t     isFreqMod : 1;      ///<   10  [6]  Признак изменения частоты ЛЧМ сигналов СОТС
+//    uint8_t     reserv2 : 1;        ///<   10  [7]  Резерв
+//    uint16_t    period;             ///< 11-12 Код периода повторения импульсов в пачке
+//    uint8_t     reserv3[12];        ///< 13-24 Резерв
+//    uint16_t    duration;           ///< 25-26 Код длительности одного интервала обработки сигнала
+//                                    ///<       (без учета длительности импульса)
+//    uint8_t     reserv4;            ///<   27  Резерв
+//    uint8_t     amplify;            ///<   28  Код коэффициента передачи приемных каналов УПЧ,
+//                                    ///<       (внешний модуль усиления)
+//    uint8_t     koefFalse;          ///<   29  Коэффициент, определяющий вероятность ложной тревоги
+//    uint16_t    treshold;           ///< 30-31 Уровень постоянного порога
+//    uint8_t     regType : 1;        ///<   32 [0] Признак вида регистрации
+//    uint8_t     regCh1 : 1;         ///<   32 [1] Признак регистрации сигнатур в 1-ом канале
+//    uint8_t     regCh2 : 1;         ///<   32 [2] Признак регистрации сигнатур во 2-ом канале
+//    uint8_t     regCh3 : 1;         ///<   32 [3] Признак регистрации сигнатур в 3-ем канале
+//    uint8_t     regCh4 : 1;         ///<   32 [4] Признак регистрации сигнатур в 4-ом канале
+//    uint8_t     regCh5 : 1;         ///<   32 [5] Признак регистрации сигнатур в 5-ом канале
+//                                    ///<          УЦП (в приемном канале КИБ)
+//    uint8_t     reserv5 : 2;        ///<   32 [6-7] Резерв
+//    uint8_t     reserv6[3];         ///<   33-35 Резерв
 
-    EthMessage_MCFS_SGNL_GEN_REC() {
-        uint64_t time = TimeProvider::instance().getBsPeriodTime();
-        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
-//        timeBeginTrans[0] = time & 0xFF;
-//        timeBeginTrans[1] = (time >> 8) & 0xFF;
-//        timeBeginTrans[2] = (time >> 16) & 0xFF;
-//        timeBeginTrans[3] = (time >> 24) & 0xFF;
-//        timeBeginTrans[4] = (time >> 32) & 0xFF;
+//    EthMessage_MCFS_SGNL_GEN_REC() {
+//        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+//        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
+////        timeBeginTrans[0] = time & 0xFF;
+////        timeBeginTrans[1] = (time >> 8) & 0xFF;
+////        timeBeginTrans[2] = (time >> 16) & 0xFF;
+////        timeBeginTrans[3] = (time >> 24) & 0xFF;
+////        timeBeginTrans[4] = (time >> 32) & 0xFF;
 
-        /// @warning !!! Для заполнения требует наличия заведённых структур для МЦФОС
-    }
-};
-#pragma pack(pop)
+//        /// @warning !!! Для заполнения требует наличия заведённых структур для МЦФОС
+//    }
+//};
+//#pragma pack(pop)
 
-static_assert(sizeof(EthMessage_MCFS_SGNL_GEN_REC) == 23 + 29, "Invalid size [EthMessage_MCFS_SGNL_GEN_REC]");
+//static_assert(sizeof(EthMessage_MCFS_SGNL_GEN_REC) == 23 + 29, "Invalid size [EthMessage_MCFS_SGNL_GEN_REC]");
 
 
 /**
