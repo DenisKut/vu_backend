@@ -1,4 +1,5 @@
 #include "EthHandler.h"
+#include <qfile.h>
 
 
 // Конструктор обработчика принятых MAC пакетов:
@@ -203,7 +204,7 @@ void EthHandler::connectAdapter()
     //if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(etherType))) == -1) {
     if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(0x2020))) == -1) {
         perror("socket");
-        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - socket");
+        //Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - socket");
     }
 
     struct ifreq ifopts;
@@ -214,12 +215,12 @@ void EthHandler::connectAdapter()
 
     if (setsockopt(ethSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
         perror("SO_BINDTODEVICE");
-        Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - SO_BINDTODEVICE");
+        //Logger::instance().("ОШИБКА: EthHandler::connectAdapter() - SO_BINDTODEVICE");
         close(ethSocketID);
     }
 
     qDebug() << "Starting capture on interface" << ifName << "...\n";
-    Logger::instance().writeText(QString("Подключен Ethernet адаптер: %1").arg(ifName));
+    //Logger::instance().writeText(QString("Подключен Ethernet адаптер: %1").arg(ifName));
 
     // Создание SocketNotifier
     m_notifier = new QSocketNotifier(ethSocketID, QSocketNotifier::Read, this);

@@ -73,6 +73,7 @@ int main(int argc, char* argv[]) {
                                .arg(env.getStr("DB_PASSWORD"));
 
 	Logger::instance().initialize(connectionString);
+
 //    qDebug() << "Состояние Логгера:" << Logger::instance().isRunning();
 
 //    // Тест запуска Логгера без явного вызова writeText():
