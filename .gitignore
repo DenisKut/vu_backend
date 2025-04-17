@@ -157,3 +157,6 @@ patches/
 
 !libs/**/**/*
 !.env
+.qtc_clangd
+moc_predefs.h
+qmake_qmake_qm_files.qrc
