@@ -151,6 +151,10 @@ Makefile*
 *.qrc.d
 *.moc.d
 
+
+bin/
+objects/
+*.Release
 ### !!! Git-patches !!! ###
 patches/
 *.patch

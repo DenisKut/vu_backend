@@ -1,7 +1,28 @@
-QT += core network
+QT += core network sql
 
 TARGET = lun_vu
 CONFIG += c++11 cmdline
+
+# -------------------------------
+# 0. Пути сборки проекта
+# -------------------------------
+
+BIN_DIR = $$PWD/bin
+OBJECTS_DIR = $$PWD/objects
+
+# Настройка выходных директорий
+CONFIG(debug, debug|release) {
+    DESTDIR = $$BIN_DIR/debug
+} else {
+    DESTDIR = $$BIN_DIR/release
+}
+
+MOC_DIR = $$OBJECTS_DIR
+UI_DIR = $$OBJECTS_DIR/ui
+RCC_DIR = $$OBJECTS_DIR/rcc
+
+QMAKE_CLEAN += -r $$BIN_DIR $$OBJECTS_DIR
+QMAKE_DISTCLEAN += $$QMAKE_CLEAN
 
 #-------------------------------
 # 1. Платформозависимые настройки
@@ -96,9 +117,9 @@ DISTFILES += \
 
 # Определение DESTDIR в зависимости от конфигурации
 CONFIG(debug, debug|release) {
-    DESTDIR = $$OUT_PWD/debug
+    DESTDIR = $$OUT_PWD/bin/debug
 } else {
-    DESTDIR = $$OUT_PWD/release
+    DESTDIR = $$OUT_PWD/bin/release
 }
 
 # Копирование .env
