@@ -87,6 +87,10 @@ public:
     /// @brief Значение по умолчанию до подтверждения регистрации
     static constexpr uint8_t PBU_PROTO_HEAD_IDX_MODULE_FIRST = 0xFF;
 
+    /// @brief Максимальное количество элементов в модуле
+    /// @details 2 РЛМН
+    static constexpr int MAX_ELEMENTS_MODULE = 2;
+
     /// @name Методы доступа к параметрам из .env
     /// @warning НЕИЗМЕННЫЕ в рантайме
     /// @{
@@ -335,58 +339,58 @@ private:
     /// @name Параметры сети
     /// @{
     std::string _tcpHostIP;         ///< IP адрес TCP сервера
-                                    ///
+        ///
     int _tcpHostPort;               ///< Порт TCP сервера
-                                    ///
+        ///
     int _udpPort;                   ///< Порт UDP
-                                    ///
+        ///
     std::string _ethInterfaceName;  ///< Имя сетевого интерфейса
-                                    ///
+        ///
     int _ethSocketBuffSize;         ///< Размер буфера MAC сокета
     /// @}
 
     /// @name Версии протоколов
     /// @{
     uint8_t _pbuProtoMajorVersion;  ///< Мажорная версия протокола
-                                    ///
+        ///
     uint8_t _pbuProtoMinorVersion;  ///< Минорная версия протокола
     /// @}
 
     /// @name Параметры заголовков
     /// @{
     uint32_t _pbuProtoHeadSender: 24;   ///< Идентификатор отправителя (24 бита)
-                                        ///
+        ///
     uint8_t _pbuProtoHeadIdxModule;     ///< Индекс модуля в комплексе
-                                        ///
+        ///
     uint16_t _pbuProtoHeadIdxPack;      ///< Сквозной номер пакета
-                                        ///
+        ///
     uint8_t _pbuProtoHeadIsAsku: 1;     ///< Флаг использования ПО АСКУ (1 бит)
     /// @}
 
     /// @name Параметры протокола 0x01
     /// @{
     uint8_t _pbuProto0x01IdManuf;           ///< ID производителя
-                                            ///
+        ///
     uint32_t _pbuProto0x01SerialNum: 24;    ///< Серийный номер (24 бита)
-                                            ///
+        ///
     uint8_t _pbuProto0x01VersHardMaj;       ///< Мажорная версия железа
-                                            ///
+        ///
     uint8_t _pbuProto0x01VersHardMin;       ///< Минорная версия железа
-                                            ///
+        ///
     uint8_t _pbuProto0x01VersProgMaj:7;     ///< Мажорная версия ПО (7 бит)
-                                            ///
+        ///
     uint8_t _pbuProto0x01IsInfo:1;          ///< Флаг обработки информации
-                                            ///< (1 бит)
-                                            ///
+        ///< (1 бит)
+        ///
     uint8_t _pbuProto0x01VersProgMin:7;     ///< Минорная версия ПО (7 бит)
-                                            ///
+        ///
     uint8_t _pbuProto0x01IsControl:1;       ///< Флаг управления (1 бит)
     /// @}
 
     /// @name Параметры протокола 0x05
     /// @{
     uint8_t _pbuProto0x05TypeData:3;    ///< Тип данных позиционирования
-                                        /// (3 бита)
+        /// (3 бита)
     uint8_t _pbuProto0x05IsValid:1;     ///< Достоверность данных (1 бит)
     /// @}
 
@@ -404,19 +408,19 @@ private:
      * | Z_height   | Высота над уровнем моря (м)    | Z-координата (м)        |
      */
     float _pbuProto0x05_X_lat_geo;      ///< Координата X/Широта (Геопозиция)
-                                        ///
+        ///
     float _pbuProto0x05_X_lat_coord;    ///< Координата X/Широта (Координаты в
-                                        ///< системе комплекса)
+        ///< системе комплекса)
 
     float _pbuProto0x05_Y_long_geo;     ///< Координата Y/Долгота (Геопозиция)
-                                        ///
+        ///
     float _pbuProto0x05_Y_long_coord;   ///< Координата Y/Долгота (Координаты в
-                                        /// системе комплекса)
+        /// системе комплекса)
 
     float _pbuProto0x05_Z_height_geo;   ///< Координата Z/Высота (Геопозиция)
-                                        ///
+        ///
     float _pbuProto0x05_Z_height_coord; ///< Координата Z/Высота (Координаты в
-                                        /// системе комплекса)
+        /// системе комплекса)
 
     /// @name Параметры Ethernet-пакетов
     /// @{

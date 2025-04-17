@@ -207,3 +207,262 @@ messages.push_back(std::move(msg));
 >       return msg.template staticCast<TcpHeader>();
 >   }
 > ```
+
+---
+
+### Подход к реализации сообщения TcpMessage_0x21 через std::vector
+
+```
+#pragma pack(push, 1)
+
+// Элемент статуса (как ранее)
+struct ElementStatus {
+    uint16_t IDElem;
+    uint8_t status:4;
+    uint8_t workFl:4;  
+    uint8_t local:1;
+    uint8_t isImit:1;
+    uint8_t reserv:6;
+};
+
+// Основная структура сообщения (только заголовок)
+struct TcpMessage_0x21_Header : TcpMessage<TcpMessage_0x21_Header, 
+                                         PBU_MessageNumbers::STATUS_SCHEME_ELEMENTS> {
+    uint32_t time1;
+    uint32_t time2;
+    
+    TcpMessage_0x21_Header() {
+        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        time1 = to_uint32(time & 0xFFFFFFFF);
+        time2 = to_uint32(time >> 32);
+    }
+};
+
+// Обертка для удобной работы
+class TcpMessage_0x21 {
+    TcpMessage_0x21_Header header;
+    std::vector<ElementStatus> elements;
+    
+public:
+    // Конструкторы
+    TcpMessage_0x21() = default;
+    
+    explicit TcpMessage_0x21(const std::vector<ElementStatus>& elems)
+        : elements(elems) {
+        updateSize();
+    }
+    
+    // Управление элементами
+    void setElements(const std::vector<ElementStatus>& elems) {
+        elements = elems;
+        updateSize();
+    }
+    
+    void addElement(const ElementStatus& elem) {
+        elements.push_back(elem);
+        updateSize();
+    }
+    
+    const std::vector<ElementStatus>& getElements() const { return elements; }
+    
+    // Сериализация
+    QByteArray serializeFull() const {
+        QByteArray data;
+        data.append(reinterpret_cast<const char*>(&header), sizeof(header));
+        data.append(reinterpret_cast<const char*>(elements.data()), 
+                   elements.size() * sizeof(ElementStatus));
+        return data;
+    }
+    
+    // Десериализация
+    static TcpMessage_0x21 deserialize(const QByteArray& data) {
+        TcpMessage_0x21 msg;
+        
+        if (data.size() >= static_cast<int>(sizeof(TcpMessage_0x21_Header))) {
+            // Читаем заголовок
+            memcpy(&msg.header, data.constData(), sizeof(TcpMessage_0x21_Header));
+            
+            // Читаем элементы
+            const size_t elementsSize = (data.size() - sizeof(TcpMessage_0x21_Header)) / 
+                                      sizeof(ElementStatus);
+            msg.elements.resize(elementsSize);
+            
+            if (elementsSize > 0) {
+                memcpy(msg.elements.data(), 
+                      data.constData() + sizeof(TcpMessage_0x21_Header),
+                      elementsSize * sizeof(ElementStatus));
+            }
+        }
+        
+        return msg;
+    }
+    
+private:
+    void updateSize() {
+        header.sizeData = sizeof(TcpMessage_0x21_Header) - sizeof(TcpHeader) + 
+                         elements.size() * sizeof(ElementStatus);
+    }
+};
+
+#pragma pack(pop) 
+```
+
+### Реализация с динамическим массивом:
+ ```  
+ #pragma pack(push, 1)
+ 
+ /**
+  * @struct ElementStatus
+  * @brief Статус одного элемента схемы
+  */
+ struct ElementStatus {
+     uint16_t IDElem;    ///< Условный номер элемента (0-65535)
+ 
+     uint8_t status:4;   ///< Состояние элемента (0-неизвестно, 1-норма,
+                         ///< 2-предупреждение, 3-авария)
+     uint8_t workFl:4;   ///< Статус работы (0-выключен, 1-включен, 2-включение,
+                         ///< 3-выключение)
+ 
+     uint8_t local:1;    ///< Признак местного режима (0/1)
+     uint8_t isImit:1;   ///< Признак имитатора (0/1)
+     uint8_t reserv:6;   ///< Резервные биты
+ };
+ 
+ /**
+  * @struct TcpMessage_0x21
+  * @brief Сообщение статуса элементов схемы (0x21)
+  */
+ struct TcpMessage_0x21 : TcpMessage<TcpMessage_0x21,
+         PBU_MessageNumbers::STATUS_SCHEME_ELEMENTS> {
+     uint32_t time1;     ///< Младшие 32 бита временной метки
+     uint32_t time2;     ///< Старшие 32 бита временной метки
+ 
+     ElementStatus* elements; ///< Динамический массив статусов
+ 
+     /**
+      * @brief Конструктор
+      */
+     TcpMessage_0x21() : elements(nullptr) {
+         uint64_t time = to_uint64(TimeProvider::instance().getMs());
+         time1 = to_uint32(time & 0xFFFFFFFF);
+         time2 = to_uint32(time >> 32);
+     }
+ 
+     /**
+      * @brief Деструктор
+      */
+     ~TcpMessage_0x21() {
+         delete[] elements;
+     }
+ 
+     /**
+      * @brief Добавляет статусы элементов в сообщение
+      * @param statuses Массив статусов
+      * @param count Количество элементов
+      */
+     void setStatuses(const ElementStatus* statuses, size_t count) {
+         delete[] elements;
+         elements = nullptr;
+ 
+         if (count > 0) {
+             elements = new ElementStatus[count];
+             std::copy(statuses, statuses + count, elements);
+             sizeData = sizeof(TcpMessage_0x21) - sizeof(TcpHeader) +
+                        count * sizeof(ElementStatus);
+         } else {
+             sizeData = sizeof(TcpMessage_0x21) - sizeof(TcpHeader);
+         }
+     }
+ 
+     /**
+      * @brief Возвращает количество элементов в сообщении
+      */
+     size_t getElementsCount() const {
+         return (sizeData - (sizeof(TcpMessage_0x21) - sizeof(TcpHeader))) /
+                sizeof(ElementStatus);
+     }
+ 
+     /**
+      * @brief Полная сериализация сообщения
+      */
+     QByteArray serializeFull() const {
+         QByteArray data;
+         const size_t headerSize = sizeof(TcpMessage_0x21);
+         const size_t elementsSize = getElementsCount() * sizeof(ElementStatus);
+ 
+         data.append(reinterpret_cast<const char*>(this), headerSize);
+         if (elements && elementsSize > 0) {
+             data.append(reinterpret_cast<const char*>(elements), elementsSize);
+         }
+ 
+         return data;
+     }
+ 
+ /// @warning Отключение диагностики комплилятора для метода копирования
+ /// @note Мы сами перепроверяем строку при её сериализации/десериализации
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wclass-memaccess"
+     /**
+      * @brief Десериализация из массива байт
+      */
+     static TcpMessage_0x21 deserialize(const QByteArray& data) {
+         TcpMessage_0x21 msg;
+ 
+         const size_t headerSize = sizeof(TcpMessage_0x21);
+         if (data.size() >= static_cast<int>(headerSize)) {
+             /// @note Копирование заголовка
+             memcpy(&msg, data.constData(), headerSize);
+ 
+             /// @note Копирование элементов
+             const size_t elementsCount = msg.getElementsCount();
+             if (elementsCount > 0) {
+                 const size_t elementsSize = elementsCount *
+                                             sizeof(ElementStatus);
+                 if (data.size() >=
+                     static_cast<int>(headerSize + elementsSize)) {
+                     msg.elements = new ElementStatus[elementsCount];
+                     memcpy(msg.elements, data.constData() + headerSize,
+                            elementsSize);
+                 }
+             }
+         }
+ 
+         return msg;
+     }
+ #pragma GCC diagnostic pop
+ 
+     /// @note Запрет на копирование и присваивание
+     TcpMessage_0x21(const TcpMessage_0x21&) = delete;
+     TcpMessage_0x21& operator=(const TcpMessage_0x21&) = delete;
+ 
+     /// @note Разрешение перемещений
+     TcpMessage_0x21(TcpMessage_0x21&& other) noexcept
+         : TcpMessage<TcpMessage_0x21,
+                      PBU_MessageNumbers::STATUS_SCHEME_ELEMENTS>(),
+         time1(other.time1), time2(other.time2), elements(other.elements) {
+         other.elements = nullptr;
+     }
+ 
+     TcpMessage_0x21& operator=(TcpMessage_0x21&& other) noexcept {
+         if (this != &other) {
+             delete[] elements;
+ 
+             time1 = other.time1;
+             time2 = other.time2;
+             elements = other.elements;
+             other.elements = nullptr;
+ 
+             // Копируем данные из базового класса
+             static_cast<TcpHeader&>(*this) =
+                 static_cast<const TcpHeader&>(other);
+         }
+         return *this;
+     }
+ };
+ 
+ #pragma pack(pop)
+ 
+ static_assert(sizeof(ElementStatus) == 4, "Invalid ElementStatus size");
+ static_assert(sizeof(TcpMessage_0x21) == 16 + 8 + sizeof(ElementStatus*),
+         "Invalid TcpMessage_0x21 size");
+ ```
