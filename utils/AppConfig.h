@@ -87,6 +87,10 @@ public:
     /// @brief Значение по умолчанию до подтверждения регистрации
     static constexpr uint8_t PBU_PROTO_HEAD_IDX_MODULE_FIRST = 0xFF;
 
+    /// @brief Максимальное количество элементов в модуле
+    /// @details 2 РЛМН
+    static constexpr int MAX_ELEMENTS_MODULE = 2;
+
     /// @name Методы доступа к параметрам из .env
     /// @warning НЕИЗМЕННЫЕ в рантайме
     /// @{
