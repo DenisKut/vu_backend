@@ -155,6 +155,8 @@ Makefile*
 bin/
 objects/
 *.Release
+.qtc_clangd
+
 ### !!! Git-patches !!! ###
 patches/
 *.patch
