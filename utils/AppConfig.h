@@ -299,6 +299,9 @@ public:
     uint16_t ETH_PROTO_ETHER_TYPE() const { return _ethProtoEtherType; }
     /// @}
 
+    uint16_t MODULE_MODE() const { return _moduleMode; }
+    void SET_MODULE_MODE(uint16_t mode) { _moduleMode = mode; }
+
     /**
      * @brief Инициализация параметров из переменных окружения
      * @param env Хэш-таблица с параметрами из .env файла
@@ -373,6 +376,9 @@ public:
         // ---- 0x05 -----
         this->_pbuProto0x05TypeData = 1;
         this->_pbuProto0x05IsValid = 1;
+
+		// Инициализация режима модуля
+		this->_moduleMode = 0; // "0": ожидание команд управления
     }
 
     /**
@@ -571,6 +577,8 @@ private:
     uint64_t _ethProtoMacSrc: 48;       ///< MAC отправителя Ethernet-пакетов
     uint16_t _ethProtoEtherType;        ///< Тип протокола Ethernet-пакетов
     /// @}
+
+    uint16_t _moduleMode = 0; // Режим функционирования модуля (по умолчанию "0": ожидание команд управления)
 
     /// @name Объекты для хранения текущих состояний ППУ
     /// @{

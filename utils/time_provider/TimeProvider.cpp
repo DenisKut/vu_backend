@@ -92,3 +92,29 @@ uint64_t TimeProvider::getBsPeriodTime() const {
 uint32_t TimeProvider::getBsPeriodWidth() const {
     return bsPeriodWidth;
 }
+
+void TimeProvider::setPbuTimestamp(int64_t new_time) {
+    pbuTimestamp = new_time;
+}
+
+void TimeProvider::setTimeOnTimestamp(int64_t new_time) {
+    timeOnTimestamp = new_time;
+}
+
+// Синхронизировать время:
+void TimeProvider::syncTime(uint32_t time1, uint32_t time2) {
+    // Объединяем два 32-битных значения в 64-битное время
+    int64_t timePBU = static_cast<int64_t>(static_cast<uint64_t>(time2) << 32)
+                                        | time1;
+    setPbuTimestamp(timePBU);
+
+    // Получаем текущее время системы
+    int64_t time_now = getMs();
+    setTimeOnTimestamp(time_now);
+}
+
+uint64_t TimeProvider::getTimeForRequest() {
+    uint64_t resultTime = static_cast<uint64_t>(getMs() -
+                                                timeOnTimestamp + pbuTimestamp);
+    return resultTime;
+}
