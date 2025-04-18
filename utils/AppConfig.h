@@ -1,6 +1,8 @@
 #pragma once
 #include "utils/env_loader/EnvLoader.h"
 #include <cstdint>
+#include <cmath>     // Для std::round
+#include <QtGlobal>  // Для qBound
 #include <QString>
 #include <QHash>
 
@@ -14,6 +16,55 @@
  * @ingroup Utils
  * @brief Inline функции для безопасного приведения типов
  */
+static inline double from_anglePPU(const uint8_t in[3]) {
+    // Предвычисление константы
+    static constexpr double SCALE = 360.0 / 65536.0;
+
+    // Объединение операций сдвига (компилятор оптимизирует в одну инструкцию)
+    const int32_t tmp = (static_cast<int32_t>(in[2]) << 16)
+                      | (static_cast<int32_t>(in[1]) << 8)
+                      | static_cast<int32_t>(in[0]);
+
+    // Расширение знака через арифметический сдвиг (1 инструкция процессора)
+    const int32_t out = (tmp << 8) >> 8;
+
+    // Прямое умножение на предвычисленную константу
+    return static_cast<double>(out) * SCALE;
+}     ///< @brief Приведение к градусам из 3-байтового массива с дискретами
+
+static inline void to_anglePPU(double value, uint8_t out[3]) {
+    // Предвычисление константы
+    static constexpr double INV_SCALE = 65536.0 / 360.0;
+    double scaled = value * INV_SCALE;
+
+    // Ограничение диапазона 24-битного знакового целого
+    constexpr int32_t MIN_VAL = -0x800000;
+    constexpr int32_t MAX_VAL =  0x7FFFFF;
+
+    // Округление и ограничение значения
+    int32_t ival = qBound(MIN_VAL,
+                          static_cast<int32_t>(std::round(scaled)),
+                          MAX_VAL);
+
+    // Усечение до 24 бит
+    ival &= 0x00FFFFFF;
+
+    // Упаковка в массив
+    out[0] = static_cast<uint8_t>(ival);
+    out[1] = static_cast<uint8_t>(ival >> 8);
+    out[2] = static_cast<uint8_t>(ival >> 16);
+}     ///< @brief Приведение к дискретам от градусов и упаковка в массив
+
+template<typename T>
+static inline float to_float(T x) {
+    return static_cast<float>(x);
+}     ///< @brief Приведение к дробному одинарной точности
+
+template<typename T>
+static inline double to_double(T x) {
+    return static_cast<double>(x);
+}     ///< @brief Приведение к дробному двойной точности
+
 template<typename T>
 static inline uint64_t to_uint64(T x) {
     return static_cast<uint64_t>(x);
@@ -333,6 +384,98 @@ public:
         initBase();
     }
 
+    // *******************************************
+    //  Текущее состояние ППУ
+    // *******************************************
+
+    /**
+     * @enum ModulePPU_lastCommand
+     * @brief Перечень команд, полученных ППУ
+     */
+    enum ModulePPU_lastCommand {
+        ModulePPU_lastCommand_Stop     = 0, ///< Команда остановки ППУ
+        ModulePPU_lastCommand_SwitchOn = 2, ///< Команда включения ППУ
+        ModulePPU_lastCommand_Target   = 4, ///< Целеуказание
+        ModulePPU_lastCommand_Idle     = 6  ///< Команды не поступало
+    };
+
+    /**
+     * @enum ModulePPU_state
+     * @brief Перечень состояний ППУ
+     */
+    enum ModulePPU_state {
+        ModulePPU_state_TurnedOn       = 1, ///< ППУ включено
+        ModulePPU_state_TurnOff        = 2, ///< Выполняется отключение ППУ
+        ModulePPU_state_Targeting      = 4, ///< Выполняется отработка ЦУ
+        ModulePPU_state_NoCommand      = 8  ///< Отсутствует внешний обмен
+    };
+
+    /**
+     * @struct ModulePPU
+     * @brief Структура, содержащая состояние ППУ
+     */
+    struct ModulePPU {
+        uint8_t     lastCommand;    ///< Код последней полученной команды
+        uint8_t     state;          ///< Состояние
+        uint8_t     ispr;           ///< Исправность оборудования
+        double      az;             ///< Текущая координата по азимуту,
+                                    ///<   отсчётов (65536/360 = 1 град)
+        uint64_t    azDelay;        ///< Задержка измерения координаты
+                                    ///<   по азимуту, мс (20 = 1 мс)
+        double      an;             ///< Текущая координата по углу места,
+                                    ///<   отсчётов (65536/360 = 1 град)
+        uint64_t    anDelay;        ///< Задержка измерения координаты
+                                    ///<   по углу места, мс (20 = 1 мс)
+        uint8_t     borders;        ///< Состояние границ
+        uint64_t    waitCommands;   ///< Время ожидания команд, мс (1 = 5 мс)
+        uint64_t    waitTarget;     ///< Время ожидания ЦУ, мс (1 = 5 мс)
+    };
+
+    /// @name Заполнение структуры состояний ППУ
+    /// @{
+    /// Код последней полученной команды
+    void setModulePPU_lastCommand(ModulePPU *module, uint8_t value) {
+        module->lastCommand = value;
+    }
+    /// Состояние
+    void setModulePPU_state(ModulePPU *module, uint8_t value) {
+        module->state = value;
+    }
+    /// Исправность оборудования
+    void setModulePPU_ispr(ModulePPU *module, uint8_t value) {
+        module->ispr = value;
+    }
+    /// Текущая координата по азимуту (65536/360 = 1 град)
+    void setModulePPU_az(ModulePPU *module, uint8_t *value) {
+        module->az = from_anglePPU(value);
+    }
+    /// Задержка измерения координаты по азимуту (20 = 1 мс = 10000 тактов)
+    void setModulePPU_azDelay(ModulePPU *module, uint8_t value) {
+        module->azDelay = to_uint64(value) * 500; // Преобразование в такты БС
+    }
+    /// Текущая координата по углу места (65536/360 = 1 град)
+    void setModulePPU_an(ModulePPU *module, uint8_t *value) {
+        module->an = from_anglePPU(value);
+    }
+    /// Задержка измерения координаты по углу места (20 = 1 мс = 10000 тактов)
+    void setModulePPU_anDelay(ModulePPU *module, uint8_t value) {
+        module->anDelay = to_uint64(value) * 500; // Преобразование в такты БС
+    }
+    /// Состояние границ
+    void setModulePPU_borders(ModulePPU *module, uint8_t value) {
+        module->borders = value;
+    }
+    /// Время ожидания команд (1 = 5 мс = 50000 тактов)
+    void setModulePPU_waitCommands(ModulePPU *module, uint8_t value) {
+        module->waitCommands = to_uint64(value) * 50000; // Преобразование в такты БС
+    }
+    /// Время ожидания ЦУ (1 = 5 мс = 50000 тактов)
+    void setModulePPU_waitTarget(ModulePPU *module, uint8_t value) {
+        module->waitTarget = to_uint64(value) * 50000; // Преобразование в такты БС
+    }
+    /// @}
+
+
 private:
     AppConfig() = default; ///< Приватный конструктор
 
@@ -427,6 +570,12 @@ private:
     uint64_t _ethProtoMacDst: 48;       ///< MAC получателя Ethernet-пакетов
     uint64_t _ethProtoMacSrc: 48;       ///< MAC отправителя Ethernet-пакетов
     uint16_t _ethProtoEtherType;        ///< Тип протокола Ethernet-пакетов
+    /// @}
+
+    /// @name Объекты для хранения текущих состояний ППУ
+    /// @{
+    ModulePPU ppu1;                     ///< ППУ под номером 1
+    ModulePPU ppu2;                     ///< ППУ под номером 2
     /// @}
 };
     // uint8_t _pbuProto0x05;
