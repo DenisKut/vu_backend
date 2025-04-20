@@ -5,8 +5,6 @@
  * Этот файл содержит описание класса Logger, который реализует функциональность
  * логгирования текстовых и бинарных данных, а также записи логов в базу данных.
  * Логгер работает в отдельном потоке и поддерживает многопоточную запись.
- *
- * @authors Денис О, Денис Т., Никита О.
  */
 
 #ifndef LOGGER_H
@@ -22,59 +20,74 @@
 #include <QString>
 #include <atomic>
 #include <vector>
-
 #include <utils/time_provider/TimeProvider.h>
+
+
 
 
 // FLAGS AND MARKS
 //-------------------------------------------------------------------
+
+/**
+ * @brief идентификатор, который принадлежит структуре LogHeader
+ * @details статусы сообщений, позволяет разделять их по важности
+ */
 enum class LogLevel {
+    //mostly debug ¯\_(ツ)_/¯
     Trace,    ///> @brief детальная отладочная информация
-	MessageReceived, ///> @brief получаемое сообщений
-	MessageSent,      ///> @brief принимаемое сообщение
     Debug,    ///> @brief отладочные сообщения
+    //common
     Info,     ///> @brief общая информация
     Warning,  ///> @brief предупреждения
     Error,    ///> @brief ошибки
-    Fatal     ///> @brief критические ошибки
+    Fatal,     ///> @brief критические ошибки
+    //message in/out
+    MessageReceived, ///> @brief получаемое сообщений
+    MessageSent      ///> @brief принимаемое сообщение
 };
 
 QString inline logLevelToString(LogLevel level) {
     switch(level) {
     case LogLevel::Trace:           return "Trace";
-    case LogLevel::MessageReceived: return "MessageReceived";
-    case LogLevel::MessageSent:     return "MessageSent";
     case LogLevel::Debug:           return "Debug";
     case LogLevel::Info:            return "Info";
     case LogLevel::Warning:         return "Warning";
     case LogLevel::Error:           return "Error";
     case LogLevel::Fatal:           return "Fatal";
+    case LogLevel::MessageReceived: return "MessageReceived";
+    case LogLevel::MessageSent:     return "MessageSent";
     default:                        return "N/A";
     }
 }
 
+/**
+ * @brief приналежит InitLog
+ * @details помогает разделять сообщения об инициализации компонентов по важности
+ */
 enum class StatusInit{
-	LOADED__NO_ERRORS,
-	LOADED__HAS_WARNINGS,
-	NOT_LOADED__ERROR_CRITICAL,
-	NOT_LOADED
+    LOADED,
+    NOT_LOADED__ERROR_CRITICAL,
+    NOT_LOADED
 
 };
 QString inline statusInitToString(StatusInit status) {
     switch(status) {
-    case StatusInit::LOADED__NO_ERRORS:       return "LOADED_NO_ERRORS";
-    case StatusInit::LOADED__HAS_WARNINGS:    return "LOADED_HAS_WARNINGS";
+    case StatusInit::LOADED:       return "LOADED";
     case StatusInit::NOT_LOADED__ERROR_CRITICAL: return "NOT_LOADED_ERROR_CRITICAL";
     case StatusInit::NOT_LOADED:              return "NOT_LOADED";
     default:                                  return "N/A";
     }
 }
+// END FLAGS AND MARKS ---------------------------------------------------------
 
 
+//--------------------------------------------------------------------------------
+// DB_WRITABLE STRUCTS основые структуры записи определенных данных в базу данных
+//--------------------------------------------------------------------------------
 /**
  * @struct LogHeader
  * @brief Структура заголовка лога.
- * 
+ *
  * Содержит информацию о временной метке, источнике и получателе сообщения.
  */
 struct LogHeader {
@@ -90,27 +103,30 @@ struct LogHeader {
      * @param logLevel Уровень логирования
      */
     LogHeader(const QString& source,
-             const LogLevel& logLevel)
-            : timestampMicroseconds(TimeProvider::instance().getMks()),
-            src(source),
-            timestampMilliseconds(TimeProvider::instance().getMs()),
-            level(logLevel)
+              const LogLevel& logLevel)
+        : timestampMicroseconds(TimeProvider::instance().getMks()),
+        src(source),
+        timestampMilliseconds(TimeProvider::instance().getMs()),
+        level(logLevel)
     {}
 };
 
-// END FLAGS AND MARKS ---------------------------------------------------------
 
-// DBWRITERS основые структуры записи определенных данных в базу данных
-//------------------------------------------------------------------------------
+
 /**
  * @struct InitLog
  * @brief Лог инициализации приложения/компонентов
  */
 struct InitLog : public LogHeader {
-    
+
     StatusInit status;        ///< Сообщение инициализации
-    
-    InitLog(const QString& src, const StatusInit& status);
+
+    InitLog(const QString& source,
+            const StatusInit& status);
+
+    InitLog(const QString& source,
+            const LogLevel& logLevel,
+            const StatusInit& status);
 };
 
 /**
@@ -119,52 +135,43 @@ struct InitLog : public LogHeader {
  */
 struct InternalMessageLog : public LogHeader {
     QString messageType;    ///< Тип сообщения
-    QString messageItself; ///< Содержимое сообщения
+    QString parsedData; ///< Содержимое сообщения
 
-	
-    InternalMessageLog(const QString& src,
+
+    InternalMessageLog(const QString& source,
                        const QString& messageType,
-                       const QString& messageItself);
+                       const QString& parsedData);
 
+    InternalMessageLog(const QString& source,
+                       const LogLevel& logLevel,
+                       const QString& messageType,
+                       const QString& parsedData);
 };
 
 /**
  * @struct ProtocolMessageLog
- * @brief Лог протокольных сообщений
+ * @brief Лог протокольных сообщений. кидаемых вовне / принимаемых извне
  */
 struct ProtocolMessageLog : public LogHeader {
     QString protocolType;   ///< Тип сообщения/протокола (TCP/UDP/RAW(MAC))
     QByteArray rawData;     ///< Сырые данные сообщения
     QString parsedData;     ///< Распарсенные данные
-    
-    ProtocolMessageLog(const QString& src, const QString& dst,
-                      const QString& func, int line,
-                      const QString& protocol, 
-                      const QByteArray& data, 
-                      const QString& parsed);
-};
 
-/**
- * @struct MethodCallLog
- * @brief Лог вызовов методов
- */
-struct MethodCallLog : public LogHeader {
-	QString callerClassName;///< Имя класса, в котором вызван метод
-    QString methodName;     ///< Имя вызванного метода
-    QString parameters;     ///< Параметры вызова?
-    QString returnValue;    ///< Возвращаемое значение
-    
-    MethodCallLog(const QString& src, const QString& dst,
-                 const QString& func, int line,
-                 const QString& method, 
-                 const QString& params = "",
-                 const QString& retVal = "");
+    ProtocolMessageLog(const QString& source,
+                       const QString& protocol,
+                       const QByteArray& data);
+
+    ProtocolMessageLog(const QString& source,
+                       const LogLevel& logLevel,
+                       const QString& protocol,
+                       const QByteArray& data);
 
 };
+// END DB_WRITABLE STRUCTS--------------------------------------------------------------
 
 
 
-// END DBWRITERS ---------------------------------------------------------------
+
 /**
  * @class Logger
  * @brief Класс для логгирования данных.
@@ -284,19 +291,6 @@ private:
     */
     void flushBuffer();
 
-    QString bakeQuery(const LogHeader& logHead);
-    QString bakeQuery(const InitLog& logData);
-    QString bakeQuery(const InternalMessageLog& logData);
-    //QString bakeQuery(const ProtocolMessageLog& logData);
-    //QString bakeQuery(const MethodCallLog& logData);
-
-
-
-
-
-
-
-
     QSqlDatabase m_db; ///< Подключение к базе данных.
     QMutex m_mutex; ///< Мьютекс для синхронизации.
     QWaitCondition m_condition; ///< Условие ожидания.
@@ -306,4 +300,7 @@ private:
     std::vector<QString> m_buffer; ///< Буфер для пакетной вставки.
     const int m_bufferSize = 100; ///< Размер буфера перед записью в БД.
 };
+
+
+
 #endif // LOGGER_H

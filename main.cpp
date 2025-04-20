@@ -11,7 +11,7 @@
 #include "utils/env_loader/EnvLoader.h"
 #include "utils/AppConfig.h"
 #include "core/CoreManager.h"
-
+#include "core/logger/Logger.h"
 int main(int argc, char* argv[]) {
 #ifdef Q_OS_WIN
     // Настройка консоли Windows

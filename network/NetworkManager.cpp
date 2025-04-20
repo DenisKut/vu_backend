@@ -15,6 +15,7 @@ NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
     connect(&m_ethTimer, &QTimer::timeout, &m_ethHandler, &EthHandler::checkReceived);
     connect(&m_ethHandler, &EthHandler::ethTimerReceiveRestart, [this](){ m_ethTimer.start(1); });
 #endif
+    
 }
 
 NetworkManager::~NetworkManager() {
@@ -30,6 +31,7 @@ void NetworkManager::start() {
     m_udpHandler.startListening(AppConfig::instance().UDP_PORT());
     m_ethHandler.start();
     m_ethTimer.start(1);
+    LOG_INIT(typeid(this).name(), StatusInit::LOADED);
 }
 
 void NetworkManager::stop() {

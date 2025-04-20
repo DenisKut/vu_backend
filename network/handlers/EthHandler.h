@@ -7,11 +7,7 @@
 #include <QDebug>
 #include <QDataStream>
 #include "../messages/EthMessage.h"
-#include "utils/time_provider/TimeProvider.h"
-#include "core/logger/Logger.h"
 #include "utils/AppConfig.h"
-
-#include <chrono>
 
 // Библиотека WinPCap для работы с
 // Ethernet raw data под Windows:

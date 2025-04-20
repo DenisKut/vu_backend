@@ -1,8 +1,9 @@
 QT += core network sql
 
-TARGET = lun_vu
+TARGET = lun
 CONFIG += c++11 cmdline
-
+# ЦЕЛЬ сборки {debug, release}
+CONFIG += debug
 # -------------------------------
 # 0. Пути сборки проекта
 # -------------------------------
@@ -32,6 +33,7 @@ QMAKE_DISTCLEAN += $$QMAKE_CLEAN
 SOURCES += \
     core/CoreManager.cpp \
     core/logger/Logger.cpp \
+    core/logger/LoggerMessages.cpp \
     main.cpp \
     network/NetworkManager.cpp \
     network/handlers/EthHandler.cpp \
@@ -43,6 +45,7 @@ SOURCES += \
 HEADERS += \
     core/CoreManager.h \
     core/logger/Logger.h \
+    core/logger/LoggerMessages.h \
     network/NetworkManager.h \
     network/handlers/EthHandler.h \
     network/handlers/TcpHandler.h \
@@ -53,6 +56,11 @@ HEADERS += \
     utils/AppConfig.h \
     utils/time_provider/TimeProvider.h \
     utils/env_loader/EnvLoader.h
+
+#глобальное включение
+PRECOMPILED_HEADER = pch.h
+CONFIG+=precompile_header
+INCLUDEPATH += $$PWD/core/logger
 
 # Windows (WinPcap)
 win32 {

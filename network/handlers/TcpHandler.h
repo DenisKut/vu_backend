@@ -6,7 +6,6 @@
 #include <QDataStream>
 #include "../messages/TcpMessage.h"
 #include "utils/time_provider/TimeProvider.h"
-#include "core/logger/Logger.h"
 
 class TcpHandler : public QObject {
     Q_OBJECT
