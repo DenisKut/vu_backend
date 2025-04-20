@@ -1,12 +1,16 @@
 // CoreManager.cpp
 #include "CoreManager.h"
 #include "network/NetworkManager.h"
-#include "utils/time_provider/TimeProvider.h"
 
 CoreManager::CoreManager(QObject* parent) : QObject(parent) {
     m_networkManager = new NetworkManager(m_timeProvider, this);
 }
 
 void CoreManager::initialize() {
-    m_networkManager->start(); // Запуск сетевого модуля
+    try{
+        m_networkManager->start(); // Запуск сетевого модуля
+    }
+    catch (...){
+        LOG_INIT(typeid(this).name(), StatusInit::NOT_LOADED__ERROR_CRITICAL);
+    }
 }
