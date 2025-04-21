@@ -84,8 +84,13 @@ void TcpHandler::sendPeriodicMessages() {
         // TcpHandler::sendModuleStatus();
 
         // Отправка 0x1021 (Текущее состояние РЛС-Н)
-        auto msg_0x1021_1 = MessageFactory::create<TcpMessage_0x1021>(),
-            msg_0x1021_2 = MessageFactory::create<TcpMessage_0x1021>();
+        auto msg_0x1021_1 =
+            MessageFactory::create<TcpMessage_0x1021>(AppConfig
+                                    ::ModulePPU_num
+                                        ::ModulePPU_num_RLMN_1),
+            msg_0x1021_2 = MessageFactory::create<TcpMessage_0x1021>(AppConfig
+                                                    ::ModulePPU_num
+                                                        ::ModulePPU_num_RLMN_2);
         sendMessage(msg_0x1021_1.serializeFull());
         sendMessage(msg_0x1021_2.serializeFull());
     }

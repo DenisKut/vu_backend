@@ -397,7 +397,14 @@ struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
     float dAzVisible;   ///< Ширина зоны обзора/луча по азимуту (32 бит)
     float dElVisible;   ///< Ширина поля обзора/луча по углу места (32 бит)
 
-    TcpMessage_0x1021() {
+    TcpMessage_0x1021(AppConfig::ModulePPU_num num_device)
+        : numDrive(to_uint8(num_device)),
+        isRemote(AppConfig::instance().getModulePPU_isRemote(num_device)),
+        reserve(0),
+        azCur(AppConfig::instance().getModulePPU_az(num_device)),
+        elCur(AppConfig::instance().getModulePPU_an(num_device)),
+        dAzVisible(3),
+        dElVisible(3) {
         uint64_t time = to_uint64(TimeProvider::instance().getMs());
         time1 = to_uint32(time & 0xFFFFFFFF);
         time2 = to_uint32(time >> 32);
