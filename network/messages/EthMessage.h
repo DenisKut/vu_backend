@@ -172,6 +172,8 @@ struct EthMessage : EthHeader {
     QByteArray serializeFull() const {
         QByteArray data(sizeof(TDerived), 0);
         memcpy(data.data(), this, sizeof(TDerived));
+        // Дополнение кол-ва данных до 60, если кол-во данных меньше:
+        if (data.size() < 60) data.append(60 - data.size(), 0);
         return data;
     }
 
@@ -271,10 +273,11 @@ struct EthMessage_PPU_ENABLE : EthMessage<EthMessage_PPU_ENABLE, ETH_MessageNumb
     // Данные:
     uint8_t     state;              ///< Состояние ППУ (0 – выключить ППУ, 1 – включить ППУ)
 
-    EthMessage_PPU_ENABLE(uint8_t _state) {
+//    EthMessage_PPU_ENABLE(uint8_t _state) {
+    EthMessage_PPU_ENABLE() {
         uint64_t time = TimeProvider::instance().getBsPeriodTime();
         memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
-        state = _state > 0 ? 1 : 0;
+//        state = _state > 0 ? 1 : 0;
 //        timeBeginTrans[0] = time & 0xFF;
 //        timeBeginTrans[1] = (time >> 8) & 0xFF;
 //        timeBeginTrans[2] = (time >> 16) & 0xFF;
