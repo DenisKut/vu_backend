@@ -494,14 +494,26 @@ public:
     // *******************************************
 
     /**
+     * @enum ModulePPU_num
+     * @brief Перечень номеров ППУ
+     */
+    enum ModulePPU_num {
+        ModulePPU_num_RLMN_1            = 0, ///< РЛМН 1
+        ModulePPU_num_RLMN_2            = 1, ///< РЛМН 2
+        ModulePPU_num_SHPU              = 2, ///< ШПУ
+
+        ModulePPU_num_Size              = 3  ///< Размер списка ППУ
+    };
+
+    /**
      * @enum ModulePPU_lastCommand
      * @brief Перечень команд, полученных ППУ
      */
     enum ModulePPU_lastCommand {
-        ModulePPU_lastCommand_Stop     = 0, ///< Команда остановки ППУ
-        ModulePPU_lastCommand_SwitchOn = 2, ///< Команда включения ППУ
-        ModulePPU_lastCommand_Target   = 4, ///< Целеуказание
-        ModulePPU_lastCommand_Idle     = 6  ///< Команды не поступало
+        ModulePPU_lastCommand_Stop      = 0, ///< Команда остановки ППУ
+        ModulePPU_lastCommand_SwitchOn  = 2, ///< Команда включения ППУ
+        ModulePPU_lastCommand_Target    = 4, ///< Целеуказание
+        ModulePPU_lastCommand_Idle      = 6  ///< Команды не поступало
     };
 
     /**
@@ -509,10 +521,10 @@ public:
      * @brief Перечень состояний ППУ
      */
     enum ModulePPU_state {
-        ModulePPU_state_TurnedOn       = 1, ///< ППУ включено
-        ModulePPU_state_TurnOff        = 2, ///< Выполняется отключение ППУ
-        ModulePPU_state_Targeting      = 4, ///< Выполняется отработка ЦУ
-        ModulePPU_state_NoCommand      = 8  ///< Отсутствует внешний обмен
+        ModulePPU_state_TurnedOn        = 1, ///< ППУ включено
+        ModulePPU_state_TurnOff         = 2, ///< Выполняется отключение ППУ
+        ModulePPU_state_Targeting       = 4, ///< Выполняется отработка ЦУ
+        ModulePPU_state_NoCommand       = 8  ///< Отсутствует внешний обмен
     };
 
     /**
@@ -536,47 +548,91 @@ public:
         uint64_t    waitTarget;     ///< Время ожидания ЦУ, мс (1 = 5 мс)
     };
 
-    /// @name Заполнение структуры состояний ППУ
+    /// @name Запись структуры состояний ППУ
     /// @{
     /// Код последней полученной команды
-    void setModulePPU_lastCommand(ModulePPU *module, uint8_t value) {
-        module->lastCommand = value;
+    void setModulePPU_lastCommand(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->lastCommand = value;
     }
     /// Состояние
-    void setModulePPU_state(ModulePPU *module, uint8_t value) {
-        module->state = value;
+    void setModulePPU_state(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->state = value;
     }
     /// Исправность оборудования
-    void setModulePPU_ispr(ModulePPU *module, uint8_t value) {
-        module->ispr = value;
+    void setModulePPU_ispr(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->ispr = value;
     }
     /// Текущая координата по азимуту (65536/360 = 1 град)
-    void setModulePPU_az(ModulePPU *module, uint8_t *value) {
-        module->az = from_anglePPU(value);
+    void setModulePPU_az(ModulePPU_num moduleNum, uint8_t *value) {
+        ModulePPU_mas[moduleNum]->az = from_anglePPU(value);
     }
     /// Задержка измерения координаты по азимуту (20 = 1 мс = 10000 тактов)
-    void setModulePPU_azDelay(ModulePPU *module, uint8_t value) {
-        module->azDelay = to_uint64(value) * 500; // Преобразование в такты БС
+    void setModulePPU_azDelay(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->azDelay = to_uint64(value) * 500; // Преобразование в такты БС
     }
     /// Текущая координата по углу места (65536/360 = 1 град)
-    void setModulePPU_an(ModulePPU *module, uint8_t *value) {
-        module->an = from_anglePPU(value);
+    void setModulePPU_an(ModulePPU_num moduleNum, uint8_t *value) {
+        ModulePPU_mas[moduleNum]->an = from_anglePPU(value);
     }
     /// Задержка измерения координаты по углу места (20 = 1 мс = 10000 тактов)
-    void setModulePPU_anDelay(ModulePPU *module, uint8_t value) {
-        module->anDelay = to_uint64(value) * 500; // Преобразование в такты БС
+    void setModulePPU_anDelay(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->anDelay = to_uint64(value) * 500; // Преобразование в такты БС
     }
     /// Состояние границ
-    void setModulePPU_borders(ModulePPU *module, uint8_t value) {
-        module->borders = value;
+    void setModulePPU_borders(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->borders = value;
     }
     /// Время ожидания команд (1 = 5 мс = 50000 тактов)
-    void setModulePPU_waitCommands(ModulePPU *module, uint8_t value) {
-        module->waitCommands = to_uint64(value) * 50000; // Преобразование в такты БС
+    void setModulePPU_waitCommands(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->waitCommands = to_uint64(value) * 50000; // Преобразование в такты БС
     }
     /// Время ожидания ЦУ (1 = 5 мс = 50000 тактов)
-    void setModulePPU_waitTarget(ModulePPU *module, uint8_t value) {
-        module->waitTarget = to_uint64(value) * 50000; // Преобразование в такты БС
+    void setModulePPU_waitTarget(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->waitTarget = to_uint64(value) * 50000; // Преобразование в такты БС
+    }
+    /// @}
+
+    /// @name Чтение структуры состояний ППУ
+    /// @{
+    /// Код последней полученной команды
+    uint8_t getModulePPU_lastCommand(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->lastCommand;
+    }
+    /// Состояние
+    uint8_t getModulePPU_state(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->state;
+    }
+    /// Исправность оборудования
+    uint8_t getModulePPU_ispr(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->ispr;
+    }
+    /// Текущая координата по азимуту (65536/360 = 1 град)
+    double getModulePPU_az(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->az;
+    }
+    /// Задержка измерения координаты по азимуту (20 = 1 мс = 10000 тактов)
+    uint64_t getModulePPU_azDelay(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->azDelay;
+    }
+    /// Текущая координата по углу места (65536/360 = 1 град)
+    double getModulePPU_an(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->an;
+    }
+    /// Задержка измерения координаты по углу места (20 = 1 мс = 10000 тактов)
+    uint64_t getModulePPU_anDelay(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->anDelay;
+    }
+    /// Состояние границ
+    uint8_t getModulePPU_borders(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->borders;
+    }
+    /// Время ожидания команд (1 = 5 мс = 50000 тактов)
+    uint64_t getModulePPU_waitCommands(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->waitCommands;
+    }
+    /// Время ожидания ЦУ (1 = 5 мс = 50000 тактов)
+    uint64_t getModulePPU_waitTarget(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->waitTarget;
     }
     /// @}
 
@@ -700,8 +756,13 @@ private:
 
     /// @name Объекты для хранения текущих состояний ППУ
     /// @{
-    ModulePPU ppu1;                     ///< ППУ под номером 1
-    ModulePPU ppu2;                     ///< ППУ под номером 2
+    ModulePPU ppuRLMN1;                 ///< ППУ РЛМН 1
+    ModulePPU ppuRLMN2;                 ///< ППУ РЛМН 2
+    ModulePPU ppuSHPU;                  ///< ППУ РЛМН 2
     /// @}
+
+    ModulePPU* ModulePPU_mas[ModulePPU_num_Size] = {
+        &ppuRLMN1, &ppuRLMN2, &ppuSHPU
+    };                                  ///< Массив указателей на ППУ
 };
     // uint8_t _pbuProto0x05;
