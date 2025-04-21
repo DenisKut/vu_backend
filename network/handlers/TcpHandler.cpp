@@ -43,15 +43,16 @@ void TcpHandler::onDisconnected() {
 }
 
 void TcpHandler::onError(QAbstractSocket::SocketError error) {
-    emit errorOccurred(m_socket->errorString());
+    if(error)
+        emit errorOccurred(m_socket->errorString());
 }
 
 void TcpHandler::onReadyRead() {
     while (m_socket->bytesAvailable() > 0) {
         QByteArray data = m_socket->readAll();
         if (data.size() >= static_cast<int>(sizeof(TcpHeader))) {
-            TcpHeader header = TcpHeader::deserialize(data);
-            // processIncomingMessage(header);
+            auto parsed = MessageFactory::parse(data);
+            processIncomingMessage(parsed);
         }
     }
 }
@@ -90,45 +91,51 @@ void TcpHandler::sendPeriodicMessages() {
     }
 }
 
-// void TcpHandler::processIncomingMessage(const TcpHeader& msg) {
-//     switch (static_cast<PBU_MessageNumbers>(msg.typePack)) {
-//     case PBU_MessageNumbers::RES_REGISTRATION: {
-//         m_isRegistered = true;
-//         m_registrationTimer.stop();
-//         m_periodicTimer.start(1000); // Периодическая отправка сообщений
-//         break;
-//     }
-//     case PBU_MessageNumbers::TIMESTAMP: {
-//         TcpMessage_0x04* timeMsg = reinterpret_cast<TcpMessage_0x04*>(&msg);
-//         m_timeProvider->syncTime(timeMsg->timeAnswer1, timeMsg->timeAnswer2);
-//         qDebug() << "Time synchronized using message 0x04.";
-//         break;
-//     }
-//     case PBU_MessageNumbers::TARGET_DESIGNATION: {
-//         TcpMessage_0x641* targetMsg = reinterpret_cast<TcpMessage_0x641*>(&msg);
+void TcpHandler::processIncomingMessage(std::unique_ptr<TcpHeader>& parsed) {;
+    // if()
+    switch (static_cast<PBU_MessageNumbers>(parsed->typePack)) {
+    case PBU_MessageNumbers::RES_REGISTRATION: {
+        auto msg_0x02 = reinterpret_cast<TcpMessage_0x02*>(parsed.get());
+        AppConfig::instance().SET_PBU_PROTO_HEAD_IDX_MODULE(msg_0x02->idxModule);
+        if (msg_0x02->errorConnect == 0) {
+            m_isRegistered = true;
+            m_registrationTimer.stop();
+            m_periodicTimer.start(1000); // Периодическая отправка сообщений
+        }
+        break;
+    }
+    case PBU_MessageNumbers::TIMESTAMP: {
+        auto msg_0x04 = reinterpret_cast<TcpMessage_0x04*>(parsed.get());
+        m_timeProvider->syncTime(msg_0x04->timeAnswer1, msg_0x04->timeAnswer2);
+        qDebug() << "Time synchronized using message 0x04.";
+        break;
+    }
 
-//         // Изменение глобального состояния
-//         AppConfig::instance().setModuleState("Executing Command");
+    // case PBU_MessageNumbers::TARGET_DESIGNATION: {
+    //     TcpMessage_0x641* targetMsg = reinterpret_cast<TcpMessage_0x641*>(&msg);
 
-//         // Отправка подтверждения и статуса
-//         TcpMessage_0x23 ackMsg;
-//         TcpMessage_0x24 statusMsg;
-//         sendMessage(ackMsg);
-//         sendMessage(statusMsg);
+    //     // Изменение глобального состояния
+    //     AppConfig::instance().setModuleState("Executing Command");
 
-//         // Формирование и отправка отметок цели
-//         TcpMessage_0x1022 targetResponse;
-//         targetResponse.fillFromTargetMessage(*targetMsg); // Заполнение из 0x641
-//         sendMessage(targetResponse);
+    //     // Отправка подтверждения и статуса
+    //     TcpMessage_0x23 ackMsg;
+    //     TcpMessage_0x24 statusMsg;
+    //     sendMessage(ackMsg);
+    //     sendMessage(statusMsg);
 
-//         // Завершение обработки
-//         AppConfig::instance().SET_MODULE_MODE(1024);
-//         TcpMessage_0x23 finalAckMsg;
-//         sendMessage(finalAckMsg);
-//         break;
-//     }
-//     default:
-//         qDebug() << "Unknown message type received:" << msg.typePack;
-//         break;
-//     }
-// }
+    //     // Формирование и отправка отметок цели
+    //     TcpMessage_0x1022 targetResponse;
+    //     targetResponse.fillFromTargetMessage(*targetMsg); // Заполнение из 0x641
+    //     sendMessage(targetResponse);
+
+    //     // Завершение обработки
+    //     AppConfig::instance().SET_MODULE_MODE(1024);
+    //     TcpMessage_0x23 finalAckMsg;
+    //     sendMessage(finalAckMsg);
+    //     break;
+    // }
+    default:
+        // qDebug() << "Unknown message type received:" << msg.typePack;
+        break;
+    }
+}

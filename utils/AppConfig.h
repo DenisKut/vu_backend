@@ -286,7 +286,91 @@ public:
     float PBU_PROTO_0X05_Z_HEIGHT_COORD() const {
         return _pbuProto0x05_Z_height_coord;
     }
+    /// @}
 
+    /// @name Протокол Статуса модуля (0x24)
+    /// @{
+    /// Состояние модуля
+    uint8_t PBU_PROTO_0X24_STATUS() const { return _pbuProto0x24_status; }
+    void SET_PBU_PROTO_0X24_STATUS(uint8_t data) {
+        _pbuProto0x24_status = data;
+    }
+
+    /// Статус работы
+    uint8_t PBU_PROTO_0X24_WORK() const { return _pbuProto0x24_work; }
+    void SET_PBU_PROTO_0X24_WORK(uint8_t data) {
+        _pbuProto0x24_work = data;
+    }
+
+    /// Признак включения РГДВ
+    uint8_t PBU_PROTO_0X24_IS_RGDV() const { return _pbuProto0x24_isRGDV; }
+    void SET_PBU_PROTO_0X24_IS_RGDV(bool flag) {
+        _pbuProto0x24_isRGDV = flag ? 1 : 0;
+    }
+
+    /// Признак включения РАФ
+    uint8_t PBU_PROTO_0X24_IS_RAF() const { return _pbuProto0x24_isRAF; }
+    void SET_PBU_PROTO_0X24_IS_RAF(bool flag) {
+        _pbuProto0x24_isRAF = flag ? 1 : 0;
+    }
+
+    /// Признак включения местного режима
+    uint8_t PBU_PROTO_0X24_IS_LOCAL() const { return _pbuProto0x24_isLocal; }
+    void SET_PBU_PROTO_0X24_IS_LOCAL(bool flag) {
+        _pbuProto0x24_isLocal = flag ? 1 : 0;
+    }
+
+    /// Признак имитатора
+    uint8_t PBU_PROTO_0X24_IS_IMIT() const { return _pbuProto0x24_isImit; }
+    void SET_PBU_PROTO_0X24_IS_IMIT(bool flag) {
+        _pbuProto0x24_isImit = flag ? 1 : 0;
+    }
+
+    /// Признак наличия транспортного положения
+    uint8_t PBU_PROTO_0X24_HAS_TP() const { return _pbuProto0x24_hasTP; }
+    void SET_PBU_PROTO_0X24_HAS_TP(bool flag) {
+        _pbuProto0x24_hasTP = flag ? 1 : 0;
+    }
+
+    /// Признак нахождения в транспортном положении
+    uint8_t PBU_PROTO_0X24_IS_TP() const { return _pbuProto0x24_isTP; }
+    void SET_PBU_PROTO_0X24_IS_TP(bool flag) {
+        _pbuProto0x24_isTP = flag ? 1 : 0;
+    }
+
+    /// Признак нахождения в РП
+    uint8_t PBU_PROTO_0X24_IS_WP() const { return _pbuProto0x24_isWP; }
+    void SET_PBU_PROTO_0X24_IS_WP(bool flag) {
+        _pbuProto0x24_isWP = flag ? 1 : 0;
+    }
+
+    /// Признак достоверности флага ТП
+    uint8_t PBU_PROTO_0X24_IS_TP_VALID() const {
+        return _pbuProto0x24_isTPValid;
+    }
+    void SET_PBU_PROTO_0X24_IS_TP_VALID(bool flag) {
+        _pbuProto0x24_isTPValid = flag ? 1 : 0;
+    }
+
+    /// Признак достоверности флага РП
+    uint8_t PBU_PROTO_0X24_IS_WP_VALID() const {
+        return _pbuProto0x24_isWPValid;
+    }
+    void SET_PBU_PROTO_0X24_IS_WP_VALID(bool flag) {
+        _pbuProto0x24_isWPValid = flag ? 1 : 0;
+    }
+
+    /// Статус положения
+    uint8_t PBU_PROTO_0X24_STATUS_TWP() const {
+        return _pbuProto0x24_statusTWP;
+    }
+    void SET_PBU_PROTO_0X24_STATUS_TWP(bool flag) {
+        _pbuProto0x24_statusTWP = flag ? 1 : 0;
+    }
+
+    /// Режим функционирования
+    uint16_t PBU_PROTO_0X24_MODE() const { return _pbuProto0x24_mode; }
+    void SET_PBU_PROTO_0X24_MODE(uint16_t data) { _pbuProto0x24_mode = data; }
     /// @}
 
     /// @name Параметры Ethernet-пакетов
@@ -298,9 +382,6 @@ public:
     /// Тип протокола Ethernet-пакетов
     uint16_t ETH_PROTO_ETHER_TYPE() const { return _ethProtoEtherType; }
     /// @}
-
-    uint16_t MODULE_MODE() const { return _moduleMode; }
-    void SET_MODULE_MODE(uint16_t mode) { _moduleMode = mode; }
 
     /**
      * @brief Инициализация параметров из переменных окружения
@@ -316,8 +397,10 @@ public:
         this->_ethSocketBuffSize = env.getInt("ETH_SOCKET_BUF_SIZE", 2048);
 
         // Версии протокола
-        this->_pbuProtoMajorVersion = env.getUInt8("PBU_PROTO_MAJOR_VERSION", 2);
-        this->_pbuProtoMinorVersion = env.getUInt8("PBU_PROTO_MINOR_VERSION", 0);
+        this->_pbuProtoMajorVersion = env
+                                        .getUInt8("PBU_PROTO_MAJOR_VERSION", 2);
+        this->_pbuProtoMinorVersion = env
+                                        .getUInt8("PBU_PROTO_MINOR_VERSION", 0);
 
         // 24-битное значение
         this->_pbuProtoHeadSender =
@@ -377,8 +460,24 @@ public:
         this->_pbuProto0x05TypeData = 1;
         this->_pbuProto0x05IsValid = 1;
 
-		// Инициализация режима модуля
-		this->_moduleMode = 0; // "0": ожидание команд управления
+        // ---- 0x24 -----
+        this->_pbuProto0x24_status = 1;     ///< "1": Норма
+        this->_pbuProto0x24_work = 1;       ///< "1": включен
+        this->_pbuProto0x24_isRGDV = 1;     ///< модуль находится в РГДВ
+        this->_pbuProto0x24_isRAF = 1;      ///< модуль находится в РАФ
+        this->_pbuProto0x24_isLocal = 0;    ///< модуль находится в удалённом
+                                            ///< режиме управления
+
+        this->_pbuProto0x24_isImit = 0;     ///< Боевой режим
+        this->_pbuProto0x24_hasTP = 0;      ///< Модуль не находится в
+                                            ///< транспортном положении
+        this->_pbuProto0x24_isTP = 0;       ///< Модуль не находится в ТП
+        this->_pbuProto0x24_isWP = 0;       ///< Модуль не находится в ТП и РП
+        this->_pbuProto0x24_isTPValid = 0;  ///< Не удалось определить
+        this->_pbuProto0x24_isWPValid = 0;  ///< Не удалось определить
+        this->_pbuProto0x24_statusTWP = 1;   ///< "1": норма
+
+        this->_pbuProto0x24_mode = 0; // "0": ожидание команд управления
     }
 
     /**
@@ -571,14 +670,33 @@ private:
     float _pbuProto0x05_Z_height_coord; ///< Координата Z/Высота (Координаты в
                                         /// системе комплекса)
 
+    /// @name Параметры протокола 0x24
+    /// @{
+    uint8_t _pbuProto0x24_status: 3;    ///< Состояние модуля
+    uint8_t _pbuProto0x24_work: 3;      ///< Статус работы
+    uint8_t _pbuProto0x24_isRGDV: 1;    ///< Признак включения РГДВ
+    uint8_t _pbuProto0x24_isRAF: 1;     ///< Признак включения РАФ
+    uint8_t _pbuProto0x24_isLocal: 1;   ///< Признак включения местного режима
+    uint8_t _pbuProto0x24_isImit: 1;    ///< Признак имитатора
+    uint8_t _pbuProto0x24_hasTP: 1;     ///< Признак наличия транспортного
+                                        ///< положения
+                                        ///
+    uint8_t _pbuProto0x24_isTP: 1;      ///< Признак нахождения в транспортном
+                                        ///< положении
+    uint8_t _pbuProto0x24_isWP: 1;      ///< Признак нахождения в РП
+    uint8_t _pbuProto0x24_isTPValid: 1; ///< Признак достоверности флага ТП
+    uint8_t _pbuProto0x24_isWPValid: 1; ///< Признак достоверности флага РП
+    uint8_t _pbuProto0x24_statusTWP: 1; ///< Статус положения
+
+    uint16_t _pbuProto0x24_mode;        ///< Режим функционирования
+    /// @}
+
     /// @name Параметры Ethernet-пакетов
     /// @{
     uint64_t _ethProtoMacDst: 48;       ///< MAC получателя Ethernet-пакетов
     uint64_t _ethProtoMacSrc: 48;       ///< MAC отправителя Ethernet-пакетов
     uint16_t _ethProtoEtherType;        ///< Тип протокола Ethernet-пакетов
     /// @}
-
-    uint16_t _moduleMode = 0; // Режим функционирования модуля (по умолчанию "0": ожидание команд управления)
 
     /// @name Объекты для хранения текущих состояний ППУ
     /// @{

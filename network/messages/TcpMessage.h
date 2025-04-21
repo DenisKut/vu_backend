@@ -332,7 +332,7 @@ struct TcpMessage_0x03 : TcpMessage<TcpMessage_0x03,
 
     /// @brief Инициализирует временную метку текущим временем
     TcpMessage_0x03() {
-        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        uint64_t time = TimeProvider::instance().getTimeForRequest();
         timeRequest1 = to_uint32(time & 0xFFFFFFFF);
         timeRequest2 = to_uint32(time >> 32);
     }
@@ -2268,10 +2268,12 @@ struct TcpMessage_0x24: TcpMessage<TcpMessage_0x24,
     uint8_t isRGDV: 1;      ///< @brief Признак включения РГДВ
                             ///< @details В данном поле передается «1»,
                             ///< если модуль находится в РГДВ, «0» - если нет
+                            ///< default - 1
 
     uint8_t isRAF: 1;       ///< @brief Признак включения РАФ
                             ///< @details В данном поле передается «1», если
                             ///< модуль находится в РАФ, «0» - если нет
+                            ///< default - 1
 
     uint8_t isLocal: 1;     ///< @brief Признак включения местного режима
                             ///< @details В данном поле передается «1», если
@@ -2282,6 +2284,7 @@ struct TcpMessage_0x24: TcpMessage<TcpMessage_0x24,
                             ///< Сервера. Переход в местный режим и выход из
                             ///< него возможен только с технологического
                             ///< рабочего места оператора модуля.
+                            ///< default - 0
 
     uint8_t isImit: 1;      ///< @brief Признак имитатора
                             ///< @details В данном поле передается «1», если
@@ -2379,6 +2382,26 @@ struct TcpMessage_0x24: TcpMessage<TcpMessage_0x24,
                             ///< частями РУК КББ (приложение 1 к протоколу)
 
     uint32_t reserve;       ///< @brief Резерв (не используется)
+
+    TcpMessage_0x24()
+        : status(AppConfig::instance().PBU_PROTO_0X24_STATUS()),
+        work(AppConfig::instance().PBU_PROTO_0X24_WORK()),
+        isRGDV(AppConfig::instance().PBU_PROTO_0X24_IS_RGDV()),
+        isRAF(AppConfig::instance().PBU_PROTO_0X24_IS_RAF()),
+        isLocal(AppConfig::instance().PBU_PROTO_0X24_IS_LOCAL()),
+        isImit(AppConfig::instance().PBU_PROTO_0X24_IS_IMIT()),
+        hasTP(AppConfig::instance().PBU_PROTO_0X24_HAS_TP()),
+        isTP(AppConfig::instance().PBU_PROTO_0X24_IS_TP()),
+        isWP(AppConfig::instance().PBU_PROTO_0X24_IS_WP()),
+        isTPValid(AppConfig::instance().PBU_PROTO_0X24_IS_TP_VALID()),
+        isWPValid(AppConfig::instance().PBU_PROTO_0X24_IS_WP_VALID()),
+        statusTWP(AppConfig::instance().PBU_PROTO_0X24_STATUS_TWP()),
+        mode(AppConfig::instance().PBU_PROTO_0X24_MODE()),
+        reserve(0) {
+        uint64_t time = TimeProvider::instance().getTimeForRequest();
+        time1 = to_uint32(time & 0xFFFFFFFF);
+        time2 = to_uint32(time >> 32);
+    }
 };
 #pragma pack(pop)
 
