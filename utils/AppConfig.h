@@ -528,6 +528,22 @@ public:
     };
 
     /**
+     * @enum ModulePPU_isRemote
+     * @brief Перечень признаков внешнего управления
+     */
+    enum ModulePPU_isRemote {
+        ModulePPU_isRemote_defaulted    = 0,    ///< Не выполняется никаких
+                                                ///< команд от ПО СОИ
+
+        ModulePPU_isRemote_search       = 1,    ///< Выполняется поиск цели по
+                                                ///< команде «Целеуказание»
+
+        ModulePPU_isRemote_support      = 2     ///< Выполняется сопровождение
+                                                ///< цели по команде
+                                                ///< «Целеуказание»
+    };
+
+    /**
      * @struct ModulePPU
      * @brief Структура, содержащая состояние ППУ
      */
@@ -546,6 +562,26 @@ public:
         uint8_t     borders;        ///< Состояние границ
         uint64_t    waitCommands;   ///< Время ожидания команд, мс (1 = 5 мс)
         uint64_t    waitTarget;     ///< Время ожидания ЦУ, мс (1 = 5 мс)
+
+        /// ===========================
+        /// Поля для сообщений о состояниях с ПБУ
+        /// ===========================
+
+        uint8_t isRemote;           ///< Признак внешнего управления
+
+        ModulePPU()
+            : lastCommand(0),
+            state(0),
+            ispr(0),
+            az(0),
+            azDelay(0),
+            an(0),
+            anDelay(0),
+            borders(0),
+            waitCommands(0),
+            waitTarget(0),
+            isRemote(0)
+        {};
     };
 
     /// @name Запись структуры состояний ППУ
@@ -590,6 +626,11 @@ public:
     void setModulePPU_waitTarget(ModulePPU_num moduleNum, uint8_t value) {
         ModulePPU_mas[moduleNum]->waitTarget = to_uint64(value) * 50000; // Преобразование в такты БС
     }
+
+    /// Признак внешнего управления
+    void setModulePPU_isRemote(ModulePPU_num moduleNum, ModulePPU_isRemote value) {
+        ModulePPU_mas[moduleNum]->isRemote = to_uint8(value);
+    }
     /// @}
 
     /// @name Чтение структуры состояний ППУ
@@ -633,6 +674,11 @@ public:
     /// Время ожидания ЦУ (1 = 5 мс = 50000 тактов)
     uint64_t getModulePPU_waitTarget(ModulePPU_num moduleNum) {
         return ModulePPU_mas[moduleNum]->waitTarget;
+    }
+
+    /// Признак внешнего управления
+    uint8_t getModulePPU_isRemote(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->isRemote;
     }
     /// @}
 
@@ -756,9 +802,9 @@ private:
 
     /// @name Объекты для хранения текущих состояний ППУ
     /// @{
-    ModulePPU ppuRLMN1;                 ///< ППУ РЛМН 1
-    ModulePPU ppuRLMN2;                 ///< ППУ РЛМН 2
-    ModulePPU ppuSHPU;                  ///< ППУ РЛМН 2
+    ModulePPU ppuRLMN1,             ///< ППУ РЛМН 1
+        ppuRLMN2,                   ///< ППУ РЛМН 2
+        ppuSHPU;                    ///< ППУ ШПУ
     /// @}
 
     ModulePPU* ModulePPU_mas[ModulePPU_num_Size] = {
