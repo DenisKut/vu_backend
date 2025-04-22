@@ -245,6 +245,20 @@ void EthHandler::disconnectAdapter()
     // Logger::instance().writeText("Ethernet адаптер отключен");
 }
 
+/// Отправить сообщение
+bool EthHandler::sendMessage(const QByteArray &data)
+{
+#ifdef _WIN32
+    if (pcap_sendpacket(pcapTx, reinterpret_cast<const u_char*>(data.data()), data.size()) != 0)
+    {
+        qDebug("Ошибка при отправке Ethernet-пакета");
+        return false;
+    }
+    return true;
+#else
+#endif
+}
+
 void EthHandler::start()
 {
     connectAdapter();
@@ -267,9 +281,9 @@ void EthHandler::checkReceived()
             long long time = static_cast<long long>(header->ts.tv_sec)*1000000 + static_cast<long long>(header->ts.tv_usec);
             int length = static_cast<int>(header->len);
 
-            // Вывод метки времени и длины пакета:
-            qDebug() << QString("%1  -  %2").arg(time).arg(length);
-            // Logger::instance().writeBinary("Принят Ethernet пакет:", data, length);
+            // Запись в лог метки времени и длины пакета:
+//            qDebug() << QString("%1  -  %2").arg(time).arg(length);
+            Logger::instance().writeBinary("Принят Ethernet пакет:", data, length);
 
             // Отправка данных в NetworkManager для разбора:
             QByteArray msg = QByteArray(reinterpret_cast<const char*>(data), length);
@@ -286,9 +300,9 @@ void EthHandler::checkReceived()
     ssize_t length = 0;
     while((length = recvfrom(ethSocketID, buf, buf_size, 0, NULL, NULL)) > 0)
     {
-        // Вывод метки времени и длины пакета:
-        qDebug() << QString("%1  -  %2").arg(TimeProvider::instance().getMks()).arg(length);
-        //Logger::instance().writeBinary("Принят Ethernet пакет:", buf, length);
+        // Запись в лог метки времени и длины пакета:
+//            qDebug() << QString("%1  -  %2").arg(time).arg(length);
+        Logger::instance().writeBinary("Принят Ethernet пакет:", buf, length);
 
         // Отправка данных в NetworkManager для разбора:
         QByteArray msg = QByteArray(reinterpret_cast<const char*>(buf), length);

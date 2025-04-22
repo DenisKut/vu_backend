@@ -1,6 +1,8 @@
 #pragma once
 #include "utils/env_loader/EnvLoader.h"
 #include <cstdint>
+#include <cmath>     // Для std::round
+#include <QtGlobal>  // Для qBound
 #include <QString>
 #include <QHash>
 
@@ -14,6 +16,55 @@
  * @ingroup Utils
  * @brief Inline функции для безопасного приведения типов
  */
+static inline double from_anglePPU(const uint8_t in[3]) {
+    // Предвычисление константы
+    static constexpr double SCALE = 360.0 / 65536.0;
+
+    // Объединение операций сдвига (компилятор оптимизирует в одну инструкцию)
+    const int32_t tmp = (static_cast<int32_t>(in[2]) << 16)
+                      | (static_cast<int32_t>(in[1]) << 8)
+                      | static_cast<int32_t>(in[0]);
+
+    // Расширение знака через арифметический сдвиг (1 инструкция процессора)
+    const int32_t out = (tmp << 8) >> 8;
+
+    // Прямое умножение на предвычисленную константу
+    return static_cast<double>(out) * SCALE;
+}     ///< @brief Приведение к градусам из 3-байтового массива с дискретами
+
+static inline void to_anglePPU(double value, uint8_t out[3]) {
+    // Предвычисление константы
+    static constexpr double INV_SCALE = 65536.0 / 360.0;
+    double scaled = value * INV_SCALE;
+
+    // Ограничение диапазона 24-битного знакового целого
+    constexpr int32_t MIN_VAL = -0x800000;
+    constexpr int32_t MAX_VAL =  0x7FFFFF;
+
+    // Округление и ограничение значения
+    int32_t ival = qBound(MIN_VAL,
+                          static_cast<int32_t>(std::round(scaled)),
+                          MAX_VAL);
+
+    // Усечение до 24 бит
+    ival &= 0x00FFFFFF;
+
+    // Упаковка в массив
+    out[0] = static_cast<uint8_t>(ival);
+    out[1] = static_cast<uint8_t>(ival >> 8);
+    out[2] = static_cast<uint8_t>(ival >> 16);
+}     ///< @brief Приведение к дискретам от градусов и упаковка в массив
+
+template<typename T>
+static inline float to_float(T x) {
+    return static_cast<float>(x);
+}     ///< @brief Приведение к дробному одинарной точности
+
+template<typename T>
+static inline double to_double(T x) {
+    return static_cast<double>(x);
+}     ///< @brief Приведение к дробному двойной точности
+
 template<typename T>
 static inline uint64_t to_uint64(T x) {
     return static_cast<uint64_t>(x);
@@ -86,6 +137,10 @@ public:
 
     /// @brief Значение по умолчанию до подтверждения регистрации
     static constexpr uint8_t PBU_PROTO_HEAD_IDX_MODULE_FIRST = 0xFF;
+
+    /// @brief Максимальное количество элементов в модуле
+    /// @details 2 РЛМН
+    static constexpr int MAX_ELEMENTS_MODULE = 2;
 
     /// @name Методы доступа к параметрам из .env
     /// @warning НЕИЗМЕННЫЕ в рантайме
@@ -231,7 +286,91 @@ public:
     float PBU_PROTO_0X05_Z_HEIGHT_COORD() const {
         return _pbuProto0x05_Z_height_coord;
     }
+    /// @}
 
+    /// @name Протокол Статуса модуля (0x24)
+    /// @{
+    /// Состояние модуля
+    uint8_t PBU_PROTO_0X24_STATUS() const { return _pbuProto0x24_status; }
+    void SET_PBU_PROTO_0X24_STATUS(uint8_t data) {
+        _pbuProto0x24_status = data;
+    }
+
+    /// Статус работы
+    uint8_t PBU_PROTO_0X24_WORK() const { return _pbuProto0x24_work; }
+    void SET_PBU_PROTO_0X24_WORK(uint8_t data) {
+        _pbuProto0x24_work = data;
+    }
+
+    /// Признак включения РГДВ
+    uint8_t PBU_PROTO_0X24_IS_RGDV() const { return _pbuProto0x24_isRGDV; }
+    void SET_PBU_PROTO_0X24_IS_RGDV(bool flag) {
+        _pbuProto0x24_isRGDV = flag ? 1 : 0;
+    }
+
+    /// Признак включения РАФ
+    uint8_t PBU_PROTO_0X24_IS_RAF() const { return _pbuProto0x24_isRAF; }
+    void SET_PBU_PROTO_0X24_IS_RAF(bool flag) {
+        _pbuProto0x24_isRAF = flag ? 1 : 0;
+    }
+
+    /// Признак включения местного режима
+    uint8_t PBU_PROTO_0X24_IS_LOCAL() const { return _pbuProto0x24_isLocal; }
+    void SET_PBU_PROTO_0X24_IS_LOCAL(bool flag) {
+        _pbuProto0x24_isLocal = flag ? 1 : 0;
+    }
+
+    /// Признак имитатора
+    uint8_t PBU_PROTO_0X24_IS_IMIT() const { return _pbuProto0x24_isImit; }
+    void SET_PBU_PROTO_0X24_IS_IMIT(bool flag) {
+        _pbuProto0x24_isImit = flag ? 1 : 0;
+    }
+
+    /// Признак наличия транспортного положения
+    uint8_t PBU_PROTO_0X24_HAS_TP() const { return _pbuProto0x24_hasTP; }
+    void SET_PBU_PROTO_0X24_HAS_TP(bool flag) {
+        _pbuProto0x24_hasTP = flag ? 1 : 0;
+    }
+
+    /// Признак нахождения в транспортном положении
+    uint8_t PBU_PROTO_0X24_IS_TP() const { return _pbuProto0x24_isTP; }
+    void SET_PBU_PROTO_0X24_IS_TP(bool flag) {
+        _pbuProto0x24_isTP = flag ? 1 : 0;
+    }
+
+    /// Признак нахождения в РП
+    uint8_t PBU_PROTO_0X24_IS_WP() const { return _pbuProto0x24_isWP; }
+    void SET_PBU_PROTO_0X24_IS_WP(bool flag) {
+        _pbuProto0x24_isWP = flag ? 1 : 0;
+    }
+
+    /// Признак достоверности флага ТП
+    uint8_t PBU_PROTO_0X24_IS_TP_VALID() const {
+        return _pbuProto0x24_isTPValid;
+    }
+    void SET_PBU_PROTO_0X24_IS_TP_VALID(bool flag) {
+        _pbuProto0x24_isTPValid = flag ? 1 : 0;
+    }
+
+    /// Признак достоверности флага РП
+    uint8_t PBU_PROTO_0X24_IS_WP_VALID() const {
+        return _pbuProto0x24_isWPValid;
+    }
+    void SET_PBU_PROTO_0X24_IS_WP_VALID(bool flag) {
+        _pbuProto0x24_isWPValid = flag ? 1 : 0;
+    }
+
+    /// Статус положения
+    uint8_t PBU_PROTO_0X24_STATUS_TWP() const {
+        return _pbuProto0x24_statusTWP;
+    }
+    void SET_PBU_PROTO_0X24_STATUS_TWP(bool flag) {
+        _pbuProto0x24_statusTWP = flag ? 1 : 0;
+    }
+
+    /// Режим функционирования
+    uint16_t PBU_PROTO_0X24_MODE() const { return _pbuProto0x24_mode; }
+    void SET_PBU_PROTO_0X24_MODE(uint16_t data) { _pbuProto0x24_mode = data; }
     /// @}
 
     /// @name Параметры Ethernet-пакетов
@@ -258,8 +397,10 @@ public:
         this->_ethSocketBuffSize = env.getInt("ETH_SOCKET_BUF_SIZE", 2048);
 
         // Версии протокола
-        this->_pbuProtoMajorVersion = env.getUInt8("PBU_PROTO_MAJOR_VERSION", 2);
-        this->_pbuProtoMinorVersion = env.getUInt8("PBU_PROTO_MINOR_VERSION", 0);
+        this->_pbuProtoMajorVersion = env
+                                        .getUInt8("PBU_PROTO_MAJOR_VERSION", 2);
+        this->_pbuProtoMinorVersion = env
+                                        .getUInt8("PBU_PROTO_MINOR_VERSION", 0);
 
         // 24-битное значение
         this->_pbuProtoHeadSender =
@@ -318,6 +459,25 @@ public:
         // ---- 0x05 -----
         this->_pbuProto0x05TypeData = 1;
         this->_pbuProto0x05IsValid = 1;
+
+        // ---- 0x24 -----
+        this->_pbuProto0x24_status = 1;     ///< "1": Норма
+        this->_pbuProto0x24_work = 1;       ///< "1": включен
+        this->_pbuProto0x24_isRGDV = 1;     ///< модуль находится в РГДВ
+        this->_pbuProto0x24_isRAF = 1;      ///< модуль находится в РАФ
+        this->_pbuProto0x24_isLocal = 0;    ///< модуль находится в удалённом
+                                            ///< режиме управления
+
+        this->_pbuProto0x24_isImit = 0;     ///< Боевой режим
+        this->_pbuProto0x24_hasTP = 0;      ///< Модуль не находится в
+                                            ///< транспортном положении
+        this->_pbuProto0x24_isTP = 0;       ///< Модуль не находится в ТП
+        this->_pbuProto0x24_isWP = 0;       ///< Модуль не находится в ТП и РП
+        this->_pbuProto0x24_isTPValid = 0;  ///< Не удалось определить
+        this->_pbuProto0x24_isWPValid = 0;  ///< Не удалось определить
+        this->_pbuProto0x24_statusTWP = 1;   ///< "1": норма
+
+        this->_pbuProto0x24_mode = 0; // "0": ожидание команд управления
     }
 
     /**
@@ -328,6 +488,200 @@ public:
         initFromEnv(env);
         initBase();
     }
+
+    // *******************************************
+    //  Текущее состояние ППУ
+    // *******************************************
+
+    /**
+     * @enum ModulePPU_num
+     * @brief Перечень номеров ППУ
+     */
+    enum ModulePPU_num {
+        ModulePPU_num_RLMN_1            = 0, ///< РЛМН 1
+        ModulePPU_num_RLMN_2            = 1, ///< РЛМН 2
+        ModulePPU_num_SHPU              = 2, ///< ШПУ
+
+        ModulePPU_num_Size              = 3  ///< Размер списка ППУ
+    };
+
+    /**
+     * @enum ModulePPU_lastCommand
+     * @brief Перечень команд, полученных ППУ
+     */
+    enum ModulePPU_lastCommand {
+        ModulePPU_lastCommand_Stop      = 0, ///< Команда остановки ППУ
+        ModulePPU_lastCommand_SwitchOn  = 2, ///< Команда включения ППУ
+        ModulePPU_lastCommand_Target    = 4, ///< Целеуказание
+        ModulePPU_lastCommand_Idle      = 6  ///< Команды не поступало
+    };
+
+    /**
+     * @enum ModulePPU_state
+     * @brief Перечень состояний ППУ
+     */
+    enum ModulePPU_state {
+        ModulePPU_state_TurnedOn        = 1, ///< ППУ включено
+        ModulePPU_state_TurnOff         = 2, ///< Выполняется отключение ППУ
+        ModulePPU_state_Targeting       = 4, ///< Выполняется отработка ЦУ
+        ModulePPU_state_NoCommand       = 8  ///< Отсутствует внешний обмен
+    };
+
+    /**
+     * @enum ModulePPU_isRemote
+     * @brief Перечень признаков внешнего управления
+     */
+    enum ModulePPU_isRemote {
+        ModulePPU_isRemote_defaulted    = 0,    ///< Не выполняется никаких
+                                                ///< команд от ПО СОИ
+
+        ModulePPU_isRemote_search       = 1,    ///< Выполняется поиск цели по
+                                                ///< команде «Целеуказание»
+
+        ModulePPU_isRemote_support      = 2     ///< Выполняется сопровождение
+                                                ///< цели по команде
+                                                ///< «Целеуказание»
+    };
+
+    /**
+     * @struct ModulePPU
+     * @brief Структура, содержащая состояние ППУ
+     */
+    struct ModulePPU {
+        uint8_t     lastCommand;    ///< Код последней полученной команды
+        uint8_t     state;          ///< Состояние
+        uint8_t     ispr;           ///< Исправность оборудования
+        double      az;             ///< Текущая координата по азимуту,
+                                    ///<   отсчётов (65536/360 = 1 град)
+        uint64_t    azDelay;        ///< Задержка измерения координаты
+                                    ///<   по азимуту, мс (20 = 1 мс)
+        double      an;             ///< Текущая координата по углу места,
+                                    ///<   отсчётов (65536/360 = 1 град)
+        uint64_t    anDelay;        ///< Задержка измерения координаты
+                                    ///<   по углу места, мс (20 = 1 мс)
+        uint8_t     borders;        ///< Состояние границ
+        uint64_t    waitCommands;   ///< Время ожидания команд, мс (1 = 5 мс)
+        uint64_t    waitTarget;     ///< Время ожидания ЦУ, мс (1 = 5 мс)
+
+        /// ===========================
+        /// Поля для сообщений о состояниях с ПБУ
+        /// ===========================
+
+        uint8_t isRemote;           ///< Признак внешнего управления
+
+        ModulePPU()
+            : lastCommand(0),
+            state(0),
+            ispr(0),
+            az(0),
+            azDelay(0),
+            an(0),
+            anDelay(0),
+            borders(0),
+            waitCommands(0),
+            waitTarget(0),
+            isRemote(0)
+        {};
+    };
+
+    /// @name Запись структуры состояний ППУ
+    /// @{
+    /// Код последней полученной команды
+    void setModulePPU_lastCommand(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->lastCommand = value;
+    }
+    /// Состояние
+    void setModulePPU_state(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->state = value;
+    }
+    /// Исправность оборудования
+    void setModulePPU_ispr(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->ispr = value;
+    }
+    /// Текущая координата по азимуту (65536/360 = 1 град)
+    void setModulePPU_az(ModulePPU_num moduleNum, uint8_t *value) {
+        ModulePPU_mas[moduleNum]->az = from_anglePPU(value);
+    }
+    /// Задержка измерения координаты по азимуту (20 = 1 мс = 10000 тактов)
+    void setModulePPU_azDelay(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->azDelay = to_uint64(value) * 500; // Преобразование в такты БС
+    }
+    /// Текущая координата по углу места (65536/360 = 1 град)
+    void setModulePPU_an(ModulePPU_num moduleNum, uint8_t *value) {
+        ModulePPU_mas[moduleNum]->an = from_anglePPU(value);
+    }
+    /// Задержка измерения координаты по углу места (20 = 1 мс = 10000 тактов)
+    void setModulePPU_anDelay(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->anDelay = to_uint64(value) * 500; // Преобразование в такты БС
+    }
+    /// Состояние границ
+    void setModulePPU_borders(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->borders = value;
+    }
+    /// Время ожидания команд (1 = 5 мс = 50000 тактов)
+    void setModulePPU_waitCommands(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->waitCommands = to_uint64(value) * 50000; // Преобразование в такты БС
+    }
+    /// Время ожидания ЦУ (1 = 5 мс = 50000 тактов)
+    void setModulePPU_waitTarget(ModulePPU_num moduleNum, uint8_t value) {
+        ModulePPU_mas[moduleNum]->waitTarget = to_uint64(value) * 50000; // Преобразование в такты БС
+    }
+
+    /// Признак внешнего управления
+    void setModulePPU_isRemote(ModulePPU_num moduleNum, ModulePPU_isRemote value) {
+        ModulePPU_mas[moduleNum]->isRemote = to_uint8(value);
+    }
+    /// @}
+
+    /// @name Чтение структуры состояний ППУ
+    /// @{
+    /// Код последней полученной команды
+    uint8_t getModulePPU_lastCommand(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->lastCommand;
+    }
+    /// Состояние
+    uint8_t getModulePPU_state(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->state;
+    }
+    /// Исправность оборудования
+    uint8_t getModulePPU_ispr(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->ispr;
+    }
+    /// Текущая координата по азимуту (65536/360 = 1 град)
+    double getModulePPU_az(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->az;
+    }
+    /// Задержка измерения координаты по азимуту (20 = 1 мс = 10000 тактов)
+    uint64_t getModulePPU_azDelay(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->azDelay;
+    }
+    /// Текущая координата по углу места (65536/360 = 1 град)
+    double getModulePPU_an(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->an;
+    }
+    /// Задержка измерения координаты по углу места (20 = 1 мс = 10000 тактов)
+    uint64_t getModulePPU_anDelay(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->anDelay;
+    }
+    /// Состояние границ
+    uint8_t getModulePPU_borders(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->borders;
+    }
+    /// Время ожидания команд (1 = 5 мс = 50000 тактов)
+    uint64_t getModulePPU_waitCommands(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->waitCommands;
+    }
+    /// Время ожидания ЦУ (1 = 5 мс = 50000 тактов)
+    uint64_t getModulePPU_waitTarget(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->waitTarget;
+    }
+
+    /// Признак внешнего управления
+    uint8_t getModulePPU_isRemote(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->isRemote;
+    }
+    /// @}
+
 
 private:
     AppConfig() = default; ///< Приватный конструктор
@@ -418,11 +772,43 @@ private:
     float _pbuProto0x05_Z_height_coord; ///< Координата Z/Высота (Координаты в
                                         /// системе комплекса)
 
+    /// @name Параметры протокола 0x24
+    /// @{
+    uint8_t _pbuProto0x24_status: 3;    ///< Состояние модуля
+    uint8_t _pbuProto0x24_work: 3;      ///< Статус работы
+    uint8_t _pbuProto0x24_isRGDV: 1;    ///< Признак включения РГДВ
+    uint8_t _pbuProto0x24_isRAF: 1;     ///< Признак включения РАФ
+    uint8_t _pbuProto0x24_isLocal: 1;   ///< Признак включения местного режима
+    uint8_t _pbuProto0x24_isImit: 1;    ///< Признак имитатора
+    uint8_t _pbuProto0x24_hasTP: 1;     ///< Признак наличия транспортного
+                                        ///< положения
+                                        ///
+    uint8_t _pbuProto0x24_isTP: 1;      ///< Признак нахождения в транспортном
+                                        ///< положении
+    uint8_t _pbuProto0x24_isWP: 1;      ///< Признак нахождения в РП
+    uint8_t _pbuProto0x24_isTPValid: 1; ///< Признак достоверности флага ТП
+    uint8_t _pbuProto0x24_isWPValid: 1; ///< Признак достоверности флага РП
+    uint8_t _pbuProto0x24_statusTWP: 1; ///< Статус положения
+
+    uint16_t _pbuProto0x24_mode;        ///< Режим функционирования
+    /// @}
+
     /// @name Параметры Ethernet-пакетов
     /// @{
     uint64_t _ethProtoMacDst: 48;       ///< MAC получателя Ethernet-пакетов
     uint64_t _ethProtoMacSrc: 48;       ///< MAC отправителя Ethernet-пакетов
     uint16_t _ethProtoEtherType;        ///< Тип протокола Ethernet-пакетов
     /// @}
+
+    /// @name Объекты для хранения текущих состояний ППУ
+    /// @{
+    ModulePPU ppuRLMN1,             ///< ППУ РЛМН 1
+        ppuRLMN2,                   ///< ППУ РЛМН 2
+        ppuSHPU;                    ///< ППУ ШПУ
+    /// @}
+
+    ModulePPU* ModulePPU_mas[ModulePPU_num_Size] = {
+        &ppuRLMN1, &ppuRLMN2, &ppuSHPU
+    };                                  ///< Массив указателей на ППУ
 };
     // uint8_t _pbuProto0x05;

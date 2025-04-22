@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QTcpSocket>
-#include <QDataStream>
+#include <QTimer>
 #include "../messages/TcpMessage.h"
 #include "utils/time_provider/TimeProvider.h"
 
@@ -13,9 +13,7 @@ public:
     explicit TcpHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
     ~TcpHandler();
 
-public slots:
     void connectToHost(const QString& host, quint16 port);
-    void sendMessage(const TcpHeader& msg);
     void disconnect();
 
 signals:
@@ -27,10 +25,20 @@ private slots:
     void onConnected();
     void onDisconnected();
     void onError(QAbstractSocket::SocketError error);
+    void sendPeriodicMessages();
+    void handleRegistration();
 
 private:
     TimeProvider* m_timeProvider;
     QTcpSocket* m_socket;
+
+    QTimer m_registrationTimer;
+    QTimer m_periodicTimer;
+
+    bool m_isRegistered = false;
+
+    void sendMessage(const QByteArray &data);
+    void processIncomingMessage(std::unique_ptr<TcpHeader>& parsed);
 };
 
 #endif // TCPHANDLER_H

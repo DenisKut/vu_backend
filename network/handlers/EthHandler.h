@@ -54,6 +54,8 @@ public:
     void disconnectAdapter();               // Отключиться от адаптера Ethernet
     //---------------------------------------------------------------------
 
+    bool sendMessage(const QByteArray &data);
+
 public slots:
     void start();
     void checkReceived(); // Проверка сокета на наличие принятых Ethernet пакетов
