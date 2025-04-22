@@ -21,7 +21,7 @@
 #include <atomic>
 #include <vector>
 #include <utils/time_provider/TimeProvider.h>
-
+#include <QJsonDocument>
 
 
 
@@ -68,16 +68,33 @@ enum class StatusInit{
     LOADED,
     NOT_LOADED__ERROR_CRITICAL,
     NOT_LOADED
-
 };
+
 QString inline statusInitToString(StatusInit status) {
     switch(status) {
-    case StatusInit::LOADED:       return "LOADED";
+    case StatusInit::LOADED:                     return "LOADED";
     case StatusInit::NOT_LOADED__ERROR_CRITICAL: return "NOT_LOADED_ERROR_CRITICAL";
-    case StatusInit::NOT_LOADED:              return "NOT_LOADED";
-    default:                                  return "N/A";
+    case StatusInit::NOT_LOADED:                 return "NOT_LOADED";
+    default:                                     return "N/A";
     }
 }
+
+
+enum class Protocol{
+    TCP,
+    UDP,
+    RAW_MAC
+};
+
+QString inline protocolToString(Protocol proto) {
+    switch(proto) {
+    case Protocol::TCP:                     return "TCP";
+    case Protocol::UDP:                     return "UDP";
+    case Protocol::RAW_MAC:                 return "RAW_MAC";
+    default:                                return "N/A";
+    }
+}
+
 // END FLAGS AND MARKS ---------------------------------------------------------
 
 
@@ -153,18 +170,20 @@ struct InternalMessageLog : public LogHeader {
  * @brief Лог протокольных сообщений. кидаемых вовне / принимаемых извне
  */
 struct ProtocolMessageLog : public LogHeader {
-    QString protocolType;   ///< Тип сообщения/протокола (TCP/UDP/RAW(MAC))
+    Protocol protocol;   ///< Тип сообщения/протокола (TCP/UDP/RAW(MAC))
     QByteArray rawData;     ///< Сырые данные сообщения
     QString parsedData;     ///< Распарсенные данные
 
     ProtocolMessageLog(const QString& source,
-                       const QString& protocol,
-                       const QByteArray& data);
+                       const Protocol& protocol,
+                       const QByteArray& data,
+                       const QString& jsonData);
 
     ProtocolMessageLog(const QString& source,
                        const LogLevel& logLevel,
-                       const QString& protocol,
-                       const QByteArray& data);
+                       const Protocol& protocol,
+                       const QByteArray& data,
+                       const QString& jsonData);
 
 };
 // END DB_WRITABLE STRUCTS--------------------------------------------------------------
@@ -248,36 +267,35 @@ private:
 	 */
 	void stop();
 
-	/**
-	 * @brief Преобразование текстового сообщения в QByteArray для записи в файл.
-	 * @param message Текст сообщения.
-	 * @return Преобразованное сообщение в формате QByteArray.
-	 */
-	QByteArray formatMessage(const QString& message);
+    // /**
+    //  * @brief Преобразование текстового сообщения в QByteArray для записи в файл.
+    //  * @param message Текст сообщения.
+    //  * @return Преобразованное сообщение в формате QByteArray.
+    //  */
+    // QByteArray formatMessage(const QString& message);
 
-	/**
-	 * @brief Преобразование массива данных в Hex-формат.
-	 * @tparam T Тип данных.
-	 * @param data Указатель на массив данных.
-	 * @param length Длина массива данных.
-	 * @return Преобразованные данные в формате QByteArray.
-	 */
-	template<typename T>
-	QByteArray binaryToHex(const T* data, size_t length);
+    // /**
+    //  * @brief Преобразование массива данных в Hex-формат.
+    //  * @tparam T Тип данных.
+    //  * @param data Указатель на массив данных.
+    //  * @param length Длина массива данных.
+    //  * @return Преобразованные данные в формате QByteArray.
+    //  */
+    // template<typename T>
+    // QByteArray binaryToHex(const T* data, size_t length);
 
-	/**
-	 * @brief Преобразование QByteArray в Hex-формат.
-	 * @param data Данные в формате QByteArray.
-	 * @return Преобразованные данные в формате QByteArray.
-	 */
-	QByteArray binaryToHex(const QByteArray& data);
+    // /**
+    //  * @brief Преобразование QByteArray в Hex-формат.
+    //  * @param data Данные в формате QByteArray.
+    //  * @return Преобразованные данные в формате QByteArray.
+    //  */
+    // QByteArray binaryToHex(const QByteArray& data);
 
-	/**
-	 * @brief Поместить сообщение в очередь на запись в лог-файл.
-	 * @param msg Сообщение в формате QByteArray.
-	 */
-	void enqueueMessage(QByteArray msg);
-
+    // /**
+    //  * @brief Поместить сообщение в очередь на запись в лог-файл.
+    //  * @param msg Сообщение в формате QByteArray.
+    //  */
+    // void enqueueMessage(QByteArray msg);
 
 	/**
 	 * @brief Поместить SQL-запрос в очередь.
@@ -290,6 +308,7 @@ private:
      * @details Все сообщения из буффера, макс m_bufferSize, закидываются в БД пачкой
     */
     void flushBuffer();
+
 
     QSqlDatabase m_db; ///< Подключение к базе данных.
     QMutex m_mutex; ///< Мьютекс для синхронизации.

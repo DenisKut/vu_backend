@@ -1,6 +1,7 @@
 #include "TcpHandler.h"
 #include <QHostAddress>
 
+
 TcpHandler::TcpHandler(TimeProvider* timeProvider, QObject* parent)
     : QObject(parent), m_timeProvider(timeProvider), m_socket(new QTcpSocket(this))
 {
@@ -91,7 +92,9 @@ void TcpHandler::sendPeriodicMessages() {
             msg_0x1021_2 = MessageFactory::create<TcpMessage_0x1021>(AppConfig
                                                     ::ModulePPU_num
                                                         ::ModulePPU_num_RLMN_2);
+
         sendMessage(msg_0x1021_1.serializeFull());
+        LOG_PROTOCOL(typeid(this).name(), Protocol::TCP, msg_0x1021_1.serializeFull(), QJsonDocument(msg_0x1021_1.to_json()).toJson(QJsonDocument::Indented));
         sendMessage(msg_0x1021_2.serializeFull());
     }
 }

@@ -5,7 +5,6 @@
 #include <QTcpSocket>
 #include <QTimer>
 #include "../messages/TcpMessage.h"
-#include "utils/time_provider/TimeProvider.h"
 
 class TcpHandler : public QObject {
     Q_OBJECT

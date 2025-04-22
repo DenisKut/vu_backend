@@ -1,5 +1,6 @@
 #include "EthHandler.h"
 #include <qfile.h>
+#include <qfile.h>
 
 
 // Конструктор обработчика принятых MAC пакетов:
@@ -302,7 +303,7 @@ void EthHandler::checkReceived()
     {
         // Запись в лог метки времени и длины пакета:
 //            qDebug() << QString("%1  -  %2").arg(time).arg(length);
-        Logger::instance().writeBinary("Принят Ethernet пакет:", buf, length);
+        //Logger::instance().writeBinary("Принят Ethernet пакет:", buf, length);
 
         // Отправка данных в NetworkManager для разбора:
         QByteArray msg = QByteArray(reinterpret_cast<const char*>(buf), length);
