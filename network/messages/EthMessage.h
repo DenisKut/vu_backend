@@ -7,9 +7,9 @@
 #include <QByteArray>
 #include <QDebug>
 #include <type_traits>
+#include <QJsonObject>
+#include <QJsonArray>
 
-#include "utils/AppConfig.h"
-#include "utils/time_provider/TimeProvider.h"
 #include "libs/json/json.hpp"
 
 using json = nlohmann::json;
@@ -112,6 +112,23 @@ struct EthHeader {
         return true;
     }
 
+    QJsonObject to_json() const {
+        QJsonObject json;
+        json["macAddrDst"] = QByteArray(reinterpret_cast<const char*>(macAddrDst), 6).toHex().data();
+        json["macAddrSrc"] = QByteArray(reinterpret_cast<const char*>(macAddrSrc), 6).toHex().data();
+        json["etherType"] = static_cast<qint64>(etherType);
+        json["ctlCommand"] = static_cast<qint64>(ctlCommand);
+        json["ctlLen"] = static_cast<qint64>(ctlLen);
+        json["ctlCnt"] = static_cast<qint64>(ctlCnt);
+        json["ctlNumPack"] = static_cast<qint64>(ctlNumPack);
+        json["ctlNumFrame"] = static_cast<qint64>(ctlNumFrame);
+        json["mesNumber"] = static_cast<qint64>(mesNumber);
+        json["mesLength"] = static_cast<qint64>(mesLength);
+        json["mesReceiver"] = static_cast<qint64>(mesReceiver);
+        json["mesSender"] = static_cast<qint64>(mesSender);
+        return json;
+    }
+
 protected:
 
     // Защищенный конструктор для использования в наследниках
@@ -188,6 +205,14 @@ struct EthMessage : EthHeader {
         }
         return message;
     }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthHeader::to_json();
+        json["messageType"] = static_cast<qint64>(MESSAGE_TYPE);
+        return json;
+    }
+
+
 };
 
 /**
@@ -206,6 +231,17 @@ struct EthMessage_BS_SYNC : EthMessage<EthMessage_BS_SYNC, ETH_MessageNumbers::B
 //    uint64_t    periodTime : 40;    ///< Время начала нового периода
 //    uint64_t    reserv : 24;        ///< Резерв
     uint32_t    periodWidth;        ///< Значение периода синхронизации
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeReceive"] = QString(QByteArray(reinterpret_cast<const char*>(timeReceive), 5).toHex());
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["periodNumber"] = static_cast<qint64>(periodNumber);
+        json["periodTime"] = QString(QByteArray(reinterpret_cast<const char*>(periodTime), 5).toHex());
+        json["reserv"] = QString(QByteArray(reinterpret_cast<const char*>(reserv), 3).toHex());
+        json["periodWidth"] = static_cast<qint64>(periodWidth);
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -231,6 +267,23 @@ struct EthMessage_PPU_POSITION : EthMessage<EthMessage_PPU_POSITION, ETH_Message
     uint8_t     borders;            ///< Состояние границ
     uint8_t     waitCommands;       ///< Время ожидания команд, мс
     uint8_t     waitTarget;         ///< Время ожидания целеуказаний, мс
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeReceive"] = QString(QByteArray(reinterpret_cast<const char*>(timeReceive), 5).toHex());
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["lastCommand"] = static_cast<qint64>(lastCommand);
+        json["state"] = static_cast<qint64>(state);
+        json["ispr"] = static_cast<qint64>(ispr);
+        json["az"] = QString(QByteArray(reinterpret_cast<const char*>(az), 3).toHex());
+        json["azDelay"] = static_cast<qint64>(azDelay);
+        json["an"] = QString(QByteArray(reinterpret_cast<const char*>(an), 3).toHex());
+        json["anDelay"] = static_cast<qint64>(anDelay);
+        json["borders"] = static_cast<qint64>(borders);
+        json["waitCommands"] = static_cast<qint64>(waitCommands);
+        json["waitTarget"] = static_cast<qint64>(waitTarget);
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -255,6 +308,12 @@ struct EthMessage_PPU_STOP : EthMessage<EthMessage_PPU_STOP, ETH_MessageNumbers:
 //        timeBeginTrans[2] = (time >> 16) & 0xFF;
 //        timeBeginTrans[3] = (time >> 24) & 0xFF;
 //        timeBeginTrans[4] = (time >> 32) & 0xFF;
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeBeginTrans"] =QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        return json;
     }
 };
 #pragma pack(pop)
@@ -282,6 +341,13 @@ struct EthMessage_PPU_ENABLE : EthMessage<EthMessage_PPU_ENABLE, ETH_MessageNumb
 //        timeBeginTrans[2] = (time >> 16) & 0xFF;
 //        timeBeginTrans[3] = (time >> 24) & 0xFF;
 //        timeBeginTrans[4] = (time >> 32) & 0xFF;
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["state"] = state;
+        return json;
     }
 };
 #pragma pack(pop)
@@ -318,6 +384,20 @@ struct EthMessage_PPU_MOVE : EthMessage<EthMessage_PPU_MOVE, ETH_MessageNumbers:
         /// @warning !!! Для заполнения требует наличия заведённых структур для
         /// повороток
     }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["azC0"] = QString(QByteArray(reinterpret_cast<const char*>(azC0), 3).toHex());
+        json["azC1"] = azC1;
+        json["azC2"] = azC2;
+        json["anC0"] = QString(QByteArray(reinterpret_cast<const char*>(anC0), 3).toHex());
+        json["anC1"] = anC1;
+        json["anC2"] = anC2;
+        json["azSector"] = azSector;
+        json["anSector"] = anSector;
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -347,6 +427,23 @@ struct MCFS_Object {
 
     int16_t     re5;        ///< Действительная составляющая амплитуды сигнала в 5-ом канале
     int16_t     im5;        ///< Мнимая составляющая амплитуды сигнала в 5-ом  канале
+
+    QJsonObject to_json() const {
+        QJsonObject json;
+        json["doplerCh"] = doplerCh;
+        json["delay"] = delay;
+        json["re1"] = re1;
+        json["im1"] = im1;
+        json["re2"] = re2;
+        json["im2"] = im2;
+        json["re3"] = re3;
+        json["im3"] = im3;
+        json["re4"] = re4;
+        json["im4"] = im4;
+        json["re5"] = re5;
+        json["im5"] = im5;
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -401,6 +498,43 @@ struct EthMessage_MCFS_RESULT : EthMessage<EthMessage_MCFS_RESULT, ETH_MessageNu
     bool isValid() const {
         return (vecObjects.size() <= 60);
     }
+
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeReceive"] = QString(QByteArray(reinterpret_cast<const char*>(timeReceive), 5).toHex());
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["timeStartGen"] = QString(QByteArray(reinterpret_cast<const char*>(timeStartGen), 5).toHex());
+        json["taskNum"] = static_cast<qint64>(taskNum);
+        json["signalType"] = static_cast<qint64>(signalType);
+        json["impulseNum"] = static_cast<qint64>(impulseNum);
+        json["reserv1"] = static_cast<qint64>(reserv1);
+        json["isFreqMod"] = static_cast<qint64>(isFreqMod);
+        json["reserv2"] = static_cast<qint64>(reserv2);
+        json["period"] = static_cast<qint64>(period);
+        json["duration"] = static_cast<qint64>(duration);
+        json["reserv4"] = static_cast<qint64>(reserv4);
+        json["amplify"] = static_cast<qint64>(amplify);
+        json["koefFalse"] = static_cast<qint64>(koefFalse);
+        json["treshold"] = static_cast<qint64>(treshold);
+        json["regType"] = static_cast<qint64>(regType);
+        json["regCh1"] = static_cast<qint64>(regCh1);
+        json["regCh2"] = static_cast<qint64>(regCh2);
+        json["regCh3"] = static_cast<qint64>(regCh3);
+        json["regCh4"] = static_cast<qint64>(regCh4);
+        json["regCh5"] = static_cast<qint64>(regCh5);
+        json["reserv5"] = static_cast<qint64>(reserv5);
+        json["numObjects"] = static_cast<qint64>(numObjects);
+
+        QJsonArray objectsArray;
+        for (const auto& obj : vecObjects) {
+            objectsArray.append(obj.to_json());
+        }
+        json["objects"] = objectsArray;
+
+        return json;
+    }
+
 };
 #pragma pack(pop)
 
@@ -423,6 +557,13 @@ struct MCFS_Sample {
 //        s.re = qFromLittleEndian(s.re);
 //        s.im = qFromLittleEndian(s.im);
         return s;
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json;
+        json["re"] = static_cast<qint64>(re);
+        json["im"] = static_cast<qint64>(im);
+        return json;
     }
 };
 #pragma pack(pop)
@@ -512,7 +653,29 @@ struct EthMessage_MCFS_REG : EthMessage<EthMessage_MCFS_REG, ETH_MessageNumbers:
         // Копирование в структуру завершено успешно
         return true;
     }
-#pragma GCC diagnostic pop
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json(); // Call the base class to_json() if needed
+
+        json["timeReceive"] = QString(QByteArray(reinterpret_cast<const char*>(timeReceive), 5).toHex());
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["timeStartGen"] = QString(QByteArray(reinterpret_cast<const char*>(timeStartGen), 5).toHex());
+        json["taskNum"] = static_cast<qint64>(taskNum);
+        json["lastMes"] = static_cast<qint64>(lastMes);
+        json["regType"] = static_cast<qint64>(regType);
+        json["regCh6"] = static_cast<qint64>(regCh6);
+        json["regCh5"] = static_cast<qint64>(regCh5);
+        json["regCh4"] = static_cast<qint64>(regCh4);
+        json["regCh3"] = static_cast<qint64>(regCh3);
+        json["regCh2"] = static_cast<qint64>(regCh2);
+        json["regCh1"] = static_cast<qint64>(regCh1);
+        json["chIntNum"] = static_cast<qint64>(chIntNum);
+        json["signalLen"] = static_cast<qint64>(signalLen);
+        json["reserv"] = QString(QByteArray(reinterpret_cast<const char*>(reserv), 2).toHex());
+        json["mesNum"] = static_cast<qint64>(mesNum);
+
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -538,6 +701,22 @@ struct EthMessage_MCFS_STATUS : EthMessage<EthMessage_MCFS_STATUS, ETH_MessageNu
                                     ///< (поле значимо только для этих сообщений)
     uint8_t     timeCommandRec[5];  ///< Код времени устройства на момент
                                     ///< получения сообщения от ВУ
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json(); // Call the base class to_json() if needed
+
+        json["timeReceive"] = QString(QByteArray(reinterpret_cast<const char*>(timeReceive), 5).toHex());
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["state"] = static_cast<qint64>(state);
+        json["error"] = static_cast<qint64>(error);
+        json["reserv"] = static_cast<qint64>(reserv);
+        json["isprPPM"] = static_cast<qint64>(isprPPM);
+        json["isTabu"] = static_cast<qint64>(isTabu);
+        json["error12"] = static_cast<qint64>(error12);
+        json["timeCommandRec"] = QString(QByteArray(reinterpret_cast<const char*>(timeCommandRec), 5).toHex());
+
+        return json;
+    }
 };
 #pragma pack(pop)
 

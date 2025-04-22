@@ -31,21 +31,20 @@ QMAKE_DISTCLEAN += $$QMAKE_CLEAN
 
 # Общие для всех платформ настройки
 SOURCES += \
+    main.cpp \
     core/CoreManager.cpp \
     core/logger/Logger.cpp \
-    core/logger/LoggerMessages.cpp \
-    main.cpp \
     network/NetworkManager.cpp \
     network/handlers/EthHandler.cpp \
     network/handlers/TcpHandler.cpp \
     network/handlers/UdpHandler.cpp \
+    pch.cpp \
     utils/time_provider/TimeProvider.cpp \
     utils/env_loader/EnvLoader.cpp
 
 HEADERS += \
     core/CoreManager.h \
     core/logger/Logger.h \
-    core/logger/LoggerMessages.h \
     network/NetworkManager.h \
     network/handlers/EthHandler.h \
     network/handlers/TcpHandler.h \

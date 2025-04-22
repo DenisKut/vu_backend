@@ -1,9 +1,7 @@
 #include "Logger.h"
-#include "LoggerMessages.h"
 #include <QSqlError>
 #include <QDebug>
 #include <QFile>
-
 
 // РЕАЛИЗАЦИИ конструкторов, преобразований перед отправкой
 InitLog::InitLog(
@@ -42,21 +40,24 @@ InternalMessageLog::InternalMessageLog(
 
 ProtocolMessageLog::ProtocolMessageLog(
     const QString& source,
-    const QString& protocol,
-    const QByteArray& data)
-    : LogHeader(source, LogLevel::MessageReceived),
-    protocolType(protocol), rawData(data)
+    const Protocol& protocol,
+    const QByteArray& rawData,
+    const QString& jsonData)
+    : LogHeader(source, LogLevel::Info),
+    protocol(protocol), rawData(rawData), parsedData(jsonData)
 {}
 
 
 ProtocolMessageLog::ProtocolMessageLog(
     const QString& source,
     const LogLevel& logLevel,
-    const QString& protocol,
-    const QByteArray& data)
+    const Protocol& protocol,
+    const QByteArray& rawData,
+    const QString& jsonData)
     : LogHeader(source, logLevel),
-    protocolType(protocol), rawData(data)
-{}
+    protocol(protocol), rawData(rawData), parsedData(jsonData)
+{
+}
 
 
 // КЛАСС ЛОГГЕРА ----------------------------------------------
@@ -77,15 +78,15 @@ Logger& Logger::instance() {
 
 void Logger::initialize(const QString& connectionString) {
 
- 
+
     qDebug() << "Драйвера:" << QSqlDatabase::drivers();
-    
+
     if (!QSqlDatabase::isDriverAvailable("QPSQL")) {
         qCritical() << "QPSQL недоступен/не найден!";
         return;
     }
 
-    
+
     m_db = QSqlDatabase::database();
     if (!m_db.isValid()) {
         m_db = QSqlDatabase::addDatabase("QPSQL", "postgres");
@@ -96,7 +97,7 @@ void Logger::initialize(const QString& connectionString) {
         qCritical() << "Не смог подключиться к PostgreSQL:\n" << m_db.lastError().text()<<"\n\n";
         return;
     }
-    
+
 
     // создать структуру БД если это еще не было сделано ранее
     //
@@ -151,7 +152,7 @@ void Logger::run() {
         if (m_buffer.size() >= static_cast<std::vector<QString>::size_type>(m_bufferSize)) {
             flushBuffer();
         }
-        
+
 
         #ifdef QT_DEBUG
             flushBuffer();
@@ -232,10 +233,10 @@ QString bakeQuery(const ProtocolMessageLog& logData) {
                    "INSERT INTO protocol_messages (header_id, protocol_type, raw_data, parsed_data) "
                    "SELECT id, '%2', '%3', '%4' FROM header;")
         .arg(bakeQuery(static_cast<const LogHeader&>(logData)),
-             logData.protocolType,
-             logData.rawData);
+             protocolToString(logData.protocol),
+             logData.rawData,
+             logData.parsedData);
 }
-
 
 
 /// @brief Главный логирующий универсальный публичный метод
