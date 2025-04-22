@@ -1,4 +1,5 @@
 #include "TimeProvider.h"
+#include <iomanip>
 
 // Получить экземпляр синглтона:
 TimeProvider& TimeProvider::instance() {
@@ -37,6 +38,23 @@ std::string TimeProvider::currentDateString() {
     char buf[32];
     strftime(buf, sizeof(buf), "%d.%m.%Y", &bt);
     return buf;
+}
+
+std::string TimeProvider::msToDateTime(uint64_t millisecondsSinceEpoch)  {
+    // Конвертируем миллисекунды в секунды и отдельно получаем миллисекунды
+    time_t seconds = static_cast<time_t>(millisecondsSinceEpoch / 1000);
+    unsigned int milliseconds = static_cast<unsigned int>(millisecondsSinceEpoch % 1000);
+
+    // Преобразуем в struct tm (локальное время)
+    struct tm timeinfo;
+    localtime_r(&seconds, &timeinfo); // Используйте localtime_s для Windows
+
+    // Форматируем в строку
+    std::ostringstream oss;
+    oss << std::put_time(&timeinfo, "%Y-%m-%d %H:%M:%S")
+        << "." << std::setfill('0') << std::setw(3) << milliseconds;
+
+    return oss.str();
 }
 
 // Получить время в текстовом виде:

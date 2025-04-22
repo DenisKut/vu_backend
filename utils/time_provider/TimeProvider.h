@@ -9,6 +9,8 @@
 // Для кроссплатформенности (Windows/Linux) используется библиотека <chrono>:
 #include <chrono>
 
+#include <sstream>
+
 class TimeProvider : public QObject {
     Q_OBJECT
 public:
@@ -29,6 +31,8 @@ public:
 
     // Получить время с точностью до наносекунд:
     int64_t getNs() const;
+
+    std::string msToDateTime(uint64_t millisecondsSinceEpoch);
 
     // Получить дату в текстовом виде:
     std::string currentDateString();
