@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iomanip>
 #include <QByteArray>
+#include <QDateTime>
 #include <type_traits>
 
 #include "utils/AppConfig.h"
@@ -210,6 +211,22 @@ struct TcpHeader {
                    reinterpret_cast<const uint8_t*>(this), headerSize);
     }
 
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "TcpHeader:\n"
+            << "  Sender: " << sender << "\n"
+            << "  Module Index: " << idxModule << "\n"
+            << "  Version: " << static_cast<int>(vMajor) << "."
+            << static_cast<int>(vMinor) << "\n"
+            << "  Packet Index: " << idxPack << "\n"
+            << "  Data Size: " << sizeData << " bytes\n"
+            << "  ASKU Flag: " << (isAsku ? "Yes" : "No") << "\n"
+            << "  Message Type: 0x" << std::hex << typePack << std::dec << "\n"
+            << "  Checksum: 0x" << std::hex << checkSum << std::dec
+            << (isValid() ? " (Valid)" : " (Invalid)");
+        return oss.str();
+    }
+
 protected:
     /**
      * @brief Конструктор для создания заголовка
@@ -315,6 +332,22 @@ struct TcpMessage_0x01 : TcpMessage<TcpMessage_0x01,
         versProgMin = AppConfig::instance().PBU_PROTO_0X01_VERS_PROG_MIN();
         isControl = AppConfig::instance().PBU_PROTO_0X01_IS_CONTROL();
     }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Registration Request (0x01):\n"
+            << "  Manufacturer ID: 0x" << std::hex << static_cast<int>(idManuf)
+            << std::dec << "\n"
+            << "  Serial Number: " << serialNum << "\n"
+            << "  Hardware Version: " << static_cast<int>(versHardMaj) << "."
+            << static_cast<int>(versHardMin) << "\n"
+            << "  Software Version: " << static_cast<int>(versProgMaj & 0x7F) << "."
+            << static_cast<int>(versProgMin & 0x7F) << "\n"
+            << "  Info Processing: " << (isInfo ? "Yes" : "No") << "\n"
+            << "  Control Capability: " << (isControl ? "Yes" : "No");
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -335,6 +368,17 @@ struct TcpMessage_0x03 : TcpMessage<TcpMessage_0x03,
         uint64_t time = TimeProvider::instance().getTimeForRequest();
         timeRequest1 = to_uint32(time & 0xFFFFFFFF);
         timeRequest2 = to_uint32(time >> 32);
+    }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(timeRequest2) << 32) | timeRequest1;
+        oss << TcpHeader::toString() << "\n"
+            << "Time Request (0x03):\n"
+            << "  Request Time: " << time << " ms since epoch\n"
+            << "  Human Readable: " << TimeProvider::instance()
+                                                        .msToDateTime(time);
+        return oss.str();;
     }
 };
 #pragma pack(pop)
@@ -370,6 +414,25 @@ struct TcpMessage_0x05 : TcpMessage<TcpMessage_0x05,
             Y_long = AppConfig::instance().PBU_PROTO_0X05_Y_LONG_COORD();
             Z_height = AppConfig::instance().PBU_PROTO_0X05_Z_HEIGHT_COORD();
         }
+    }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Module Geoposition (0x05):\n"
+            << "  Data Type: " << (typeData == 1 ? "Geographic" : "Coordinates") << "\n"
+            << "  Data Valid: " << (isValid ? "Yes" : "No") << "\n";
+
+        if (typeData == 1) {
+            oss << "  Latitude: " << X_lat << "°\n"
+                << "  Longitude: " << Y_long << "°\n"
+                << "  Height: " << Z_height << " m";
+        } else {
+            oss << "  X Coordinate: " << X_lat << " m\n"
+                << "  Y Coordinate: " << Y_long << " m\n"
+                << "  Z Coordinate: " << Z_height << " m";
+        }
+        return oss.str();
     }
 };
 #pragma pack(pop)
@@ -411,6 +474,21 @@ struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
 
         /// @warning !!! Для заполнения требует наличия заведённых структур для
         /// объектов и их траекторий
+    }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "RLS Current State (0x1021):\n"
+            << "  Time: " << TimeProvider::instance().msToDateTime(time) << "\n"
+            << "  RLS Channel: " << static_cast<int>(numDrive) << "\n"
+            << "  Remote Control: " << (isRemote ? "Yes" : "No") << "\n"
+            << "  Current Azimuth: " << azCur << "°\n"
+            << "  Current Elevation: " << elCur << "°\n"
+            << "  Azimuth Visible Zone: " << dAzVisible << "°\n"
+            << "  Elevation Visible Zone: " << dElVisible << "°";
+        return oss.str();
     }
 };
 #pragma pack(pop)
@@ -673,8 +751,10 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
         /// объектов и их траекторий
 
         // Выделение памяти и копирование данных
-        allocatePowRangeVel();
-        copyPowData(powData);
+        if (powData && rangeCnt > 0 && speedCnt > 0) {
+            allocatePowRangeVel();
+            copyPowData(powData);
+        }
 
         // Обновляем размер данных в заголовке
         updateDataSize();
@@ -716,28 +796,69 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
      * @brief Обновляет размер данных в заголовке
      */
     void updateDataSize() {
-        sizeData = sizeof(TcpMessage_0x1022) - sizeof(TcpHeader)
-        + rangeCnt * speedCnt * sizeof(float);
+        size_t dynamicSize = 0;
+        if (powRangeVel && rangeCnt > 0 && speedCnt > 0) {
+            dynamicSize = rangeCnt * speedCnt * sizeof(float);
+        }
+        sizeData = sizeof(TcpMessage_0x1022) - sizeof(TcpHeader) + dynamicSize;
     }
 
     /// @brief Полная сериализация сообщения
     /// @warning Переопределяем метод сереализации для этого сообщения, т.к.
     /// наличие динамического массива вносит коррективы
     QByteArray serializeFull() const {
-        // Сериализуем фиксированную часть
-        QByteArray fixedData(sizeof(TcpMessage_0x1022), 0);
-        memcpy(fixedData.data(), this, sizeof(TcpMessage_0x1022));
+        // Фиксированная часть
+        QByteArray data(sizeof(TcpMessage_0x1022), 0);
+        memcpy(data.data(), this, sizeof(TcpMessage_0x1022));
 
-        // Добавляем данные ДСП
-        QByteArray dspData;
-        if (powRangeVel) {
+        // Динамическая часть
+        if (powRangeVel && rangeCnt > 0 && speedCnt > 0) {
             for (uint8_t i = 0; i < rangeCnt; ++i) {
-                dspData.append(reinterpret_cast<const char*>(powRangeVel[i]),
-                               speedCnt * sizeof(float));
+                data.append(reinterpret_cast<const char*>(powRangeVel[i]),
+                            speedCnt * sizeof(float));
             }
         }
 
-        return fixedData + dspData;
+        return data;
+    }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "Target Mark (0x1022):\n"
+            << "  Detection Time: " << TimeProvider::instance()
+                                           .msToDateTime(time) << "\n"
+            << "  Track Status: " << static_cast<int>(trackStatus) << "\n"
+            << "  Is Extra: " << (isExtra ? "Yes" : "No") << "\n"
+            << "  Is Test: " << (isTest ? "Yes" : "No") << "\n"
+            << "  RLS Channel: " << static_cast<int>(numDrive) << "\n"
+            << "  Track Type: " << static_cast<int>(typeTrack) << "\n"
+            << "  Track Index: " << idxCeil << "\n"
+            << "  Azimuth: " << azimuth << "°\n"
+            << "  Range: " << range << " m\n"
+            << "  Elevation: " << eps << "°\n"
+            << "  Radial Velocity: " << vel << " m/s\n"
+            << "  Azimuth Velocity: " << velAz << "°/s\n"
+            << "  Elevation Velocity: " << velEps << "°/s\n"
+            << "  SNR: " << snrSum << " dB\n"
+            << "  RCS: " << epr << " m²\n"
+            << "  Max Range: " << maxRange << " m\n"
+            << "  Track Number: " << numbTrack << "\n"
+            << "  Server Track Number: " << numbTrackServr << "\n"
+            << "  Azimuth Error: " << sigAz << "'\n"
+            << "  Elevation Error: " << sigEps << "'\n"
+            << "  Range Error: " << sigD << " m\n"
+            << "  Velocity Error: " << sigVr << " m/s\n"
+            << "  DSP Parameters:\n"
+            << "    Range Bins: " << rangeCnt << "\n"
+            << "    Speed Bins: " << speedCnt << "\n"
+            << "    Channels: " << static_cast<int>(chanCnt) << "\n"
+            << "    Range Start: " << rangeStart << " m\n"
+            << "    Range Step: " << rangeStep << " m\n"
+            << "    Velocity Start: " << vradStart << " m/s\n"
+            << "    Velocity Step: " << vradStep << " m/s";
+        return oss.str();
     }
 
 private:
@@ -843,14 +964,27 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
      * @note Необходимо для вложенности
      */
     struct ModuleCapability {
-        int number = 0;
-        bool isRotate = false;
+        int number;
+        bool isRotate = true;
         std::string name;
         double azMin = 0.0;
-        double azMax = 0.0;
-        double elevMin = 0.0;
-        double elevMax = 0.0;
-        double maxRange = 0.0;
+        double azMax = 360.0;
+        double elevMin = -5.0;
+        double elevMax = 95.0;
+        double maxRange = 20.0;
+
+        /**
+         * @brief Базовый конструктор для возможностей РЛМН
+         */
+        ModuleCapability() = default;
+
+        /**
+         * @brief Конструктор для получения значений полей для каждой РЛМН
+         */
+        ModuleCapability(AppConfig::ModulePPU_num numberRLMN) {
+            number = (int)numberRLMN;
+            name = "РЛС-Н №" + std::to_string((int)numberRLMN);
+        }
 
         /**
          * @brief Процедура выдачи объекта в формате JSON
@@ -887,6 +1021,17 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
             return cap;
         }
     };
+
+    // explicit TcpMessage_0x1023(const json& jsonObj) {
+    //     const std::string jsonStr = jsonObj.dump();
+    //     const size_t jsonSize = jsonStr.size() + 1; // +1 для нуль-терминатора
+
+    //     jsonData = new char[jsonSize];
+    //     memcpy(jsonData, jsonStr.c_str(), jsonSize);
+
+    //     // Корректный расчет размера
+    //     sizeData = sizeof(TcpMessage_0x1023) - sizeof(TcpHeader) + jsonSize;
+    // }
 
     /**
      * @brief Конструктор из готового JSON
@@ -991,6 +1136,32 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
     }
 #pragma GCC diagnostic pop
 
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Module Capabilities (0x1023):\n"
+            << "  JSON Data Size: " << getJsonSize() << " bytes\n";
+
+        try {
+            auto caps = getCapabilities();
+            for (const auto& cap : caps) {
+                oss << "\n  Capability for RLS Channel " << cap.number << ":\n"
+                    << "    Name: " << cap.name << "\n"
+                    << "    Is Rotatable: "
+                        << (cap.isRotate ? "Yes" : "No")
+                        << "\n"
+                    << "    Azimuth Range: "
+                        << cap.azMin << "° to " << cap.azMax << "°\n"
+                    << "    Elevation Range: "
+                        << cap.elevMin << "° to " << cap.elevMax << "°\n"
+                    << "    Max Range: " << cap.maxRange << " km";
+            }
+        } catch (const std::exception& e) {
+            oss << "\n  Failed to parse JSON: " << e.what();
+        }
+        return oss.str();
+    }
+
 private:
 
     /**
@@ -1001,13 +1172,14 @@ private:
      */
     void initializeFromJson(const json& jsonObj) {
         validateJson(jsonObj);
+
         const std::string jsonStr = serializeJson(jsonObj);
         const size_t jsonSize = jsonStr.size();
 
         jsonData = new char[jsonSize + 1];
+
         memcpy(jsonData, jsonStr.c_str(), jsonSize);
         jsonData[jsonSize] = '\0';
-
         sizeData = sizeof(TcpMessage_0x1023) - sizeof(TcpHeader) + jsonSize;
     }
 
@@ -1091,7 +1263,7 @@ private:
 
         const double elevMin = obj["ElevMin"].get<double>();
         const double elevMax = obj["ElevMax"].get<double>();
-        if (elevMin < -90.0 || elevMax > 90.0 || elevMin > elevMax) {
+        if (elevMin < -90.0 || elevMax > 95.0 || elevMin > elevMax) {
             throw std::runtime_error("Invalid elevation range: [" +
                                      std::to_string(elevMin) + ", " +
                                      std::to_string(elevMax) + "]");
@@ -1253,6 +1425,23 @@ struct TcpMessage_0x1024 : TcpMessage<TcpMessage_0x1024,
         return sectors[index];
     }
 
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Forbidden Sectors (0x1024):\n"
+            << "  Sectors Count: " << sectors.size() << "\n";
+
+        for (size_t i = 0; i < sectors.size(); ++i) {
+            const auto& sector = sectors[i];
+            oss << "\n  Sector #" << i << ":\n"
+                << "    Azimuth Range: " << sector.limAzBegin << "° to "
+                << sector.limAzEnd << "°\n"
+                << "    Elevation Range: " << sector.limElevBegin << "° to "
+                << sector.limElevEnd << "°";
+        }
+        return oss.str();
+    }
+
 private:
     /**
      * @brief Обновление размера данных в заголовке
@@ -1317,6 +1506,29 @@ struct TcpMessage_0x02 : TcpMessage<TcpMessage_0x02,
                             ///< ранее чем через 10с.
 
     uint16_t reserve;       ///< @brief Резервное поле (не используется)
+
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Registration Response (0x02):\n"
+            << "  Module Index: " << static_cast<int>(idxModule) << "\n"
+            << "  Error Code: 0x" << std::hex << static_cast<int>(errorConnect)
+            << std::dec << "\n";
+
+        // Расшифровка ошибки
+        if (errorConnect == 0) {
+            oss << "  Status: Registration successful";
+        } else {
+            oss << "  Error Details:";
+            if (errorConnect & 0x01) oss << "\n    - Module limit exceeded";
+            if (errorConnect & 0x02) oss << "\n    - Duplicate device";
+            if (errorConnect & 0x04) oss << "\n    - Unsupported module type";
+            if (errorConnect & 0x08) oss << "\n    - Protocol version mismatch";
+            if (errorConnect & 0x10) oss << "\n    - Invalid module number";
+            if (errorConnect & 0xE0) oss << "\n    - Unknown error";
+        }
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -1340,6 +1552,20 @@ struct TcpMessage_0x04 : TcpMessage<TcpMessage_0x04,
     uint32_t timeRequest2;      ///< Метка времени запроса старшие байты
     uint32_t timeAnswer1;       ///< Метка времени ответа младшие байты
     uint32_t timeAnswer2;       ///< Метка времени ответа старшие байты
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t requestTime = (static_cast<uint64_t>(timeRequest2) << 32) | timeRequest1;
+        uint64_t answerTime = (static_cast<uint64_t>(timeAnswer2) << 32) | timeAnswer1;
+        oss << TcpHeader::toString() << "\n"
+            << "Timestamp (0x04):\n"
+            << "  Request Time: " << requestTime << " ms ("
+            << TimeProvider::instance().msToDateTime(requestTime) << ")\n"
+            << "  Answer Time: " << answerTime << " ms ("
+            << TimeProvider::instance().msToDateTime(answerTime) << ")\n"
+            << "  Latency: " << (answerTime - requestTime) << " ms";
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -1523,6 +1749,42 @@ struct TcpMessage_0x07 : TcpMessage<TcpMessage_0x07,
 
     uint32_t reserve;       ///< @brief Резервное поле
 
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "PBU Track Mark (0x07):\n"
+            << "  Time: " << TimeProvider::instance().msToDateTime(time) << "\n"
+            << "  Module Track ID: " << cellVoi << "\n"
+            << "  KOIR Track ID: " << cellKOIR << "\n"
+            << "  Detection Flags: 0x" << std::hex << static_cast<int>(ktPrizn)
+                << std::dec << "\n"
+            << "  Tracking Flags: 0x" << std::hex << static_cast<int>(trPrizn)
+                << std::dec << "\n"
+            << "  Target Type: " << static_cast<int>(typeCeil) << "\n"
+            << "  Info Status: " << static_cast<int>(typeInfo) << "\n"
+            << "  Is Test: " << (isTest ? "Yes" : "No") << "\n"
+            << "  Is Course Maneuver: " << (isKursMan ? "Yes" : "No") << "\n"
+            << "  Height Change: " << static_cast<int>(isHMan) << "\n"
+            << "  Height Valid: " << (isH ? "Yes" : "No") << "\n"
+            << "  Velocity Valid: " << (isVr ? "Yes" : "No") << "\n"
+            << "  Coordinates (X,Y,Z): " << ceilX << ", " << ceilY << ", "
+                << ceilZ << "\n"
+            << "  Geoposition (Lat,Lon,Alt): " << latitude << ", "
+                << longitude << ", " << height << "\n"
+            << "  Azimuth Size: " << sizeAz << "°\n"
+            << "  Range Size: " << sizeD << " m\n"
+            << "  Velocity (X,Y,Z): " << velX << ", " << velY << ", "
+                << velZ << " m/s\n"
+            << "  Radial Velocity: " << velR << " m/s\n"
+            << "  RT Track Number: " << ceilPel << "\n"
+            << "  ADS-B Address: " << std::hex << (ceilAddr & 0xFFFFFF)
+                << std::dec << "\n"
+            << "  ADS-B Category: " << static_cast<int>(ceilCat) << "\n"
+            << "  Reserved: " << reserve;
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -1650,6 +1912,45 @@ struct TcpMessage_0x641 : TcpMessage<TcpMessage_0x641,
      * плоскостях.
      */
 
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "Target Designation (0x641):\n"
+            << "  Detection Time: " << TimeProvider::instance()
+                                                    .msToDateTime(time) << "\n"
+            << "  VOI Track Index: " << idxCeilVOI << "\n"
+            << "  RLS Channel: " << static_cast<int>(numDrive) << "\n"
+            << "  Target Type: ";
+
+        switch (typeCeil) {
+        case 0: oss << "Primary (target refinement)"; break;
+        case 1: oss << "Attack target"; break;
+        case 2: oss << "Interceptor (BPLA)"; break;
+        case 3: oss << "Cancel designation"; break;
+        default: oss << "Unknown"; break;
+        }
+
+        oss << "\n  Is Simulation: " << (isModel ? "Yes" : "No") << "\n"
+            << "  Target Coordinates:\n"
+            << "    Azimuth: " << ceilAz << "°\n"
+            << "    Elevation: " << ceilElev << "°\n"
+            << "    Range: " << ceilRange << " m\n"
+            << "    Radial Velocity: " << ceilVr << " m/s\n"
+            << "  Error Estimates:\n"
+            << "    Azimuth: " << sigAz << "°\n"
+            << "    Elevation: " << sigElev << "°\n"
+            << "    Range: " << sigRange << " m\n"
+            << "    Azimuth Velocity: " << sigVAz << "°/s\n"
+            << "    Elevation Velocity: " << sigVElev << "°/s\n"
+            << "    Radial Velocity: " << sigVr << " m/s";
+
+        if (typeCeil == 2) {
+            oss << "\n  BPLA Serial Number: " << numBPLA;
+        }
+
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -2024,6 +2325,38 @@ struct TcpMessage_0x20 : TcpMessage<TcpMessage_0x20,
     }
 #pragma GCC diagnostic pop
 
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Module Scheme (0x20):\n"
+            << "  JSON Data Size: " << getJsonSize() << " bytes\n";
+
+        try {
+            auto elements = getElements();
+            oss << "  Elements Count: " << elements.size();
+
+            // Выводим только первые 3 элемента для краткости
+            for (size_t i = 0; i < std::min(elements.size(), size_t(3)); ++i) {
+                const auto& elem = elements[i];
+                oss << "\n\n  Element #" << i << ":\n"
+                    << "    ID: " << elem.IDElem << "\n"
+                    << "    Name: " << elem.Name << "\n"
+                    << "    Short Name: " << elem.ShortName << "\n"
+                    << "    Sub-elements: " << elem.Elements.size() << "\n"
+                    << "    Parameters: " << elem.Params.size() << "\n"
+                    << "    Config Params: " << elem.ConfigParams.size();
+            }
+
+            if (elements.size() > 3) {
+                oss << "\n  ... and " << (elements.size() - 3)
+                    << " more elements";
+            }
+        } catch (const std::exception& e) {
+            oss << "\n  Failed to parse JSON: " << e.what();
+        }
+        return oss.str();
+    }
+
 private:
     /**
      * @brief Инициализация из JSON-объекта
@@ -2079,7 +2412,7 @@ struct ElementStatus {
  * @brief Основная структура сообщения (только заголовок) (0x21)
  */
 struct TcpMessage_0x21_Header : TcpMessage<TcpMessage_0x21_Header,
-                                           PBU_MessageNumbers::STATUS_SCHEME_ELEMENTS> {
+                                PBU_MessageNumbers::STATUS_SCHEME_ELEMENTS> {
     uint32_t time1;
     uint32_t time2;
 
@@ -2161,6 +2494,45 @@ public:
         return msg;
     }
 
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "Status of Scheme Elements (0x21):\n"
+            << "  Elements Count: " << elements.size() << "\n";
+
+        // Выводим только первые 5 элементов для краткости
+        for (size_t i = 0; i < std::min(elements.size(), size_t(5)); ++i) {
+            const auto& elem = elements[i];
+            oss << "\n  Element #" << i << " (ID: " << elem.IDElem << "):\n"
+                << "    Status: ";
+
+            switch (elem.status) {
+            case 0: oss << "Unknown"; break;
+            case 1: oss << "Normal"; break;
+            case 2: oss << "Warning"; break;
+            case 3: oss << "Failure"; break;
+            default: oss << "Invalid"; break;
+            }
+
+            oss << "\n    Work State: ";
+            switch (elem.workFl) {
+            case 0: oss << "Off"; break;
+            case 1: oss << "On"; break;
+            case 2: oss << "Starting"; break;
+            case 3: oss << "Stopping"; break;
+            default: oss << "Invalid"; break;
+            }
+
+            oss << "\n    Local Mode: " << (elem.local ? "Yes" : "No")
+                << "\n    Is Simulated: " << (elem.isImit ? "Yes" : "No");
+        }
+
+        if (elements.size() > 5) {
+            oss << "\n  ... and " << (elements.size() - 5) << " more elements";
+        }
+
+        return oss.str();
+    }
+
 private:
     void updateSize() {
         header.sizeData = sizeof(TcpMessage_0x21_Header) - sizeof(TcpHeader) +
@@ -2232,6 +2604,52 @@ struct TcpMessage_0x23: TcpMessage<TcpMessage_0x23,
                         ///< каждого модуля, определяются в унифицированном
                         ///< протоколе сопряжения ПО модуля с составными частями
                         ///< РУК КББ (приложение 1 к протоколу)
+
+    TcpMessage_0x23()
+        : IDCom(AppConfig::instance().PBU_PROTO_0X23_ID_COM()),
+        code(AppConfig::instance().PBU_PROTO_0X23_CODE()) {
+        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        time1 = to_uint32(time & 0xFFFFFFFF);
+        time2 = to_uint32(time >> 32);
+    }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "Command Receipt (0x23):\n"
+            << "  Time: " << TimeProvider::instance().msToDateTime(time) << "\n"
+            << "  Command ID: " << IDCom << "\n"
+            << "  Result Code: " << static_cast<int>(code) << " (";
+
+        // Расшифровка кода
+        switch (code) {
+        case 0: oss << "Success"; break;
+        case 1: oss << "In progress"; break;
+        case 2: oss << "Invalid parameters"; break;
+        case 3: oss << "Cancelled"; break;
+        case 4: oss << "Hardware failure"; break;
+        case 5: oss << "Internal error"; break;
+        case 6: oss << "Unknown message type"; break;
+        case 7: oss << "RAF is off"; break;
+        case 8: oss << "Not ready"; break;
+        case 9: oss << "Local mode"; break;
+        case 10: oss << "In RAF/RDGV mode"; break;
+        case 11: oss << "In transport position"; break;
+        case 127: oss << "Unknown error"; break;
+        case 128: oss << "Language not supported"; break;
+        case 129: oss << "Time sync cancelled"; break;
+        case 130: oss << "Save error"; break;
+        case 256: oss << "Target not found"; break;
+        case 257: oss << "Out of coverage"; break;
+        default:
+            if (code >= 256) oss << "Module-specific error";
+            else oss << "Unknown code";
+            break;
+        }
+        oss << ")";
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -2409,6 +2827,55 @@ struct TcpMessage_0x24: TcpMessage<TcpMessage_0x24,
         time1 = to_uint32(time & 0xFFFFFFFF);
         time2 = to_uint32(time >> 32);
     }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "Module Status (0x24):\n"
+            << "  Time: " << TimeProvider::instance().msToDateTime(time) << "\n"
+            << "  Status: ";
+
+        switch (status) {
+        case 0: oss << "Unknown"; break;
+        case 1: oss << "Normal"; break;
+        case 2: oss << "Warning"; break;
+        case 3: oss << "Failure"; break;
+        default: oss << "Invalid"; break;
+        }
+
+        oss << "\n  Work State: ";
+        switch (work) {
+        case 0: oss << "Off"; break;
+        case 1: oss << "On"; break;
+        case 2: oss << "Starting"; break;
+        case 3: oss << "Stopping"; break;
+        default: oss << "Invalid"; break;
+        }
+
+        oss << "\n  RDGV Mode: " << (isRGDV ? "Yes" : "No") << "\n"
+            << "  RAF Mode: " << (isRAF ? "Yes" : "No") << "\n"
+            << "  Local Control: " << (isLocal ? "Yes" : "No") << "\n"
+            << "  Simulation Mode: " << (isImit ? "Yes" : "No") << "\n"
+            << "  Transport Supported: " << (hasTP ? "Yes" : "No") << "\n";
+
+        if (hasTP) {
+            oss << "  In Transport Position: " << (isTP ? "Yes" : "No") << "\n"
+                << "  In Working Position: " << (isWP ? "Yes" : "No") << "\n"
+                << "  TP Status Valid: " << (isTPValid ? "Yes" : "No") << "\n"
+                << "  WP Status Valid: " << (isWPValid ? "Yes" : "No") << "\n"
+                << "  Position Status: " << (statusTWP ? "Normal" : "Failure");
+        }
+
+        oss << "\n  Operation Mode: ";
+        switch (mode) {
+        case 0: oss << "Standby"; break;
+        case 1: oss << "Calibration"; break;
+        default: oss << "Custom (" << mode << ")"; break;
+        }
+
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -2465,6 +2932,23 @@ struct TcpMessage_0x40: TcpMessage<TcpMessage_0x40,
                     ///<    - "9": команда не выполнена, так как модуль
                     ///<    находится в местном режиме;
                     ///<    - "127": неизвестная ошибка.
+
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Switch On Command (0x40):\n"
+            << "  Command: ";
+
+        switch (flags) {
+        case 0: oss << "Turn equipment on"; break;
+        case 1: oss << "Enable RDGV mode"; break;
+        case 2: oss << "Enable RAF mode"; break;
+        case 3: oss << "Exit transport position"; break;
+        default: oss << "Unknown command (" << flags << ")"; break;
+        }
+
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -2512,6 +2996,25 @@ struct TcpMessage_0x41: TcpMessage<TcpMessage_0x41,
                     ///<    - "9": команда не выполнена, так как модуль
                     ///<    находится в местном режиме;
                     ///<    - "127": неизвестная ошибка.
+
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Switch Off Command (0x41):\n"
+            << "  Command: ";
+
+        switch (flags) {
+        case 0: oss << "Turn equipment off"; break;
+        case 1: oss << "Disable RAF mode"; break;
+        case 2: oss << "Disable RDGV mode"; break;
+        case 3: oss << "Shutdown module software and hardware"; break;
+        case 4: oss << "Shutdown module PC"; break;
+        case 5: oss << "Enter transport position"; break;
+        default: oss << "Unknown command (" << flags << ")"; break;
+        }
+
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -2544,6 +3047,15 @@ struct TcpMessage_0x42: TcpMessage<TcpMessage_0x42,
     uint16_t IDElem;    ///< @brief Идентификатор элемента
 
     uint16_t reserve;   ///< @brief Резервное поле (Не используется)
+
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << TcpHeader::toString() << "\n"
+            << "Reset Alarm Command (0x42):\n"
+            << "  Element ID: " << IDElem << "\n"
+            << "  Reserved: " << reserve;
+        return oss.str();
+    }
 };
 #pragma pack(pop)
 
@@ -2597,11 +3109,104 @@ public:
 
         /// @brief Определяем тип сообщения
         switch (static_cast<PBU_MessageNumbers>(header.typePack)) {
-        case PBU_MessageNumbers::REQ_REGISTRATION: {
-            return parseMessage<TcpMessage_0x01>(data);
-        }
-        // Обработка других типов...
-        default: return nullptr;
+            case PBU_MessageNumbers::RES_REGISTRATION: {
+                return parseMessage<TcpMessage_0x02>(data);
+            }
+            case PBU_MessageNumbers::TIMESTAMP: {
+                return parseMessage<TcpMessage_0x04>(data);
+            }
+            case PBU_MessageNumbers::TARGET_DESIGNATION: {
+                return parseMessage<TcpMessage_0x641>(data);
+            }
+            // case PBU_MessageNumbers::GEO_COMPLEX: {
+            //     return parseMessage<TcpMessage_0x06>(data)
+            // }
+            // case PBU_MessageNumbers::MARK_TRAICE_PBU: {
+
+            // }
+            // case PBU_MessageNumbers::ORIENTATION_SC_COMPLEX: {
+
+            // }
+
+            // case PBU_MessageNumbers::COMMAND_SWITCH_ON: {
+
+            // }
+            // case PBU_MessageNumbers::COMMAND_SWITCH_OFF: {
+
+            // }
+            // case PBU_MessageNumbers::COMMAND_RESTART: {
+
+            // }
+            // case PBU_MessageNumbers::COMMAND_RESET_ALARM: {
+
+            // }
+            // case PBU_MessageNumbers::COMMAND_SET_CORRECTIONS: {
+
+            // }
+            // case PBU_MessageNumbers::REQ_MODULE_SCHEME: {
+
+            // }
+            // case PBU_MessageNumbers::COMMAND_SET_LANGUAGE: {
+
+            // }
+            // case PBU_MessageNumbers::MESSAGE_SATELLITE_NAV: {
+
+            // }
+            // case PBU_MessageNumbers::COMMAND_SET_TIME: {
+
+            // }
+            // case PBU_MessageNumbers::COMMAND_SET_COORDINATES_MODULE: {
+
+            // }
+            // case PBU_MessageNumbers::COMMAND_SET_SETTINGS_VALUES: {
+
+            // }
+            // Обработка других типов...
+            default: return nullptr;
+            }
+    }
+
+    static std::string messageToString(std::unique_ptr<TcpHeader>& msg) {
+        switch (static_cast<PBU_MessageNumbers>(msg->typePack)) {
+        case PBU_MessageNumbers::REQ_REGISTRATION:
+            return reinterpret_cast<TcpMessage_0x01*>(msg.get())->toString();
+        case PBU_MessageNumbers::RES_REGISTRATION:
+            return reinterpret_cast<TcpMessage_0x02*>(msg.get())->toString();
+        case PBU_MessageNumbers::REQ_TIME:
+            return reinterpret_cast<TcpMessage_0x03*>(msg.get())->toString();
+        case PBU_MessageNumbers::TIMESTAMP:
+            return reinterpret_cast<TcpMessage_0x04*>(msg.get())->toString();
+        case PBU_MessageNumbers::GEO_MODULE:
+            return reinterpret_cast<TcpMessage_0x05*>(msg.get())->toString();
+        case PBU_MessageNumbers::CURRENT_STATE_RLS:
+            return reinterpret_cast<TcpMessage_0x1021*>(msg.get())->toString();
+        case PBU_MessageNumbers::MARK_TARGET:
+            return reinterpret_cast<TcpMessage_0x1022*>(msg.get())->toString();
+        case PBU_MessageNumbers::MODULE_CAPABILITIES:
+            return reinterpret_cast<TcpMessage_0x1023*>(msg.get())->toString();
+        case PBU_MessageNumbers::FORBIDDEN_SECTORS:
+            return reinterpret_cast<TcpMessage_0x1024*>(msg.get())->toString();
+        case PBU_MessageNumbers::MARK_TRAICE_PBU:
+            return reinterpret_cast<TcpMessage_0x07*>(msg.get())->toString();
+        case PBU_MessageNumbers::TARGET_DESIGNATION:
+            return reinterpret_cast<TcpMessage_0x641*>(msg.get())->toString();
+        case PBU_MessageNumbers::MODULE_SCHEME:
+            return reinterpret_cast<TcpMessage_0x20*>(msg.get())->toString();
+        case PBU_MessageNumbers::STATUS_SCHEME_ELEMENTS:
+            return reinterpret_cast<TcpMessage_0x21*>(msg.get())->toString();
+        case PBU_MessageNumbers::RECEIPT_CONTROL_COMMAND:
+            return reinterpret_cast<TcpMessage_0x23*>(msg.get())->toString();
+        case PBU_MessageNumbers::STATUS_MODULE:
+            return reinterpret_cast<TcpMessage_0x24*>(msg.get())->toString();
+        case PBU_MessageNumbers::COMMAND_SWITCH_ON:
+            return reinterpret_cast<TcpMessage_0x40*>(msg.get())->toString();
+        case PBU_MessageNumbers::COMMAND_SWITCH_OFF:
+            return reinterpret_cast<TcpMessage_0x41*>(msg.get())->toString();
+        case PBU_MessageNumbers::COMMAND_RESET_ALARM:
+            return reinterpret_cast<TcpMessage_0x42*>(msg.get())->toString();
+        default:
+            return "Unsupported message type: 0x" +
+                   QString::number(msg->typePack, 16).toStdString();
         }
     }
 
@@ -2640,7 +3245,7 @@ private:
  * // Используем reinterpret_cast, а не dynamic_cast потому что
  * // реализация unique_ptr не позволяет повторять создание
  * // указателя на память ранее используемую в контексте исполнения
- * if(auto msg01 = reinterpret_cast<TcpMessage_0x01*>(parsed.get())) {
+ * if(auto msg01 = reinterpret_cast<TcpMessage_0x01>(parsed.get())) {
  *    // Работа с сообщением...
  * }
  * @endcode

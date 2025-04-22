@@ -4,7 +4,6 @@
 #pragma once
 #include <cstdint>
 #include <cstring>
-#include <iostream>
 #include <QByteArray>
 #include <QDebug>
 #include <type_traits>
@@ -466,7 +465,8 @@ struct EthMessage_MCFS_REG : EthMessage<EthMessage_MCFS_REG, ETH_MessageNumbers:
 
     /// Массив выборок сигнала
     QVector<MCFS_Sample> vecSamples;
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
     /// Метод для десериализации в структуру
     bool deserialize(const QByteArray& data) {
         /// Размер фиксированной части структуры:
@@ -512,6 +512,7 @@ struct EthMessage_MCFS_REG : EthMessage<EthMessage_MCFS_REG, ETH_MessageNumbers:
         // Копирование в структуру завершено успешно
         return true;
     }
+#pragma GCC diagnostic pop
 };
 #pragma pack(pop)
 

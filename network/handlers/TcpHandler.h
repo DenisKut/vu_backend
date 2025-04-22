@@ -39,7 +39,7 @@ private:
     bool m_isRegistered = false;
 
     void sendMessage(const QByteArray &data);
-    void processIncomingMessage(std::unique_ptr<TcpHeader>& parsed);
+    void processIncomingMessage(QByteArray &data);
 };
 
 #endif // TCPHANDLER_H
