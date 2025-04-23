@@ -970,7 +970,7 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
         double azMin = 0.0;
         double azMax = 360.0;
         double elevMin = -5.0;
-        double elevMax = 95.0;
+        double elevMax = 90.0;
         double maxRange = 20.0;
 
         /**
@@ -983,7 +983,7 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
          */
         ModuleCapability(AppConfig::ModulePPU_num numberRLMN) {
             number = (int)numberRLMN;
-            name = "РЛС-Н №" + std::to_string((int)numberRLMN);
+            name = "RLS-N #" + std::to_string((int)numberRLMN);
         }
 
         /**
@@ -1021,17 +1021,6 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
             return cap;
         }
     };
-
-    // explicit TcpMessage_0x1023(const json& jsonObj) {
-    //     const std::string jsonStr = jsonObj.dump();
-    //     const size_t jsonSize = jsonStr.size() + 1; // +1 для нуль-терминатора
-
-    //     jsonData = new char[jsonSize];
-    //     memcpy(jsonData, jsonStr.c_str(), jsonSize);
-
-    //     // Корректный расчет размера
-    //     sizeData = sizeof(TcpMessage_0x1023) - sizeof(TcpHeader) + jsonSize;
-    // }
 
     /**
      * @brief Конструктор из готового JSON
@@ -1093,8 +1082,10 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
         QByteArray buffer;
         const size_t jsonSize = getJsonSize();
 
+        // sizeData
         // Фиксированная часть
-        buffer.append(reinterpret_cast<const char*>(this), sizeof(TcpMessage_0x1023));
+        buffer.append(reinterpret_cast<const char*>(this),
+                      sizeof(TcpHeader));
 
         // JSON-данные
         if (jsonSize > 0) {
@@ -1171,16 +1162,24 @@ private:
      * @private
      */
     void initializeFromJson(const json& jsonObj) {
+
         validateJson(jsonObj);
 
-        const std::string jsonStr = serializeJson(jsonObj);
+        const std::string jsonStr = jsonObj.dump();
         const size_t jsonSize = jsonStr.size();
 
-        jsonData = new char[jsonSize + 1];
+        // Инициализация заголовка с правильным размером данных
+        sizeData = jsonSize;  // Только размер JSON, без размера структуры
 
+        // Выделение памяти и копирование JSON
+        jsonData = new char[jsonSize + 1];
         memcpy(jsonData, jsonStr.c_str(), jsonSize);
         jsonData[jsonSize] = '\0';
-        sizeData = sizeof(TcpMessage_0x1023) - sizeof(TcpHeader) + jsonSize;
+
+        // Вычисление контрольной суммы после инициализации всех полей
+        const size_t headerSize = sizeof(TcpHeader) - sizeof(checkSum);
+        checkSum = calculateChecksum(reinterpret_cast<const uint8_t*>(this),
+                                                    headerSize);
     }
 
     /**
@@ -1214,7 +1213,7 @@ private:
      * @return size_t
      */
     size_t getJsonSize() const {
-        return sizeData - (sizeof(TcpMessage_0x1023) - sizeof(TcpHeader));
+        return sizeData;
     }
 
     /**
@@ -1263,7 +1262,7 @@ private:
 
         const double elevMin = obj["ElevMin"].get<double>();
         const double elevMax = obj["ElevMax"].get<double>();
-        if (elevMin < -90.0 || elevMax > 95.0 || elevMin > elevMax) {
+        if (elevMin < -90.0 || elevMax > 90.0 || elevMin > elevMax) {
             throw std::runtime_error("Invalid elevation range: [" +
                                      std::to_string(elevMin) + ", " +
                                      std::to_string(elevMax) + "]");
@@ -1455,7 +1454,7 @@ private:
 static_assert(sizeof(TcpMessage_0x1024::Sector) == 16,
               "Invalid Sector size");
 static_assert(sizeof(TcpMessage_0x1024) == sizeof(TcpHeader) +
-                                               sizeof(std::vector<TcpMessage_0x1024::Sector>),
+                                sizeof(std::vector<TcpMessage_0x1024::Sector>),
               "Invalid TcpMessage_0x1024 size");
 
 // #pragma pack(push, 1)
@@ -1563,7 +1562,8 @@ struct TcpMessage_0x04 : TcpMessage<TcpMessage_0x04,
             << TimeProvider::instance().msToDateTime(requestTime) << ")\n"
             << "  Answer Time: " << answerTime << " ms ("
             << TimeProvider::instance().msToDateTime(answerTime) << ")\n"
-            << "  Latency: " << (answerTime - requestTime) << " ms";
+            << "  Latency: " << TimeProvider::instance()
+                            .msToDateTime(answerTime - requestTime) << " ms";
         return oss.str();
     }
 };

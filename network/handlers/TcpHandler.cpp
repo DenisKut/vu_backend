@@ -128,8 +128,17 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
                           << std::endl << "\n";
                 AppConfig::instance()
                     .SET_PBU_PROTO_HEAD_IDX_MODULE(msg_0x02->idxModule);
+
                 m_isRegistered = true;
                 m_registrationTimer.stop();
+
+                auto msg_0x05 = MessageFactory::create<TcpMessage_0x05>();
+
+                sendMessage(msg_0x05.serializeFull());
+                std::cout << "Sent message 0x05:\n"
+                          << msg_0x05.toString()
+                          << std::endl << "\n";
+
                 std::vector<TcpMessage_0x1023::ModuleCapability> capabilities {
                     TcpMessage_0x1023::ModuleCapability(AppConfig::ModulePPU_num
                                                         ::ModulePPU_num_RLMN_1),
@@ -139,12 +148,12 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
                 auto msg_0x1023 = MessageFactory
                     ::create<TcpMessage_0x1023>(capabilities);
 
+                sendMessage(msg_0x1023.serializeFull());
+
                 std::cout << "Sent message 0x1023:\n"
                           << msg_0x1023.toString()
                           << std::endl << "\n";
-
-                sendMessage(msg_0x1023.serializeFull());
-                // m_periodicTimer.start(500); // Периодическая отправка сообщений
+                m_periodicTimer.start(900); // Периодическая отправка сообщений
             }
             break;
         }
@@ -232,7 +241,8 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
             break;
         }
     } else {
-        std::cout << "Invalid or unknown message\n";
+        qDebug() << "Invalid or unknown message\n";
+        qDebug() << Qt::endl << "ETH Message:" << data.toHex(' ').toUpper();
     }
 
 
