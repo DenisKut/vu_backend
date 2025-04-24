@@ -39,6 +39,15 @@ void NetworkManager::stop() {
     m_ethHandler.disconnectAdapter();
 }
 
+
+
+template<typename T>
+T clamp(T value, T min_val, T max_val) {
+    return (value < min_val) ? min_val : (value > max_val) ? max_val : value;
+}
+
+
+
 void NetworkManager::onTcpReceived(const TcpHeader& msg) {
     qDebug() << "TCP Message:" << msg.checkSum;
 }
@@ -213,18 +222,13 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                         auto msg = EthMessageFactory::create<EthMessage_PPU_MOVE>();
                         if (mode == 0)
                         {
-                            //mode = 1;
-                            uint32_t value = 0;
-                            msg.azC0[0] =  value & 0xFF;
-                            msg.azC0[1] = (value >> 8) & 0xFF;
-                            msg.azC0[2] = (value >> 16) & 0xFF;
-                            msg.azC1 = 10;
+                            mode = 3;
+                            double value = 50;
+                            to_anglePPU(value, msg.azC0);
+                            msg.azC1 = 0;
                             msg.azC2 = 0;
-                            value = 0;
-                            msg.anC0[0] =  value & 0xFF;
-                            msg.anC0[1] = (value >> 8) & 0xFF;
-                            msg.anC0[2] = (value >> 16) & 0xFF;
-                            msg.anC1 = 10;
+                            to_anglePPU(value, msg.anC0);
+                            msg.anC1 = 0;
                             msg.anC2 = 0;
                             msg.azSector = 0;
                             msg.anSector = 0;
@@ -263,7 +267,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                         }
                         else if (mode == 2)
                         {
-                            mode = 3;
+                            //mode = 3;
                             uint32_t value = 0;
                             msg.azC0[0] =  value & 0xFF;
                             msg.azC0[1] = (value >> 8) & 0xFF;
@@ -276,6 +280,64 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             msg.anC0[2] = (value >> 16) & 0xFF;
                             msg.anC1 = 0;
                             msg.anC2 = 0;
+                            msg.azSector = 0;
+                            msg.anSector = 0;
+                        }
+                        else if (mode == 3)
+                        {
+                            double dt = 0.0000001*static_cast<double>(TimeProvider::instance().getBsPeriodWidth());
+
+                            double az = AppConfig::instance().getModulePPU_az(
+                                AppConfig::instance().ModulePPU_num_RLMN_1);
+                            double an = AppConfig::instance().getModulePPU_an(
+                                AppConfig::instance().ModulePPU_num_RLMN_1);
+
+                            static double azVel = 0;
+                            static double anVel = 0;
+                            double azC0, anC0, azC1, anC1, azC2, anC2;
+                            uint16_t azC1u, azC2u, anC1u, anC2u;
+
+                            calculateCoefficients(0, 0,
+                                                  az, azVel, dt,
+                                                  10.0, 20.0,
+                                                  &azC0, &azC1, &azC2);
+
+                            calculateCoefficients(0, 0,
+                                                  an, anVel, dt,
+                                                  10.0, 20.0,
+                                                  &anC0, &anC1, &anC2);
+
+                            azC1u = azC1 * 65535.0 / 360.0;
+                            azC2u = azC2 * 65535.0 / 360.0;
+                            anC1u = anC1 * 65535.0 / 360.0;
+                            anC2u = anC2 * 65535.0 / 360.0;
+
+                            qDebug() << "az =" << az;
+                            qDebug() << "azVel =" << azVel;
+                            qDebug() << "an =" << an;
+                            qDebug() << "anVel =" << anVel;
+                            qDebug() << "dt =" << dt;
+
+                            qDebug() << "azC0 =" << azC0;
+                            qDebug() << "azC1 =" << azC1 << "=" << azC1u;
+                            qDebug() << "azC2 =" << azC2 << "=" << azC2u;
+
+                            qDebug() << "anC0 =" << anC0;
+                            qDebug() << "anC1 =" << anC1 << "=" << anC1u;
+                            qDebug() << "anC2 =" << anC2 << "=" << anC2u;
+
+                            msg.azC0[0] = 0;
+                            msg.azC0[1] = 0;
+                            msg.azC0[2] = 0;
+                            msg.azC1 = azC1u;
+                            msg.azC2 = azC2u;
+
+                            msg.anC0[0] = 0;
+                            msg.anC0[1] = 0;
+                            msg.anC0[2] = 0;
+                            msg.anC1 = anC1u;
+                            msg.anC2 = anC2u;
+
                             msg.azSector = 0;
                             msg.anSector = 0;
                         }
