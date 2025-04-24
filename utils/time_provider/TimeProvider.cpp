@@ -111,28 +111,50 @@ uint32_t TimeProvider::getBsPeriodWidth() const {
     return bsPeriodWidth;
 }
 
-void TimeProvider::setPbuTimestamp(int64_t new_time) {
-    pbuTimestamp = new_time;
+void TimeProvider::initTimes() {
+    int64_t time_now = getMs();
+    pbuTimestamp1 = time_now;
+    sysTimeOnTimestamp1 = time_now;
 }
 
-void TimeProvider::setTimeOnTimestamp(int64_t new_time) {
-    timeOnTimestamp = new_time;
+void TimeProvider::setPbuTimestamp1(int64_t new_time) {
+    pbuTimestamp1 = new_time;
+}
+
+void TimeProvider::setSysTimeOnTimestamp1(int64_t new_time) {
+    sysTimeOnTimestamp1 = new_time;
 }
 
 // Синхронизировать время:
-void TimeProvider::syncTime(uint32_t time1, uint32_t time2) {
+void TimeProvider::syncTime(uint32_t timeRequest1,
+                            uint32_t timeRequest2,
+                            uint32_t timeAnswer1,
+                            uint32_t timeAnswer2) {
+
+
     // Объединяем два 32-битных значения в 64-битное время
-    int64_t timePBU = static_cast<int64_t>(static_cast<uint64_t>(time2) << 32)
-                                        | time1;
-    setPbuTimestamp(timePBU);
+    int64_t timePBU =
+        static_cast<int64_t>(static_cast<uint64_t>(timeAnswer2) << 32)
+                                | timeAnswer1;
+
+    int64_t timePBURequest =
+        static_cast<int64_t>(static_cast<uint64_t>(timeRequest2) << 32)
+        | timeRequest1;
+
+    setPbuTimestamp1(timePBU);
 
     // Получаем текущее время системы
     int64_t time_now = getMs();
-    setTimeOnTimestamp(time_now);
+    setSysTimeOnTimestamp1(time_now);
+
+    tKorr = (time_now - sysOnTimeReq - (timePBU - timePBURequest)) / 2;
 }
 
 uint64_t TimeProvider::getTimeForRequest() {
-    uint64_t resultTime = static_cast<uint64_t>(getMs() -
-                                                timeOnTimestamp + pbuTimestamp);
+    sysOnTimeReq = getMs();
+    uint64_t resultTime = static_cast<uint64_t>(
+            sysOnTimeReq - sysTimeOnTimestamp1 +
+            pbuTimestamp1 + tKorr
+       );
     return resultTime;
 }

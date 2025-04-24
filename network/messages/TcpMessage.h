@@ -734,31 +734,48 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
 
     /// @brief Массив мощностей ДСП [rangeCnt][speedCnt]
     /// @details Динамические данные (Массив \e по протоколу - **pow**)
-    float** powRangeVel = nullptr;
+    float* powRangeVel = nullptr;
+    // float** powRangeVel = nullptr;
 
-
-    TcpMessage_0x1022(
-        float** powData
-        /* Если необходимо, доп. параметры */
-        ) {
+    TcpMessage_0x1022(float* powData = nullptr, uint8_t rangeBins = 0,
+                      uint8_t speedBins = 0)
+        : rangeCnt(rangeBins), speedCnt(speedBins) {
         uint64_t time = to_uint64(TimeProvider::instance().getMs());
         time1 = to_uint32(time & 0xFFFFFFFF);
         time2 = to_uint32(time >> 32);
 
-        chanCnt = 1; // Фиксированное значение (У нас один канал - суммарный)
+        chanCnt = 1; // Фиксированное значение
 
-        /// @warning !!! Для заполнения требует наличия заведённых структур для
-        /// объектов и их траекторий
-
-        // Выделение памяти и копирование данных
         if (powData && rangeCnt > 0 && speedCnt > 0) {
             allocatePowRangeVel();
             copyPowData(powData);
         }
 
-        // Обновляем размер данных в заголовке
         updateDataSize();
     }
+
+    // TcpMessage_0x1022(
+    //     float** powData
+    //     /* Если необходимо, доп. параметры */
+    //     ) {
+    //     uint64_t time = to_uint64(TimeProvider::instance().getMs());
+    //     time1 = to_uint32(time & 0xFFFFFFFF);
+    //     time2 = to_uint32(time >> 32);
+
+    //     chanCnt = 1; // Фиксированное значение (У нас один канал - суммарный)
+
+    //     /// @warning !!! Для заполнения требует наличия заведённых структур для
+    //     /// объектов и их траекторий
+
+    //     // Выделение памяти и копирование данных
+    //     if (powData && rangeCnt > 0 && speedCnt > 0) {
+    //         allocatePowRangeVel();
+    //         copyPowData(powData);
+    //     }
+
+    //     // Обновляем размер данных в заголовке
+    //     updateDataSize();
+    // }
 
     /// @brief Деструктор для очистки памяти
     ~TcpMessage_0x1022() {
@@ -773,35 +790,59 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
         freePowRangeVel();
 
         if (rangeCnt > 0 && speedCnt > 0) {
-            powRangeVel = new float*[rangeCnt];
-            for (uint8_t i = 0; i < rangeCnt; ++i) {
-                powRangeVel[i] = new float[speedCnt]{};
-            }
+            powRangeVel = new float[rangeCnt * speedCnt]();
         }
     }
+    // void allocatePowRangeVel() {
+    //     freePowRangeVel();
+
+    //     if (rangeCnt > 0 && speedCnt > 0) {
+    //         powRangeVel = new float*[rangeCnt];
+    //         for (uint8_t i = 0; i < rangeCnt; ++i) {
+    //             powRangeVel[i] = new float[speedCnt]{};
+    //         }
+    //     }
+    // }
 
     /**
      * @brief Копирует внешние данные в массив мощностей
      * @param src Исходный массив данных [rangeCnt][speedCnt]
      */
-    void copyPowData(float** src) {
+    void copyPowData(const float* src) {
         if (!src || !powRangeVel) return;
 
-        for (uint8_t i = 0; i < rangeCnt; ++i) {
-            std::copy(src[i], src[i] + speedCnt, powRangeVel[i]);
-        }
+        std::copy(src, src + rangeCnt * speedCnt, powRangeVel);
     }
+    // void copyPowData(float** src) {
+    //     if (!src || !powRangeVel) return;
+
+    //     for (uint8_t i = 0; i < rangeCnt; ++i) {
+    //         std::copy(src[i], src[i] + speedCnt, powRangeVel[i]);
+    //     }
+    // }
 
     /**
      * @brief Обновляет размер данных в заголовке
      */
     void updateDataSize() {
-        size_t dynamicSize = 0;
-        if (powRangeVel && rangeCnt > 0 && speedCnt > 0) {
-            dynamicSize = rangeCnt * speedCnt * sizeof(float);
+        size_t dataSize = sizeof(TcpMessage_0x1022) - sizeof(TcpHeader);
+        if (powRangeVel) {
+            dataSize += rangeCnt * speedCnt * sizeof(float);
         }
-        sizeData = sizeof(TcpMessage_0x1022) - sizeof(TcpHeader) + dynamicSize;
+        sizeData = static_cast<uint32_t>(dataSize) - sizeof(float*);
+
+        // Обновляем контрольную сумму заголовка
+        const size_t headerSize = sizeof(TcpHeader) - sizeof(checkSum);
+        checkSum = calculateChecksum(reinterpret_cast<const uint8_t*>(this),
+                                     headerSize);
     }
+    // void updateDataSize() {
+    //     size_t dynamicSize = 0;
+    //     if (powRangeVel && rangeCnt > 0 && speedCnt > 0) {
+    //         dynamicSize = rangeCnt * speedCnt * sizeof(float);
+    //     }
+    //     sizeData = sizeof(TcpMessage_0x1022) - sizeof(TcpHeader) + dynamicSize;
+    // }
 
     /// @brief Полная сериализация сообщения
     /// @warning Переопределяем метод сереализации для этого сообщения, т.к.
@@ -811,16 +852,29 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
         QByteArray data(sizeof(TcpMessage_0x1022), 0);
         memcpy(data.data(), this, sizeof(TcpMessage_0x1022));
 
-        // Динамическая часть
+        // Динамическая часть (данные ДСП)
         if (powRangeVel && rangeCnt > 0 && speedCnt > 0) {
-            for (uint8_t i = 0; i < rangeCnt; ++i) {
-                data.append(reinterpret_cast<const char*>(powRangeVel[i]),
-                            speedCnt * sizeof(float));
-            }
+            data.append(reinterpret_cast<const char*>(powRangeVel),
+                        rangeCnt * speedCnt * sizeof(float));
         }
 
         return data;
     }
+    // QByteArray serializeFull() const {
+    //     // Фиксированная часть
+    //     QByteArray data(sizeof(TcpMessage_0x1022), 0);
+    //     memcpy(data.data(), this, sizeof(TcpMessage_0x1022));
+
+    //     // Динамическая часть
+    //     if (powRangeVel && rangeCnt > 0 && speedCnt > 0) {
+    //         for (uint8_t i = 0; i < rangeCnt; ++i) {
+    //             data.append(reinterpret_cast<const char*>(powRangeVel[i]),
+    //                         speedCnt * sizeof(float));
+    //         }
+    //     }
+
+    //     return data;
+    // }
 
     std::string toString() const {
         std::ostringstream oss;
@@ -865,18 +919,22 @@ private:
 
     /// @brief Освобождает память массива мощностей
     void freePowRangeVel() {
-        if (powRangeVel) {
-            for (uint8_t i = 0; i < rangeCnt; ++i) {
-                delete[] powRangeVel[i];
-            }
-            delete[] powRangeVel;
-            powRangeVel = nullptr;
-        }
+        delete[] powRangeVel;
+        powRangeVel = nullptr;
     }
+    // void freePowRangeVel() {
+    //     if (powRangeVel) {
+    //         for (uint8_t i = 0; i < rangeCnt; ++i) {
+    //             delete[] powRangeVel[i];
+    //         }
+    //         delete[] powRangeVel;
+    //         powRangeVel = nullptr;
+    //     }
+    // }
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TcpMessage_0x1022) == 16 + 22*4 + sizeof(float**) ,
+static_assert(sizeof(TcpMessage_0x1022) == 16 + 22*4 + sizeof(float*) ,
               "Invalid size [TcpMessage_0x1022]");
 
 #pragma pack(push, 1)

@@ -159,7 +159,9 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
         }
         case PBU_MessageNumbers::TIMESTAMP: {
             auto msg_0x04 = reinterpret_cast<TcpMessage_0x04*>(parsed.get());
-            m_timeProvider->syncTime(msg_0x04->timeAnswer1,
+            m_timeProvider->syncTime(msg_0x04->timeRequest1,
+                                     msg_0x04->timeRequest2,
+                                     msg_0x04->timeAnswer1,
                                      msg_0x04->timeAnswer2);
             std::cout << "Time synchronized using message 0x04."
                       << std::endl << "\n";
@@ -186,9 +188,11 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
                       << std::endl << "\n";
             sendMessage(msg_0x24.serializeFull());
 
-            // float pow[0][0] = {};
-            // auto msg_0x1022 = MessageFactory::create<TcpMessage_0x1022>(pow);
-            auto msg_0x1022 = MessageFactory::create<TcpMessage_0x1022>(nullptr);
+            auto msg_0x1022 = MessageFactory::
+                        create<TcpMessage_0x1022>(nullptr, 0, 0);
+            // auto msg_0x1022 = MessageFactory::
+            //          create<TcpMessage_0x1022>(nullptr);
+
             msg_0x1022.trackStatus = 0;
             msg_0x1022.isExtra = 0;
             msg_0x1022.isTest = 0;
