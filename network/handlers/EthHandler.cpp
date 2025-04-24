@@ -243,7 +243,7 @@ void EthHandler::disconnectAdapter()
 #else
     close(ethSocketID);
 #endif
-    Logger::instance().writeText("Ethernet адаптер отключен");
+    // Logger::instance().writeText("Ethernet адаптер отключен");
 }
 
 /// Отправить сообщение

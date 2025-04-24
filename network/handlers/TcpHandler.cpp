@@ -111,6 +111,7 @@ void TcpHandler::sendPeriodicMessages() {
 
         sendMessage(msg_0x1021_1.serializeFull());
         LOG_PROTOCOL(typeid(this).name(), Protocol::TCP, msg_0x1021_1.serializeFull(), QJsonDocument(msg_0x1021_1.to_json()).toJson(QJsonDocument::Indented));
+        LOG_PROTOCOL(typeid(this).name(), Protocol::TCP, msg_0x1021_1.serializeFull(), QJsonDocument(msg_0x1021_1.to_json()).toJson(QJsonDocument::Indented));
         sendMessage(msg_0x1021_2.serializeFull());
     }
 }

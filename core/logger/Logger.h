@@ -7,6 +7,15 @@
  * Логгер работает в отдельном потоке и поддерживает многопоточную запись.
  */
 
+/**
+ * @file Logger.h
+ * @brief Класс для логгирования данных и действий в программе (Windows/Linux).
+ * 
+ * Этот файл содержит описание класса Logger, который реализует функциональность
+ * логгирования текстовых и бинарных данных, а также записи логов в базу данных.
+ * Логгер работает в отдельном потоке и поддерживает многопоточную запись.
+ */
+
 #ifndef LOGGER_H
 #define LOGGER_H
 
@@ -25,7 +34,185 @@
 #include <QString>
 #include <atomic>
 #include <vector>
+#include <vector>
 #include <utils/time_provider/TimeProvider.h>
+#include <QJsonDocument>
+
+
+
+// FLAGS AND MARKS
+//-------------------------------------------------------------------
+
+/**
+ * @brief идентификатор, который принадлежит структуре LogHeader
+ * @details статусы сообщений, позволяет разделять их по важности
+ */
+enum class LogLevel {
+    //mostly debug ¯\_(ツ)_/¯
+    Trace,    ///> @brief детальная отладочная информация
+    Debug,    ///> @brief отладочные сообщения
+    //common
+    Info,     ///> @brief общая информация
+    Warning,  ///> @brief предупреждения
+    Error,    ///> @brief ошибки
+    Fatal,     ///> @brief критические ошибки
+    //message in/out
+    MessageReceived, ///> @brief получаемое сообщений
+    MessageSent      ///> @brief принимаемое сообщение
+};
+
+QString inline logLevelToString(LogLevel level) {
+    switch(level) {
+    case LogLevel::Trace:           return "Trace";
+    case LogLevel::Debug:           return "Debug";
+    case LogLevel::Info:            return "Info";
+    case LogLevel::Warning:         return "Warning";
+    case LogLevel::Error:           return "Error";
+    case LogLevel::Fatal:           return "Fatal";
+    case LogLevel::MessageReceived: return "MessageReceived";
+    case LogLevel::MessageSent:     return "MessageSent";
+    default:                        return "N/A";
+    }
+}
+
+/**
+ * @brief приналежит InitLog
+ * @details помогает разделять сообщения об инициализации компонентов по важности
+ */
+enum class StatusInit{
+    LOADED,
+    NOT_LOADED__ERROR_CRITICAL,
+    NOT_LOADED
+};
+
+QString inline statusInitToString(StatusInit status) {
+    switch(status) {
+    case StatusInit::LOADED:                     return "LOADED";
+    case StatusInit::NOT_LOADED__ERROR_CRITICAL: return "NOT_LOADED_ERROR_CRITICAL";
+    case StatusInit::NOT_LOADED:                 return "NOT_LOADED";
+    default:                                     return "N/A";
+    }
+}
+
+
+enum class Protocol{
+    TCP,
+    UDP,
+    RAW_MAC
+};
+
+QString inline protocolToString(Protocol proto) {
+    switch(proto) {
+    case Protocol::TCP:                     return "TCP";
+    case Protocol::UDP:                     return "UDP";
+    case Protocol::RAW_MAC:                 return "RAW_MAC";
+    default:                                return "N/A";
+    }
+}
+
+// END FLAGS AND MARKS ---------------------------------------------------------
+
+
+//--------------------------------------------------------------------------------
+// DB_WRITABLE STRUCTS основые структуры записи определенных данных в базу данных
+//--------------------------------------------------------------------------------
+/**
+ * @struct LogHeader
+ * @brief Структура заголовка лога.
+ *
+ * Содержит информацию о временной метке, источнике и получателе сообщения.
+ */
+struct LogHeader {
+    qint64 timestampMicroseconds; ///< Время в микросекундах.
+    QString src;                  ///< Источник сообщения.
+    qint64 timestampMilliseconds; ///< Время в миллисекундах. Уникальный признак сообщения, сродни ID
+    LogLevel level;              ///< Уровень важности
+
+    /**
+     * @brief Конструктор заголовка
+     * @param source Источник
+     * @param destination Получатель
+     * @param logLevel Уровень логирования
+     */
+    LogHeader(const QString& source,
+              const LogLevel& logLevel)
+        : timestampMicroseconds(TimeProvider::instance().getMks()),
+        src(source),
+        timestampMilliseconds(TimeProvider::instance().getMs()),
+        level(logLevel)
+    {}
+};
+
+
+
+/**
+ * @struct InitLog
+ * @brief Лог инициализации приложения/компонентов
+ */
+struct InitLog : public LogHeader {
+
+    StatusInit status;        ///< Сообщение инициализации
+
+    InitLog(const QString& source,
+            const StatusInit& status);
+
+    InitLog(const QString& source,
+            const LogLevel& logLevel,
+            const StatusInit& status);
+};
+
+/**
+ * @struct InternalMessageLog
+ * @brief Лог внутренних сообщений между компонентами
+ */
+struct InternalMessageLog : public LogHeader {
+    QString messageType;    ///< Тип сообщения
+    QString parsedData; ///< Содержимое сообщения
+
+
+    InternalMessageLog(const QString& source,
+                       const QString& messageType,
+                       const QString& parsedData);
+
+    InternalMessageLog(const QString& source,
+                       const LogLevel& logLevel,
+                       const QString& messageType,
+                       const QString& parsedData);
+};
+
+/**
+ * @struct ProtocolMessageLog
+ * @brief Лог протокольных сообщений. кидаемых вовне / принимаемых извне
+ */
+struct ProtocolMessageLog : public LogHeader {
+    Protocol protocol;   ///< Тип сообщения/протокола (TCP/UDP/RAW(MAC))
+    QByteArray rawData;     ///< Сырые данные сообщения
+    QString parsedData;     ///< Распарсенные данные
+
+    ProtocolMessageLog(const QString& source,
+                       const Protocol& protocol,
+                       const QByteArray& data,
+                       const QString& jsonData);
+
+    ProtocolMessageLog(const QString& source,
+                       const LogLevel& logLevel,
+                       const Protocol& protocol,
+                       const QByteArray& data,
+                       const QString& jsonData);
+
+};
+// END DB_WRITABLE STRUCTS--------------------------------------------------------------
+
+
+
+
+/**
+ * @class Logger
+ * @brief Класс для логгирования данных.
+ * 
+ * Реализует функциональность записи текстовых и бинарных данных в файл,
+ * а также логгирования в базу данных. Работает в отдельном потоке.
+ */
 #include <QJsonDocument>
 
 
@@ -274,6 +461,15 @@ public:
     void log(const T& logData);
 
 
+	/**
+     * @brief Основной метод логирования
+     * @tparam T Тип структуры лога (InitLog, InternalMessageLog и т.д.)
+     * @param logData Данные для логирования
+     */
+    template<typename T>
+    void log(const T& logData);
+
+
 protected:
 	/**
 	 * @brief Запуск потока логгера.
@@ -319,7 +515,22 @@ private:
     //  * @return Преобразованное сообщение в формате QByteArray.
     //  */
     // QByteArray formatMessage(const QString& message);
+    // /**
+    //  * @brief Преобразование текстового сообщения в QByteArray для записи в файл.
+    //  * @param message Текст сообщения.
+    //  * @return Преобразованное сообщение в формате QByteArray.
+    //  */
+    // QByteArray formatMessage(const QString& message);
 
+    // /**
+    //  * @brief Преобразование массива данных в Hex-формат.
+    //  * @tparam T Тип данных.
+    //  * @param data Указатель на массив данных.
+    //  * @param length Длина массива данных.
+    //  * @return Преобразованные данные в формате QByteArray.
+    //  */
+    // template<typename T>
+    // QByteArray binaryToHex(const T* data, size_t length);
     // /**
     //  * @brief Преобразование массива данных в Hex-формат.
     //  * @tparam T Тип данных.
@@ -336,6 +547,42 @@ private:
     //  * @return Преобразованные данные в формате QByteArray.
     //  */
     // QByteArray binaryToHex(const QByteArray& data);
+    // /**
+    //  * @brief Преобразование QByteArray в Hex-формат.
+    //  * @param data Данные в формате QByteArray.
+    //  * @return Преобразованные данные в формате QByteArray.
+    //  */
+    // QByteArray binaryToHex(const QByteArray& data);
+
+    // /**
+    //  * @brief Поместить сообщение в очередь на запись в лог-файл.
+    //  * @param msg Сообщение в формате QByteArray.
+    //  */
+    // void enqueueMessage(QByteArray msg);
+
+	/**
+	 * @brief Поместить SQL-запрос в очередь.
+	 * @param query SQL-запрос.
+	 */
+	void enqueueMessage(const QString& query);
+
+    /**
+     * @brief Пакетная вставка сообщений в БД.
+     * @details Все сообщения из буффера, макс m_bufferSize, закидываются в БД пачкой
+    */
+    void flushBuffer();
+
+
+    QSqlDatabase m_db; ///< Подключение к базе данных.
+    QMutex m_mutex; ///< Мьютекс для синхронизации.
+    QWaitCondition m_condition; ///< Условие ожидания.
+    QQueue<QString> m_queryQueue; ///< Очередь SQL-запросов.
+    std::atomic<bool> m_stop{false}; ///< Флаг остановки потока.
+
+    std::vector<QString> m_buffer; ///< Буфер для пакетной вставки.
+    const int m_bufferSize = 100; ///< Размер буфера перед записью в БД.
+};
+
 
     // /**
     //  * @brief Поместить сообщение в очередь на запись в лог-файл.
