@@ -218,6 +218,10 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
             msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
             msg_0x1022.typeTrack = static_cast<uint8_t>(msg_0x641->typeCeil);
 
+            std::cout << "Sent message 0x1022:\n"
+                      << msg_0x1022.toString()
+                      << std::endl << "\n";
+            sendMessage(msg_0x1022.serializeFull());
 
             AppConfig::instance().SET_PBU_PROTO_0X24_MODE(0);
             AppConfig::instance().SET_PBU_PROTO_0X23_CODE(
