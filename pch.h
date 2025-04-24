@@ -9,13 +9,33 @@
 // #include <QString>
 // #include <atomic>
 // #include <vector>
-//#include <utils/time_provider/TimeProvider.h>
-#pragma once  // защитник от множественногот включения
-#include "core/logger/Logger.h"
+// защитник от множественногот включения
+#pragma once
+#include <utils/time_provider/TimeProvider.h>
 #include "utils/AppConfig.h"
+#include "core/logger/Logger.h"
+
+
+
+/*
+Если хочется без указания типа класса, где был вызов, передавать *this в typeid
+*/
 
 /**
- * @def LOG_INIT(component, ...)
+ * @def LOG(logObject)
+ * @brief Универсальный макрос для логирования
+ * @param logObject Допустимые типы: InitLog, InternalMessageLog, ProtocolMessageLog
+ * @example LOG(InitLog(typeid(this).name(), StatusInit::LOADED))
+ * @example LOG(InitLog(typeid(this).name(), LogLevel::Info, StatusInit::LOADED))
+ * @example LOG(InternalMessageLog(typeid(this).name(), "message type", "payloadPart Here"))
+ * @example LOG(InternalMessageLog(typeid(this).name(), LogLevel::Info,  "message type", "payloadPart Here"))
+ * @example LOG(ProtocolMessageLog(typeid(this).name(), Protocol::TCP, QByteArray, "{json_data}"))
+ * @example LOG(ProtocolMessageLog(typeid(this).name(), LogLevel::Info, Protocol::TCP, QByteArray, "{json_data}"))
+ */
+#define LOG(logObject) Logger::instance().log(logObject)
+
+/**
+ * @def LOG_INIT(source, ...)
  * @brief Логирование событий инициализации
  * @param component Имя компонента (QString)
  * @param ... Варианты:
@@ -24,8 +44,8 @@
  * @example LOG_INIT(typeid(this).name(), StatusInit::LOADED)
  * @example LOG_INIT(typeid(this).name(), LogLevel::Info, StatusInit::NOT_LOADED)
  */
-#define LOG_INIT(component, ...) \
-    Logger::instance().log(InitLog(component, ##__VA_ARGS__))
+#define LOG_INIT(source, ...) \
+    Logger::instance().log(InitLog(source, ##__VA_ARGS__))
 
 /**
  * @def LOG_INTERNAL(source, ...)

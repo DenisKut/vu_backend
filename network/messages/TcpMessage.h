@@ -183,7 +183,6 @@ struct TcpHeader {
     // Word - 4
     uint16_t typePack;      ///< Тип пакета (из PBU_MessageNumbers)
     uint16_t checkSum;      ///< Контрольная сумма заголовкаs
-    uint16_t checkSum;      ///< Контрольная сумма заголовкаs
 
     /**
      * @brief Сериализует заголовок в массив байтов
@@ -256,22 +255,6 @@ protected:
 
     /// @brief Конструктор по умолчанию для десериализации
     TcpHeader() = default;
-
-    QJsonObject to_json() const {
-        QJsonObject jsonObj;
-
-        jsonObj["sender"] = static_cast<qint64>(sender);
-        jsonObj["idxModule"] = static_cast<int>(idxModule);
-        jsonObj["vMajor"] = vMajor;
-        jsonObj["vMinor"] = vMinor;
-        jsonObj["idxPack"] = idxPack;
-        jsonObj["sizeData"] = static_cast<qint64>(sizeData);
-        jsonObj["isAsku"] = static_cast<bool>(isAsku);
-        jsonObj["typePack"] = typePack;
-        jsonObj["checkSum"] = checkSum;
-
-        return jsonObj;
-    }
 
     QJsonObject to_json() const {
         QJsonObject jsonObj;
@@ -1244,35 +1227,6 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
         return buffer;
     }
 
-
-    QJsonObject to_json() const {
-        QJsonObject json = TcpHeader::to_json();
-        QJsonArray capabilitiesArray;
-
-        if (jsonData) {
-            try {
-                auto json = json::parse(jsonData, jsonData + getJsonSize());
-                for (const auto& item : json) {
-                    QJsonObject capObj;
-                    capObj["Number"] = item["Number"].get<int>();
-                    capObj["IsRotate"] = item.value("IsRotate", false);
-                    capObj["Name"] = QString::fromStdString(item.value("Name", std::string()));
-                    capObj["AzMin"] = item["AzMin"].get<double>();
-                    capObj["AzMax"] = item["AzMax"].get<double>();
-                    capObj["ElevMin"] = item["ElevMin"].get<double>();
-                    capObj["ElevMax"] = item["ElevMax"].get<double>();
-                    capObj["MaxRange"] = item["MaxRange"].get<double>();
-                    capabilitiesArray.append(capObj);
-                }
-            } catch (const json::exception&) {
-
-            }
-        }
-
-        json["capabilities"] = capabilitiesArray;
-        return json;
-    }
-
     QJsonObject to_json() const {
         QJsonObject json = TcpHeader::to_json();
         QJsonArray capabilitiesArray;
@@ -1589,22 +1543,6 @@ struct TcpMessage_0x1024 : TcpMessage<TcpMessage_0x1024,
         return data;
     }
 
-    QJsonObject to_json() const {
-        QJsonObject json = TcpHeader::to_json();
-        QJsonArray sectorsArray;
-
-        for (const auto& sector : sectors) {
-            QJsonObject sectorObj;
-            sectorObj["limAzBegin"] = sector.limAzBegin;
-            sectorObj["limAzEnd"] = sector.limAzEnd;
-            sectorObj["limElevBegin"] = sector.limElevBegin;
-            sectorObj["limElevEnd"] = sector.limElevEnd;
-            sectorsArray.append(sectorObj);
-        }
-
-        json["sectors"] = sectorsArray;
-        return json;
-    }
 
     QJsonObject to_json() const {
         QJsonObject json = TcpHeader::to_json();
@@ -2185,32 +2123,8 @@ struct TcpMessage_0x641 : TcpMessage<TcpMessage_0x641,
                                 ///< другом признаке поле Серийный номер
                                 ///< перехватчика игнорируется).
                                 ///
-    QJsonObject to_json() {
-        QJsonObject json = TcpHeader::to_json();
-        json["time1"] = static_cast<int>(time1);
-        json["time2"] = static_cast<int>(time2);
-        json["idxCeilVOI"] = static_cast<int>(idxCeilVOI);
-        json["numDrive"] = static_cast<int>(numDrive);
-        json["typeCeil"] = static_cast<int>(typeCeil);
-        json["isModel"] = static_cast<int>(isModel);
-        json["reserve"] = static_cast<int>(reserve);
-        json["ceilAz"] = ceilAz;
-        json["ceilElev"] = ceilElev;
-        json["ceilRange"] = ceilRange;
-        json["ceilVr"] = ceilVr;
-        json["ceilVAz"] = ceilVAz;
-        json["ceilVElev"] = ceilVElev;
-        json["sigAz"] = sigAz;
-        json["sigElev"] = sigElev;
-        json["sigRange"] = sigRange;
-        json["sigVAz"] = sigVAz;
-        json["sigVElev"] = sigVElev;
-        json["sigVr"] = sigVr;
-        json["numBPLA"] = static_cast<int>(numBPLA);
-        return json;
-    }
 
-                                ///
+
     QJsonObject to_json() {
         QJsonObject json = TcpHeader::to_json();
         json["time1"] = static_cast<int>(time1);
@@ -2322,12 +2236,6 @@ struct TcpMessage_0x20 : TcpMessage<TcpMessage_0x20,
     struct ControlledParam;
     struct ConfigParam;
     struct Element;
-
-    QJsonObject to_json() const {
-        QJsonObject json = TcpHeader::to_json();
-        json["raw_json"] = jsonData;
-        return json;
-    }
 
     QJsonObject to_json() const {
         QJsonObject json = TcpHeader::to_json();
