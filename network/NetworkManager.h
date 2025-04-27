@@ -23,32 +23,55 @@ public:
 
     // ППУ:
     //----------------------------------------------------------
-    void calculateCoefficients(double tPos, double tVel,
-                               double cPos, double cVel, double dt,
-                               double aMax, double vMax,
-                               double* C0, double* C1, double* C2) {
-        // 1. Расчет ошибки позиции и скорости
-        float delta_x = tPos - cPos;
-        float delta_v = tVel - cVel;
+    void calculateCoefficientsPPU(double angleTarget,  double velocityTarget,
+                                  double angleCurrent, double* angleLast,
+                                  double* accelerationLast, double accelerationMax,
+                                  double angleMin, double velocityMin,
+                                  double KP, double KD, double dt,
+                                  double* C0, double* C1, double* C2) {
 
-        // 2. Расчет идеального ускорения для достижения цели
-        float a_needed = (delta_v + 2.0f * delta_x / dt) / dt;
 
-        // 3. Ограничение ускорения по максимальному значению
-        a_needed = fmaxf(fminf(a_needed, aMax), -aMax);
+        double dx = angleTarget - angleCurrent;
+        double v1 = (angleCurrent - (*angleLast)) / dt + 0.5 * (*accelerationLast) * dt;
+        double dv = velocityTarget - v1;
+        double a1 = 0.0;
 
-        // 4. Проверка ограничения скорости после ускорения
-        float predicted_velocity = cVel + a_needed * dt;
-        if (predicted_velocity > vMax) {
-            a_needed = (vMax - cVel) / dt;
-        } else if (predicted_velocity < -vMax) {
-            a_needed = (-vMax - cVel) / dt;
+        double breaking_dist = dv * dv / (2.0 * accelerationMax) + angleMin;
+
+        if (abs(dx) > angleMin) {
+            // Максимальное ускорение в направлении цели
+            a1 = (dx > 0) ? accelerationMax : -accelerationMax;
+
+            // Если расстояние торможения достигнуто, то тормозим:
+            if (abs(dx) < breaking_dist) {
+                a1 = (dv < 0) ? -accelerationMax : accelerationMax;
+            }
+
+            // Плавное изменение ускорения:
+            if (abs(dv) < velocityMin) {
+                a1 = (*accelerationLast) + 0.5 * (a1 - (*accelerationLast));
+            }
+        } else {
+            // ПД-регулятор
+            a1 = KP * dx + KD * dv;
         }
 
-        // 5. Установка коэффициентов
-        *C0 = 0.0f;              // Начальное смещение (не используется)
-        *C1 = cVel;   // Текущая скорость (начальная для интервала)
-        *C2 = 0.5f * a_needed;   // Ускорение, деленное на 2 (по условию задачи)
+        // Ограничение ускорения
+        a1 = fmax(fmin(a1, accelerationMax), -accelerationMax);
+
+        // Плавное изменение ускорения:
+        if (abs(dv) < velocityMin) {
+            a1 = (*accelerationLast) + 0.8 * (a1 - (*accelerationLast));
+        }
+
+        // Запоминаем предыдущие значения положения и ускорения точки 1
+        *angleLast = angleCurrent;
+        *accelerationLast = a1;
+
+        // Установка коэффициентов
+        *C0 = angleCurrent; // Начальное смещение (не используется)
+        *C1 = v1;           // Текущая скорость (начальная для интервала)
+        *C2 = 0.5 * a1;     // Ускорение, деленное на 2
     }
     //----------------------------------------------------------
 
