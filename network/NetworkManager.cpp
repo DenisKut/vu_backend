@@ -215,7 +215,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                     qDebug() << "PPU is turned On" << Qt::endl;
 
                     // Если ППУ включено, то подвинуть его в координаты 10, 10:
-                    static int mode = 0;
+                    static int mode = 3;
                     //if (mode == 0)
                     {
                         //mode = 1;
@@ -292,39 +292,45 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             double an = AppConfig::instance().getModulePPU_an(
                                 AppConfig::instance().ModulePPU_num_RLMN_1);
 
-                            static double azVel = 0;
-                            static double anVel = 0;
+                            static double azLast = 0;
+                            static double azAccLast = 0;
+                            static double anLast = 0;
+                            static double anAccLast = 0;
                             double azC0, anC0, azC1, anC1, azC2, anC2;
                             uint16_t azC1u, azC2u, anC1u, anC2u;
+                            double aMax = 1.5; // 30.0 для dt = 0.1
+                            double KP = 0.5;
+                            double KD = 1.5;
 
-                            calculateCoefficients(0, 0,
-                                                  az, azVel, dt,
-                                                  10.0, 20.0,
-                                                  &azC0, &azC1, &azC2);
+                            calculateCoefficientsPPU(0, 0,
+                                                     az, &azLast, &azAccLast,
+                                                     aMax, 10.0, 10.0, KP, KD, dt,
+                                                     &azC0, &azC1, &azC2);
 
-                            calculateCoefficients(0, 0,
-                                                  an, anVel, dt,
-                                                  10.0, 20.0,
-                                                  &anC0, &anC1, &anC2);
+                            calculateCoefficientsPPU(0, 0,
+                                                     an, &anLast, &anAccLast,
+                                                     aMax, 10.0, 10.0, KP, KD, dt,
+                                                     &anC0, &anC1, &anC2);
 
                             azC1u = azC1 * 65535.0 / 360.0;
                             azC2u = azC2 * 65535.0 / 360.0;
                             anC1u = anC1 * 65535.0 / 360.0;
                             anC2u = anC2 * 65535.0 / 360.0;
 
-                            qDebug() << "az =" << az;
-                            qDebug() << "azVel =" << azVel;
-                            qDebug() << "an =" << an;
-                            qDebug() << "anVel =" << anVel;
-                            qDebug() << "dt =" << dt;
+                            qDebug() << "azCur =" << azC0;
+                            qDebug() << "azVel =" << azC1 << "=" << azC1u;
+                            qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
+                            qDebug() << "anCur =" << anC0;
+                            qDebug() << "anVel =" << anC1 << "=" << anC1u;
+                            qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
 
-                            qDebug() << "azC0 =" << azC0;
-                            qDebug() << "azC1 =" << azC1 << "=" << azC1u;
-                            qDebug() << "azC2 =" << azC2 << "=" << azC2u;
+//                            qDebug() << "azC0 =" << azC0;
+//                            qDebug() << "azC1 =" << azC1 << "=" << azC1u;
+//                            qDebug() << "azC2 =" << azC2 << "=" << azC2u;
 
-                            qDebug() << "anC0 =" << anC0;
-                            qDebug() << "anC1 =" << anC1 << "=" << anC1u;
-                            qDebug() << "anC2 =" << anC2 << "=" << anC2u;
+//                            qDebug() << "anC0 =" << anC0;
+//                            qDebug() << "anC1 =" << anC1 << "=" << anC1u;
+//                            qDebug() << "anC2 =" << anC2 << "=" << anC2u;
 
                             msg.azC0[0] = 0;
                             msg.azC0[1] = 0;
