@@ -80,6 +80,7 @@ void TcpHandler::sendPeriodicMessages() {
         // Отправка 0x03 (Запрос времени)
         // TcpMessage_0x03 timeReq;
         auto msg_0x03 = MessageFactory::create<TcpMessage_0x03>();
+        qDebug() << "time_now =" << TimeProvider::instance().getMs();
         std::cout << "Sent message 0x03:\n"
                   << msg_0x03.toString()
                   << std::endl << "\n";
@@ -159,6 +160,7 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
         }
         case PBU_MessageNumbers::TIMESTAMP: {
             auto msg_0x04 = reinterpret_cast<TcpMessage_0x04*>(parsed.get());
+            qDebug() << "time_now =" << TimeProvider::instance().getMs();
             m_timeProvider->syncTime(msg_0x04->timeRequest1,
                                      msg_0x04->timeRequest2,
                                      msg_0x04->timeAnswer1,

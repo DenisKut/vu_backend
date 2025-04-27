@@ -125,6 +125,10 @@ void TimeProvider::setSysTimeOnTimestamp1(int64_t new_time) {
     sysTimeOnTimestamp1 = new_time;
 }
 
+int64_t TimeProvider::getPbuTimeDelta() {
+    return pbuTimeDelta;
+}
+
 // Синхронизировать время:
 void TimeProvider::syncTime(uint32_t timeRequest1,
                             uint32_t timeRequest2,
@@ -147,14 +151,19 @@ void TimeProvider::syncTime(uint32_t timeRequest1,
     int64_t time_now = getMs();
     setSysTimeOnTimestamp1(time_now);
 
-    tKorr = (time_now - sysOnTimeReq - (timePBU - timePBURequest)) / 2;
+    pbuTimeDelta = timePBU - time_now;
+    pbuTimeKorr = timePBU - timePBURequest;
+    qDebug() << "pbuTimeDelta =" << pbuTimeDelta;
+    qDebug() << "pbuTimeKorr =" << pbuTimeKorr;
 }
 
 uint64_t TimeProvider::getTimeForRequest() {
     sysOnTimeReq = getMs();
+    int64_t _pbuTimeDelta = getPbuTimeDelta();
+    qDebug() << "sysOnTimeReq =" << sysOnTimeReq;
+    qDebug() << "pbuTimeDelta =" << pbuTimeDelta;
     uint64_t resultTime = static_cast<uint64_t>(
-            sysOnTimeReq - sysTimeOnTimestamp1 +
-            pbuTimestamp1 + tKorr
+            sysOnTimeReq + _pbuTimeDelta
        );
     return resultTime;
 }

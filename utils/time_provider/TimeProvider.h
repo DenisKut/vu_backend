@@ -43,6 +43,7 @@ public:
 
     void setPbuTimestamp1(int64_t new_time);
     void setSysTimeOnTimestamp1(int64_t new_time);
+    int64_t getPbuTimeDelta();
 
     // Функции периода БС:
     //----------------------------------------------------------------------
@@ -73,7 +74,6 @@ public:
                   uint32_t timeAnswer2);
 
     uint64_t getTimeForRequest();
-
     //----------------------------------------------------------------------
 
 private:
@@ -94,9 +94,18 @@ private:
                                     ///< пакета "Отметка времени"
                                     ///< (мс)
 
-    int64_t sysOnTimeReq;
+    int64_t sysOnTimeReq;           ///< Время на момент отправки
+                                    ///< пакета "Запрос времени"
+                                    ///< (мс)
 
-    int64_t tKorr = 0;
+    int64_t pbuTimeKorr = 0;        ///< Задержка распространения
+                                    ///< до ПБУ (мс)
+
+    int64_t pbuTimeDelta = 0;       ///< Разница времени между
+                                    ///< временем ПБУ и нашим
+                                    ///< системным временем (мс)
 };
+
+
 
 #endif // TIMEPROVIDER_H
