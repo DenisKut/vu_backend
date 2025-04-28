@@ -365,7 +365,7 @@ struct TcpMessage_0x03 : TcpMessage<TcpMessage_0x03,
 
     /// @brief Инициализирует временную метку текущим временем
     TcpMessage_0x03() {
-        uint64_t time = TimeProvider::instance().getTimeForRequest();
+        uint64_t time = TimeProvider::instance().getTimeForRequestPBU();
         timeRequest1 = to_uint32(time & 0xFFFFFFFF);
         timeRequest2 = to_uint32(time >> 32);
     }
@@ -2881,7 +2881,7 @@ struct TcpMessage_0x24: TcpMessage<TcpMessage_0x24,
         statusTWP(AppConfig::instance().PBU_PROTO_0X24_STATUS_TWP()),
         mode(AppConfig::instance().PBU_PROTO_0X24_MODE()),
         reserve(0) {
-        uint64_t time = TimeProvider::instance().getTimeForRequest();
+        uint64_t time = TimeProvider::instance().getTimeForRequestPBU();
         time1 = to_uint32(time & 0xFFFFFFFF);
         time2 = to_uint32(time >> 32);
     }

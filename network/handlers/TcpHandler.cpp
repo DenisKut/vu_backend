@@ -159,10 +159,10 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
         }
         case PBU_MessageNumbers::TIMESTAMP: {
             auto msg_0x04 = reinterpret_cast<TcpMessage_0x04*>(parsed.get());
-            m_timeProvider->syncTime(msg_0x04->timeRequest1,
-                                     msg_0x04->timeRequest2,
-                                     msg_0x04->timeAnswer1,
-                                     msg_0x04->timeAnswer2);
+            m_timeProvider->syncTimePBU(msg_0x04->timeRequest1,
+                                        msg_0x04->timeRequest2,
+                                        msg_0x04->timeAnswer1,
+                                        msg_0x04->timeAnswer2);
             std::cout << "Time synchronized using message 0x04."
                       << std::endl << "\n";
             break;

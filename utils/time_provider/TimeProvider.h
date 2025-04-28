@@ -45,12 +45,12 @@ public:
     // между ВУ и ПБУ, а также задержки сообщений
     // при передачи по TCP/IP между ВУ и ПБУ:
     //----------------------------------------------------------------------
-    void setSysOnTimeReq(int64_t time);
-    void setPbuTimeDelta(int64_t time);
-    void setPbuTimeKorr(int64_t time);
-    int64_t getSysOnTimeReq();
-    int64_t getPbuTimeDelta();
-    int64_t getPbuTimeKorr();
+    void setSysOnTimeReq(const int64_t time);
+    void setPbuTimeDelta(const int64_t time);
+    void setPbuTimeKorr(const int64_t time);
+    int64_t getSysOnTimeReq() const;
+    int64_t getPbuTimeDelta() const;
+    int64_t getPbuTimeKorr() const;
     //----------------------------------------------------------------------
 
     // Функции периода БС:
@@ -64,24 +64,44 @@ public:
     // Установить значение периода синхронизации БС:
     void setBsPeriodWidth(const uint32_t value);
 
+    // Установить значение разницы во времени между ВУ и БС:
+    void setBsTimeDelta(const int64_t value);
+
+    // Установить значение времени БС по приходу сообщения 11.1:
+    void setBsTimePPU(const int64_t value);
+
     // Получить номер текущего периода БС:
     uint32_t getBsPeriodNumber() const;
 
     // Получить время текущего приода БС:
-    uint64_t getBsPeriodTime() const;
+    int64_t getBsPeriodTime() const;
 
     // Получить значение периода синхронизации БС:
-    uint32_t getBsPeriodWidth() const;
+    int64_t getBsPeriodWidth() const;
+
+    // Получить значение разницы во времени между ВУ и БС:
+    int64_t getBsTimeDelta() const;
+
+    // Получить значение разницы во времени между предыдущим
+    // сообщением 11.1 и текущим временем БС:
+    int64_t getBsDeltaPPU() const;
 
     void initTimes();
 
-    // Синхронизировать время:
-    void syncTime(uint32_t timeRequest1,
-                  uint32_t timeRequest2,
-                  uint32_t timeAnswer1,
-                  uint32_t timeAnswer2);
+    // Синхронизировать время с БС:
+    void syncTimeBS();
 
-    uint64_t getTimeForRequest();
+    // Синхронизировать время с ПБУ:
+    void syncTimePBU(uint32_t timeRequest1,
+                     uint32_t timeRequest2,
+                     uint32_t timeAnswer1,
+                     uint32_t timeAnswer2);
+
+    // Запрос времени ПБУ для отправки сообщения на ПБУ:
+    uint64_t getTimeForRequestPBU();
+
+    // Запрос времени БС для отправки сообщения на БС:
+    uint64_t getTimeForRequestBS();
     //----------------------------------------------------------------------
 
 private:
@@ -90,17 +110,15 @@ private:
 
     // Переменные периода БС:
     //----------------------------------------------------------------------
-    uint32_t bsPeriodNumber;        ///< Порядковый номер нового периода
-    uint64_t bsPeriodTime : 40;    ///< Время начала нового периода
-    uint32_t bsPeriodWidth;        ///< Значение периода синхронизации
+    int32_t bsPeriodNumber = 0;     ///< Порядковый номер нового периода
+    int64_t bsPeriodTime : 40;      ///< Время начала нового периода
+    int32_t bsPeriodWidth = 0;      ///< Значение периода синхронизации
+    int64_t bsTimeDelta = 0;        ///< Разница времени между
+                                    ///< нашим системным временем (нс)
+                                    ///< и временем БС (0.1 мкс)
+    int64_t bsTimePPU = 0;          ///< Время приёма последнего сообщения
+                                    ///< 11.1 от ППУ
     //----------------------------------------------------------------------
-
-    int64_t pbuTimestamp1;          ///< Время из пакета "Отметка
-                                    ///< времени" (мс)
-
-    int64_t sysTimeOnTimestamp1;    ///< Время на момент получения
-                                    ///< пакета "Отметка времени"
-                                    ///< (мс)
 
     int64_t sysOnTimeReq;           ///< Время на момент отправки
                                     ///< пакета "Запрос времени"

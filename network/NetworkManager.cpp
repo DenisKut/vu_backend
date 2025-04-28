@@ -86,6 +86,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 TimeProvider::instance().setBsPeriodNumber(msgBS_SYNC->periodNumber);
                 TimeProvider::instance().setBsPeriodTime(msgBS_SYNC->periodTime);
                 TimeProvider::instance().setBsPeriodWidth(msgBS_SYNC->periodWidth);
+                TimeProvider::instance().syncTimeBS();
 
                 // Отладочный вывод параметров сообщения 2.5
                 qDebug() << "2.5 RECEIVED";
@@ -105,6 +106,16 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
             // Если удалось получить указатель
             if (msgPPU_POSITION)
             {
+                // Сохранить время БС, соответствующее сообщению 11.1:
+                //-------------------------------------------------------------
+                int64_t timeTemp;
+                for (int i = 4; i >= 0; --i) { // Обратный порядок (Little-endian)
+                    timeTemp = (timeTemp << 8) | msgPPU_POSITION->timeBeginTrans[i];
+                }
+                timeTemp &= 0x000000FFFFFFFFFF;
+                TimeProvider::instance().setBsTimePPU(timeTemp);
+                //-------------------------------------------------------------
+
                 // Заполнение структуры ППУ:
                 //-------------------------------------------------------------
                 // Код последней полученной команды
@@ -246,16 +257,31 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                                             reinterpret_cast<const char*>(buf),
                                             sizeof(buf)
                                             );
-                                qDebug() << "Sending message to change period"
+                                qDebug() << "Sending message to change period "
                                             "of messages on imitator:";
                                 qDebug() << "ETH Message from VU to BS:"
                                          << Qt::endl
                                          << data.toHex(' ').toUpper();
                                 isChangedImitPeriod = m_ethHandler.sendMessage(data);
                                 if (isChangedImitPeriod) {
-                                    mode = 3;
+                                    mode = 1;
                                 }
                             }
+
+//                            uint32_t value = 0;
+//                            msg.azC0[0] =  value & 0xFF;
+//                            msg.azC0[1] = (value >> 8) & 0xFF;
+//                            msg.azC0[2] = (value >> 16) & 0xFF;
+//                            msg.azC1 = 0;
+//                            msg.azC2 = 0;
+//                            value = 0;
+//                            msg.anC0[0] =  value & 0xFF;
+//                            msg.anC0[1] = (value >> 8) & 0xFF;
+//                            msg.anC0[2] = (value >> 16) & 0xFF;
+//                            msg.anC1 = 0;
+//                            msg.anC2 = 0;
+//                            msg.azSector = 0;
+//                            msg.anSector = 0;
 
 //                            mode = 3;
 //                            double value = 50;
@@ -285,42 +311,44 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                         else if (mode == 1)
                         {
                             mode = 2;
-                            uint32_t value = 10000;
-                            msg.azC0[0] =  value & 0xFF;
-                            msg.azC0[1] = (value >> 8) & 0xFF;
-                            msg.azC0[2] = (value >> 16) & 0xFF;
-                            msg.azC1 = 0;
-                            msg.azC2 = 0;
-                            value = 10000;
-                            msg.anC0[0] =  value & 0xFF;
-                            msg.anC0[1] = (value >> 8) & 0xFF;
-                            msg.anC0[2] = (value >> 16) & 0xFF;
-                            msg.anC1 = 0;
-                            msg.anC2 = 0;
-                            msg.azSector = 0;
-                            msg.anSector = 0;
+//                            uint32_t value = 0;//10000;
+//                            msg.azC0[0] =  value & 0xFF;
+//                            msg.azC0[1] = (value >> 8) & 0xFF;
+//                            msg.azC0[2] = (value >> 16) & 0xFF;
+//                            msg.azC1 = 0;
+//                            msg.azC2 = 0;
+//                            value = 0;//10000;
+//                            msg.anC0[0] =  value & 0xFF;
+//                            msg.anC0[1] = (value >> 8) & 0xFF;
+//                            msg.anC0[2] = (value >> 16) & 0xFF;
+//                            msg.anC1 = 0;
+//                            msg.anC2 = 0;
+//                            msg.azSector = 0;
+//                            msg.anSector = 0;
                         }
                         else if (mode == 2)
                         {
-                            //mode = 3;
-                            uint32_t value = 0;
-                            msg.azC0[0] =  value & 0xFF;
-                            msg.azC0[1] = (value >> 8) & 0xFF;
-                            msg.azC0[2] = (value >> 16) & 0xFF;
-                            msg.azC1 = 0;
-                            msg.azC2 = 0;
-                            value = 0;
-                            msg.anC0[0] =  value & 0xFF;
-                            msg.anC0[1] = (value >> 8) & 0xFF;
-                            msg.anC0[2] = (value >> 16) & 0xFF;
-                            msg.anC1 = 0;
-                            msg.anC2 = 0;
-                            msg.azSector = 0;
-                            msg.anSector = 0;
+                            mode = 3;
+//                            uint32_t value = 0;
+//                            msg.azC0[0] =  value & 0xFF;
+//                            msg.azC0[1] = (value >> 8) & 0xFF;
+//                            msg.azC0[2] = (value >> 16) & 0xFF;
+//                            msg.azC1 = 0;
+//                            msg.azC2 = 0;
+//                            value = 0;
+//                            msg.anC0[0] =  value & 0xFF;
+//                            msg.anC0[1] = (value >> 8) & 0xFF;
+//                            msg.anC0[2] = (value >> 16) & 0xFF;
+//                            msg.anC1 = 0;
+//                            msg.anC2 = 0;
+//                            msg.azSector = 0;
+//                            msg.anSector = 0;
                         }
                         else if (mode == 3)
                         {
+                            mode = 4;
                             double dt = 0.0000001*static_cast<double>(TimeProvider::instance().getBsPeriodWidth());
+                            double dtLast = 0.0000001*static_cast<double>(TimeProvider::instance().getBsDeltaPPU());
 
                             double az = AppConfig::instance().getModulePPU_az(
                                 AppConfig::instance().ModulePPU_num_RLMN_1);
@@ -340,14 +368,16 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             double KP = 3.0;
                             double KD = 3.0;
 
+                            dt *= 3.0;
+
                             calculateCoefficientsPPU(60, 0,
                                                      az, &azLast, &azAccLast,
-                                                     aMax, 10.0, 10.0, KP, KD, dt,
+                                                     aMax, 10.0, 10.0, KP, KD, dtLast, dt,
                                                      &azC0, &azC1, &azC2);
 
                             calculateCoefficientsPPU(60, 0,
                                                      an, &anLast, &anAccLast,
-                                                     aMax, 10.0, 10.0, KP, KD, dt,
+                                                     aMax, 10.0, 10.0, KP, KD, dtLast, dt,
                                                      &anC0, &anC1, &anC2);
 
                             azC1u = azC1 * 65535.0 / 360.0;
@@ -384,11 +414,19 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 
                             msg.azSector = 0;
                             msg.anSector = 0;
+
+                            QByteArray data = msg.serializeFull();
+                            qDebug() << "Sending message to move the PPU:";
+                            qDebug() << "Time BS:" << TimeProvider::instance().getTimeForRequestBS();
+                            qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+                            m_ethHandler.sendMessage(data);
                         }
-                        QByteArray data = msg.serializeFull();
-                        qDebug() << "Sending message to move the PPU:";
-                        qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
-                        m_ethHandler.sendMessage(data);
+                        else if (mode == 4) {
+                            mode = 5;
+                        }
+                        else if (mode == 5) {
+                            mode = 3;
+                        }
                     }
                 }
                 else

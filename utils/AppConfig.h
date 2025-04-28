@@ -16,6 +16,16 @@
  * @ingroup Utils
  * @brief Inline функции для безопасного приведения типов
  */
+static inline int64_t from_timeBS(const uint8_t value[5]) {
+    int64_t _bsTime;
+    for (int i = 4; i >= 0; --i) { // Обратный порядок (Little-endian)
+        _bsTime = (_bsTime << 8) | value[i];
+    }
+    _bsTime &= 0x000000FFFFFFFFFF;
+
+    return _bsTime;
+}     ///< @brief Получение времени БС из пакета синхронизации от БС
+
 static inline double from_anglePPU(const uint8_t in[3]) {
     // Предвычисление константы
     static constexpr double SCALE = 360.0 / 65536.0;

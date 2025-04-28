@@ -85,6 +85,7 @@ void TimeProvider::setBsPeriodNumber(const uint32_t value) {
 
 // Установить время текущего приода БС:
 void TimeProvider::setBsPeriodTime(const uint8_t *value) {
+//    bsPeriodTime = from_timeBS(value);
     for (int i = 4; i >= 0; --i) { // Обратный порядок (Little-endian)
         bsPeriodTime = (bsPeriodTime << 8) | value[i];
     }
@@ -96,19 +97,42 @@ void TimeProvider::setBsPeriodWidth(const uint32_t value) {
     bsPeriodWidth = value;
 }
 
+// Установить значение разницы во времени между ВУ и БС:
+void TimeProvider::setBsTimeDelta(const int64_t value)
+{
+    bsTimeDelta = value;
+}
+
+// Установить значение времени БС по приходу сообщения 11.1:
+void TimeProvider::setBsTimePPU(const int64_t value)
+{
+    bsTimePPU = value;
+}
+
 // Получить номер текущего периода БС:
 uint32_t TimeProvider::getBsPeriodNumber() const {
     return bsPeriodNumber;
 }
 
-// Получить время текущего приода БС:
-uint64_t TimeProvider::getBsPeriodTime() const {
+// Получить время текущего периода БС:
+int64_t TimeProvider::getBsPeriodTime() const {
     return bsPeriodTime;
 }
 
 // Получить значение периода синхронизации БС:
-uint32_t TimeProvider::getBsPeriodWidth() const {
+int64_t TimeProvider::getBsPeriodWidth() const {
     return bsPeriodWidth;
+}
+
+// Получить значение разницы во времени между ВУ и БС:
+int64_t TimeProvider::getBsTimeDelta() const {
+    return bsTimeDelta;
+}
+
+// Получить значение разницы во времени между предыдущим
+// сообщением 11.1 и текущим временем БС:
+int64_t TimeProvider::getBsDeltaPPU() const {
+    return getNs() / 100 - TimeProvider::instance().getBsTimeDelta() - bsTimePPU;
 }
 
 void TimeProvider::initTimes() {
@@ -118,35 +142,42 @@ void TimeProvider::initTimes() {
     TimeProvider::instance().setPbuTimeKorr(0);
 }
 
-void TimeProvider::setSysOnTimeReq(int64_t time) {
+void TimeProvider::setSysOnTimeReq(const int64_t time) {
     sysOnTimeReq = time;
 }
 
-void TimeProvider::setPbuTimeDelta(int64_t time) {
+void TimeProvider::setPbuTimeDelta(const int64_t time) {
     pbuTimeDelta = time;
 }
 
-void TimeProvider::setPbuTimeKorr(int64_t time) {
+void TimeProvider::setPbuTimeKorr(const int64_t time) {
     pbuTimeKorr = time;
 }
 
-int64_t TimeProvider::getSysOnTimeReq() {
+int64_t TimeProvider::getSysOnTimeReq() const {
     return sysOnTimeReq;
 }
 
-int64_t TimeProvider::getPbuTimeDelta() {
+int64_t TimeProvider::getPbuTimeDelta() const {
     return pbuTimeDelta;
 }
 
-int64_t TimeProvider::getPbuTimeKorr() {
+int64_t TimeProvider::getPbuTimeKorr() const {
     return pbuTimeKorr;
 }
 
-// Синхронизировать время:
-void TimeProvider::syncTime(uint32_t timeRequest1,
-                            uint32_t timeRequest2,
-                            uint32_t timeAnswer1,
-                            uint32_t timeAnswer2) {
+// Синхронизировать время с БС:
+void TimeProvider::syncTimeBS() {
+    int64_t timeDelta = getNs() / 100 -
+            TimeProvider::instance().getBsPeriodTime();
+    TimeProvider::instance().setBsTimeDelta(timeDelta);
+}
+
+// Синхронизировать время с ПБУ:
+void TimeProvider::syncTimePBU(uint32_t timeRequest1,
+                               uint32_t timeRequest2,
+                               uint32_t timeAnswer1,
+                               uint32_t timeAnswer2) {
 
     // Объединяем два 32-битных значения в 64-битное время
     int64_t timePBU = static_cast<int64_t>(
@@ -169,8 +200,8 @@ void TimeProvider::syncTime(uint32_t timeRequest1,
 //    qDebug() << "pbuTimeKorr =" << _pbuTimeKorr;
 }
 
-// Получаем корректированное время для отправки сообщения на ПБУ
-uint64_t TimeProvider::getTimeForRequest() {
+// Запрос времени ПБУ для отправки сообщения на ПБУ
+uint64_t TimeProvider::getTimeForRequestPBU() {
     int64_t _sysOnTimeReq = getMs();
     TimeProvider::instance().setSysOnTimeReq(_sysOnTimeReq);
     int64_t _pbuTimeDelta = TimeProvider::instance().getPbuTimeDelta();
@@ -183,4 +214,11 @@ uint64_t TimeProvider::getTimeForRequest() {
 //    qDebug() << "pbuTimeKorr =" << _pbuTimeKorr;
 //    qDebug() << "resultTime =" << resultTime;
     return resultTime;
+}
+
+// Запрос времени БС для отправки сообщения на БС
+uint64_t TimeProvider::getTimeForRequestBS() {
+    uint64_t _timeBS = static_cast<uint64_t>(getNs() / 100 -
+            TimeProvider::instance().getBsTimeDelta());
+    return _timeBS;
 }

@@ -27,12 +27,12 @@ public:
                                   double angleCurrent, double* angleLast,
                                   double* accelerationLast, double accelerationMax,
                                   double angleMin, double velocityMin,
-                                  double KP, double KD, double dt,
+                                  double KP, double KD, double dtLast, double dt,
                                   double* C0, double* C1, double* C2) {
 
 
         double dx = angleTarget - angleCurrent;
-        double v1 = (angleCurrent - (*angleLast)) / dt + 0.5 * (*accelerationLast) * dt;
+        double v1 = (angleCurrent - (*angleLast)) / dt;// + 0.5 * (*accelerationLast) * dt;
         double dv = velocityTarget - v1;
         double a1 = 0.0;
 
