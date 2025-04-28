@@ -41,9 +41,17 @@ public:
     std::string currentTimeString();
     //----------------------------------------------------------------------
 
-    void setPbuTimestamp1(int64_t new_time);
-    void setSysTimeOnTimestamp1(int64_t new_time);
+    // Функции записи и чтения разницы во времени
+    // между ВУ и ПБУ, а также задержки сообщений
+    // при передачи по TCP/IP между ВУ и ПБУ:
+    //----------------------------------------------------------------------
+    void setSysOnTimeReq(int64_t time);
+    void setPbuTimeDelta(int64_t time);
+    void setPbuTimeKorr(int64_t time);
+    int64_t getSysOnTimeReq();
     int64_t getPbuTimeDelta();
+    int64_t getPbuTimeKorr();
+    //----------------------------------------------------------------------
 
     // Функции периода БС:
     //----------------------------------------------------------------------

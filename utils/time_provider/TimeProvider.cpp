@@ -113,20 +113,33 @@ uint32_t TimeProvider::getBsPeriodWidth() const {
 
 void TimeProvider::initTimes() {
     int64_t time_now = getMs();
-    pbuTimestamp1 = time_now;
-    sysTimeOnTimestamp1 = time_now;
+    TimeProvider::instance().setSysOnTimeReq(time_now);
+    TimeProvider::instance().setPbuTimeDelta(0);
+    TimeProvider::instance().setPbuTimeKorr(0);
 }
 
-void TimeProvider::setPbuTimestamp1(int64_t new_time) {
-    pbuTimestamp1 = new_time;
+void TimeProvider::setSysOnTimeReq(int64_t time) {
+    sysOnTimeReq = time;
 }
 
-void TimeProvider::setSysTimeOnTimestamp1(int64_t new_time) {
-    sysTimeOnTimestamp1 = new_time;
+void TimeProvider::setPbuTimeDelta(int64_t time) {
+    pbuTimeDelta = time;
+}
+
+void TimeProvider::setPbuTimeKorr(int64_t time) {
+    pbuTimeKorr = time;
+}
+
+int64_t TimeProvider::getSysOnTimeReq() {
+    return sysOnTimeReq;
 }
 
 int64_t TimeProvider::getPbuTimeDelta() {
     return pbuTimeDelta;
+}
+
+int64_t TimeProvider::getPbuTimeKorr() {
+    return pbuTimeKorr;
 }
 
 // Синхронизировать время:
@@ -135,35 +148,39 @@ void TimeProvider::syncTime(uint32_t timeRequest1,
                             uint32_t timeAnswer1,
                             uint32_t timeAnswer2) {
 
-
     // Объединяем два 32-битных значения в 64-битное время
-    int64_t timePBU =
-        static_cast<int64_t>(static_cast<uint64_t>(timeAnswer2) << 32)
+    int64_t timePBU = static_cast<int64_t>(
+                static_cast<uint64_t>(timeAnswer2) << 32)
                                 | timeAnswer1;
+    int64_t timePBURequest = static_cast<int64_t>(
+                static_cast<uint64_t>(timeRequest2) << 32)
+                                | timeRequest1;
 
-    int64_t timePBURequest =
-        static_cast<int64_t>(static_cast<uint64_t>(timeRequest2) << 32)
-        | timeRequest1;
-
-    setPbuTimestamp1(timePBU);
-
-    // Получаем текущее время системы
-    int64_t time_now = getMs();
-    setSysTimeOnTimestamp1(time_now);
-
-    pbuTimeDelta = timePBU - time_now;
-    pbuTimeKorr = timePBU - timePBURequest;
-    qDebug() << "pbuTimeDelta =" << pbuTimeDelta;
-    qDebug() << "pbuTimeKorr =" << pbuTimeKorr;
+    // Вычисляем коррекцию времени
+    int64_t sys_time_now = getMs();
+    int64_t sys_time_req = TimeProvider::instance().getSysOnTimeReq();
+    int64_t _pbuTimeDelta = timePBU - sys_time_now;
+    int64_t _pbuTimeKorr = sys_time_now - sys_time_req;
+    TimeProvider::instance().setPbuTimeDelta(_pbuTimeDelta);
+    TimeProvider::instance().setPbuTimeKorr(_pbuTimeKorr);
+    qDebug() << "Delta time between VU and PBU ="
+             << timePBU - timePBURequest << "ms";
+//    qDebug() << "pbuTimeDelta =" << _pbuTimeDelta;
+//    qDebug() << "pbuTimeKorr =" << _pbuTimeKorr;
 }
 
+// Получаем корректированное время для отправки сообщения на ПБУ
 uint64_t TimeProvider::getTimeForRequest() {
-    sysOnTimeReq = getMs();
-    int64_t _pbuTimeDelta = getPbuTimeDelta();
-    qDebug() << "sysOnTimeReq =" << sysOnTimeReq;
-    qDebug() << "pbuTimeDelta =" << pbuTimeDelta;
+    int64_t _sysOnTimeReq = getMs();
+    TimeProvider::instance().setSysOnTimeReq(_sysOnTimeReq);
+    int64_t _pbuTimeDelta = TimeProvider::instance().getPbuTimeDelta();
+    int64_t _pbuTimeKorr = TimeProvider::instance().getPbuTimeKorr();
     uint64_t resultTime = static_cast<uint64_t>(
-            sysOnTimeReq + _pbuTimeDelta
+            _sysOnTimeReq + _pbuTimeDelta + _pbuTimeKorr
        );
+//    qDebug() << "sysOnTimeReq =" << _sysOnTimeReq;
+//    qDebug() << "pbuTimeDelta =" << _pbuTimeDelta;
+//    qDebug() << "pbuTimeKorr =" << _pbuTimeKorr;
+//    qDebug() << "resultTime =" << resultTime;
     return resultTime;
 }

@@ -215,37 +215,72 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                     qDebug() << "PPU is turned On" << Qt::endl;
 
                     // Если ППУ включено, то подвинуть его в координаты 10, 10:
-                    static int mode = 3;
+                    static int mode = 0;
                     //if (mode == 0)
                     {
                         //mode = 1;
                         auto msg = EthMessageFactory::create<EthMessage_PPU_MOVE>();
                         if (mode == 0)
                         {
-                            mode = 3;
-                            double value = 50;
-                            to_anglePPU(value, msg.azC0);
-                            msg.azC1 = 0;
-                            msg.azC2 = 0;
-                            to_anglePPU(value, msg.anC0);
-                            msg.anC1 = 0;
-                            msg.anC2 = 0;
-                            msg.azSector = 0;
-                            msg.anSector = 0;
-//                            uint32_t value = 0x00332211;
-//                            msg.azC0[0] =  value & 0xFF;
-//                            msg.azC0[1] = (value >> 8) & 0xFF;
-//                            msg.azC0[2] = (value >> 16) & 0xFF;
-//                            msg.azC1 = 0x5544;
-//                            msg.azC2 = 0x7766;
-//                            value = 0x00AA9988;
-//                            msg.anC0[0] =  value & 0xFF;
-//                            msg.anC0[1] = (value >> 8) & 0xFF;
-//                            msg.anC0[2] = (value >> 16) & 0xFF;
-//                            msg.anC1 = 0xCCBB;
-//                            msg.anC2 = 0xEEDD;
-//                            msg.azSector = 0x3412;
-//                            msg.anSector = 0x7856;
+                            static bool isChangedImitPeriod = false;
+                            if (!isChangedImitPeriod) {
+                                // Пакет формата 4.6 для установки периода
+                                // выдачи сообщений с имитатора 0.1 секунды:
+                                const u_char buf[60] = {0x00, 0x0A, 0x35, 0x00,
+                                                        0x23, 0x03, 0x81, 0x82,
+                                                        0x83, 0x84, 0x85, 0x86,
+                                                        0x20, 0x20, 0x00, 0x23,
+                                                        0x00, 0x00, 0x00, 0x00,
+                                                        0x00, 0x00, 0x80, 0x04,
+                                                        0x06, 0x14, 0x00, 0x00,
+                                                        0x00, 0x00, 0x00, 0x00,
+                                                        0x00, 0x00, 0x14, 0x00,
+                                                        0x14, 0x00, 0x28, 0x00,
+                                                        0x19, 0x00, 0x05, 0x00,
+                                                        0x64, 0x00, 0x1E, 0x00,
+                                                        0x00, 0x00, 0x00, 0x00,
+                                                        0x00, 0x00, 0x00, 0x00,
+                                                        0x00, 0x00, 0x00, 0x00
+                                                       };
+                                QByteArray data = QByteArray(
+                                            reinterpret_cast<const char*>(buf),
+                                            sizeof(buf)
+                                            );
+                                qDebug() << "Sending message to change period"
+                                            "of messages on imitator:";
+                                qDebug() << "ETH Message from VU to BS:"
+                                         << Qt::endl
+                                         << data.toHex(' ').toUpper();
+                                isChangedImitPeriod = m_ethHandler.sendMessage(data);
+                                if (isChangedImitPeriod) {
+                                    mode = 3;
+                                }
+                            }
+
+//                            mode = 3;
+//                            double value = 50;
+//                            to_anglePPU(value, msg.azC0);
+//                            msg.azC1 = 0;
+//                            msg.azC2 = 0;
+//                            to_anglePPU(value, msg.anC0);
+//                            msg.anC1 = 0;
+//                            msg.anC2 = 0;
+//                            msg.azSector = 0;
+//                            msg.anSector = 0;
+////                            uint32_t value = 0x00332211;
+////                            msg.azC0[0] =  value & 0xFF;
+////                            msg.azC0[1] = (value >> 8) & 0xFF;
+////                            msg.azC0[2] = (value >> 16) & 0xFF;
+////                            msg.azC1 = 0x5544;
+////                            msg.azC2 = 0x7766;
+////                            value = 0x00AA9988;
+////                            msg.anC0[0] =  value & 0xFF;
+////                            msg.anC0[1] = (value >> 8) & 0xFF;
+////                            msg.anC0[2] = (value >> 16) & 0xFF;
+////                            msg.anC1 = 0xCCBB;
+////                            msg.anC2 = 0xEEDD;
+////                            msg.azSector = 0x3412;
+////                            msg.anSector = 0x7856;
                         }
                         else if (mode == 1)
                         {
@@ -298,16 +333,19 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             static double anAccLast = 0;
                             double azC0, anC0, azC1, anC1, azC2, anC2;
                             uint16_t azC1u, azC2u, anC1u, anC2u;
-                            double aMax = 1.5; // 30.0 для dt = 0.1
-                            double KP = 0.5;
-                            double KD = 1.5;
+//                            double aMax = 1.5; // 30.0 для dt = 0.1
+//                            double KP = 0.5;
+//                            double KD = 1.5;
+                            double aMax = 30.0;
+                            double KP = 3.0;
+                            double KD = 3.0;
 
-                            calculateCoefficientsPPU(0, 0,
+                            calculateCoefficientsPPU(60, 0,
                                                      az, &azLast, &azAccLast,
                                                      aMax, 10.0, 10.0, KP, KD, dt,
                                                      &azC0, &azC1, &azC2);
 
-                            calculateCoefficientsPPU(0, 0,
+                            calculateCoefficientsPPU(60, 0,
                                                      an, &anLast, &anAccLast,
                                                      aMax, 10.0, 10.0, KP, KD, dt,
                                                      &anC0, &anC1, &anC2);
