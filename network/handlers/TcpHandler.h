@@ -3,6 +3,8 @@
 
 #include <QObject>
 #include <QTcpSocket>
+#include <QTcpServer>
+#include <QDataStream>
 #include <QTimer>
 #include "../messages/TcpMessage.h"
 #include "utils/time_provider/TimeProvider.h"
@@ -17,14 +19,22 @@ public:
     void connectToHost(const QString& host, quint16 port);
     void disconnect();
 
+    void sendMessageRMO(const QByteArray &data);
+    void sendMessageResult(const QByteArray &data);
+
 signals:
     void messageReceived(const TcpHeader& msg);
     void errorOccurred(const QString& error);
 
+public slots:
+    void incomingConnection(); // Приём запросов от клиентов на подключение
+
 private slots:
     void onReadyRead();
+    void onReadyReadRMO();
     void onConnected();
     void onDisconnected();
+    void onDisconnectedRMO();
     void onError(QAbstractSocket::SocketError error);
     void sendPeriodicMessages();
     void handleRegistration();
@@ -33,6 +43,9 @@ private:
     TimeProvider* m_timeProvider;
     QTcpSocket* m_socket;
 
+    QTcpServer* m_serverRMO;
+    QTcpSocket* m_socketRMO;
+
     QTimer m_registrationTimer;
     QTimer m_periodicTimer;
 
@@ -40,6 +53,9 @@ private:
 
     void sendMessage(const QByteArray &data);
     void processIncomingMessage(QByteArray &data);
+
+    /// Разбор сообщений, принятых от РМО
+    void processIncomingMessageRMO(QByteArray &data);
 };
 
 #endif // TCPHANDLER_H

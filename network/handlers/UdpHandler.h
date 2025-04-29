@@ -13,17 +13,22 @@ public:
     explicit UdpHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
     ~UdpHandler();
 
+    QUdpSocket* m_socket_debug;
+
 public slots:
     void startListening(quint16 port);
     void stopListening();
     void sendDatagram(const QHostAddress& address, quint16 port, const QByteArray& data);
+    void sendDatagramDebug(const QHostAddress& address, quint16 port, const QByteArray& data);
 
 signals:
     void datagramReceived(const Message& message);
+    void datagramReceivedDebug(const Message& message);
     void errorOccurred(const QString& error);
 
 private slots:
     void onReadyRead();
+    void onReadyReadDebug();
 
 private:
     TimeProvider* m_timeProvider;

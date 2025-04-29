@@ -10,6 +10,7 @@ NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
 {
     connect(&m_tcpHandler, &TcpHandler::messageReceived, this, &NetworkManager::onTcpReceived);
     connect(&m_udpHandler, &UdpHandler::datagramReceived, this, &NetworkManager::onUdpReceived);
+    connect(&m_udpHandler, &UdpHandler::datagramReceivedDebug, this, &NetworkManager::onUdpReceivedDebug);
     connect(&m_ethHandler, &EthHandler::messageReceived, this, &NetworkManager::onEthReceived);
 #ifdef _WIN32
     connect(&m_ethTimer, &QTimer::timeout, &m_ethHandler, &EthHandler::checkReceived);
@@ -54,6 +55,21 @@ void NetworkManager::onTcpReceived(const TcpHeader& msg) {
 
 void NetworkManager::onUdpReceived(const Message& msg) {
     qDebug() << "UDP Message:" << msg.payload;
+}
+
+void NetworkManager::onUdpReceivedDebug(const Message& msg) {
+    qDebug() << "UDP Message debug:" << msg.payload;
+
+//    // Задать ЦУ для ППУ
+//    if (msg.payload.size() < 16) return;
+//    QDataStream stream(msg.payload);
+//    stream.setByteOrder(QDataStream::LittleEndian); // Порядок байтов должен совпадать с записью
+//    double azTarget, anTarget;
+//    stream >> azTarget >> anTarget;
+//    AppConfig::instance().setModulePPU_CU(
+//                AppConfig::instance().ModulePPU_num_RLMN_1,
+//                azTarget,
+//                anTarget);
 }
 
 #define TO_HEX(T,len) (QByteArray::fromRawData(reinterpret_cast<const char*>(T), len).toHex(' '))
@@ -366,19 +382,32 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 //                            double KD = 1.5;
                             double aMax = 30.0;
                             double KP = 3.0;
-                            double KD = 3.0;
+                            double KD = 6.0;
 
                             dt *= 3.0;
 
-                            calculateCoefficientsPPU(60, 0,
+                            double azTarget = AppConfig::instance().getModulePPU_azTarget(
+                                        AppConfig::instance().ModulePPU_num_RLMN_1);
+                            double anTarget = AppConfig::instance().getModulePPU_anTarget(
+                                        AppConfig::instance().ModulePPU_num_RLMN_1);
+
+                            double azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(
+                                        AppConfig::instance().ModulePPU_num_RLMN_1);
+                            double anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(
+                                        AppConfig::instance().ModulePPU_num_RLMN_1);
+
+                            calculateCoefficientsPPU(azTarget, 10.0 * azTargetVel,
                                                      az, &azLast, &azAccLast,
                                                      aMax, 10.0, 10.0, KP, KD, dtLast, dt,
                                                      &azC0, &azC1, &azC2);
 
-                            calculateCoefficientsPPU(60, 0,
+                            calculateCoefficientsPPU(anTarget, 10.0 * anTargetVel,
                                                      an, &anLast, &anAccLast,
                                                      aMax, 10.0, 10.0, KP, KD, dtLast, dt,
                                                      &anC0, &anC1, &anC2);
+
+                            azC2 *= 2.0;
+                            anC2 *= 2.0;
 
                             azC1u = azC1 * 65535.0 / 360.0;
                             azC2u = azC2 * 65535.0 / 360.0;
@@ -414,6 +443,39 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 
                             msg.azSector = 0;
                             msg.anSector = 0;
+
+                            // Отправка отладочных данных на форму для отображения:
+                            //-------------------------------------------------------------
+//                            QByteArray dataDebug;
+//                            QString str;
+
+//                            str  = QString("az = %1\n"
+//                                           "an = %2\n"
+//                                           "\n"
+//                                           "C0 = %3\n"
+//                                           "C1 = %4\n"
+//                                           "C2 = %5\n")
+//                                    .arg(AppConfig::instance().getModulePPU_az(
+//                                             AppConfig::instance().ModulePPU_num_RLMN_1))
+//                                    .arg(AppConfig::instance().getModulePPU_an(
+//                                             AppConfig::instance().ModulePPU_num_RLMN_1))
+//                                    .arg(azC0)
+//                                    .arg(azC1)
+//                                    .arg(azC2);
+//                            dataDebug = str.toUtf8();
+
+                            QByteArray dataDebug;
+                            QDataStream stream(&dataDebug, QIODevice::WriteOnly);
+                            stream << AppConfig::instance().getModulePPU_az(
+                                          AppConfig::instance().ModulePPU_num_RLMN_1)
+                                   << AppConfig::instance().getModulePPU_an(
+                                          AppConfig::instance().ModulePPU_num_RLMN_1)
+                                   << azC0 << azC1 << azC2
+                                   << anC0 << anC1 << anC2;
+
+//                            m_udpHandler.sendDatagramDebug(QHostAddress::LocalHost, 12346, dataDebug);
+                            m_tcpHandler.sendMessageRMO(dataDebug);
+                            //-------------------------------------------------------------
 
                             QByteArray data = msg.serializeFull();
                             qDebug() << "Sending message to move the PPU:";

@@ -31,6 +31,7 @@ QMAKE_DISTCLEAN += $$QMAKE_CLEAN
 # Общие для всех платформ настройки
 SOURCES += \
     core/CoreManager.cpp \
+    core/calculator/calculator.cpp \
     core/logger/Logger.cpp \
     main.cpp \
     network/NetworkManager.cpp \
@@ -42,6 +43,7 @@ SOURCES += \
 
 HEADERS += \
     core/CoreManager.h \
+    core/calculator/calculator.h \
     core/logger/Logger.h \
     network/NetworkManager.h \
     network/handlers/EthHandler.h \

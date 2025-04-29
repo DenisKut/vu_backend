@@ -31,38 +31,49 @@ public:
                                   double* C0, double* C1, double* C2) {
 
 
-        double dx = angleTarget - angleCurrent;
-        double v1 = (angleCurrent - (*angleLast)) / dt;// + 0.5 * (*accelerationLast) * dt;
+        double xDist = angleTarget - angleCurrent;
+        if (xDist > 180.0) {
+            xDist -= 360.0;
+        } else if (xDist < -180.0) {
+            xDist += 360.0;
+        }
+        double dx = angleCurrent - (*angleLast);
+        if (dx > 180.0) {
+            dx -= 360.0;
+        } else if (dx < -180.0) {
+            dx += 360.0;
+        }
+        double v1 = dx / dt;// + 0.5 * (*accelerationLast) * dt;
         double dv = velocityTarget - v1;
         double a1 = 0.0;
 
-        double breaking_dist = dv * dv / (2.0 * accelerationMax) + angleMin;
+//        double breaking_dist = dv * dv / (2.0 * accelerationMax) + angleMin;
 
-        if (abs(dx) > angleMin) {
-            // Максимальное ускорение в направлении цели
-            a1 = (dx > 0) ? accelerationMax : -accelerationMax;
+//        if (abs(xDist) > angleMin) {
+//            // Максимальное ускорение в направлении цели
+//            a1 = (xDist > 0) ? accelerationMax : -accelerationMax;
 
-            // Если расстояние торможения достигнуто, то тормозим:
-            if (abs(dx) < breaking_dist) {
-                a1 = (dv < 0) ? -accelerationMax : accelerationMax;
-            }
+//            // Если расстояние торможения достигнуто, то тормозим:
+//            if (abs(xDist) < breaking_dist) {
+//                a1 = (dv < 0) ? -accelerationMax : accelerationMax;
+//            }
 
-            // Плавное изменение ускорения:
-            if (abs(dv) < velocityMin) {
-                a1 = (*accelerationLast) + 0.5 * (a1 - (*accelerationLast));
-            }
-        } else {
+//            // Плавное изменение ускорения:
+//            if (abs(dv) < velocityMin) {
+//                a1 = (*accelerationLast) + 0.5 * (a1 - (*accelerationLast));
+//            }
+//        } else {
             // ПД-регулятор
-            a1 = KP * dx + KD * dv;
-        }
+            a1 = KP * xDist + KD * dv;
+//        }
 
         // Ограничение ускорения
         a1 = fmax(fmin(a1, accelerationMax), -accelerationMax);
 
-        // Плавное изменение ускорения:
-        if (abs(dv) < velocityMin) {
-            a1 = (*accelerationLast) + 0.8 * (a1 - (*accelerationLast));
-        }
+//        // Плавное изменение ускорения:
+//        if (abs(dv) < velocityMin) {
+//            a1 = (*accelerationLast) + 0.8 * (a1 - (*accelerationLast));
+//        }
 
         // Запоминаем предыдущие значения положения и ускорения точки 1
         *angleLast = angleCurrent;
@@ -79,6 +90,7 @@ public:
 public slots:
     void onTcpReceived(const TcpHeader& msg);
     void onUdpReceived(const Message& msg);
+    void onUdpReceivedDebug(const Message& msg);
     void onEthReceived(const QByteArray &msg);
 
 private:

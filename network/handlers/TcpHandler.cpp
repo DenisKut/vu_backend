@@ -7,7 +7,19 @@ TcpHandler::TcpHandler(TimeProvider* timeProvider, QObject* parent)
 {
     m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
-    connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
+    m_socketRMO = nullptr;
+    m_serverRMO = new QTcpServer;
+    if (m_serverRMO->listen(QHostAddress::Any, 23456))
+    {
+        qDebug() << "Server listening on port" << 23456;
+    }
+    else
+    {
+        qDebug() << "ERROR - server didn't start" << m_serverRMO->errorString();
+    }
+    connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection);
+
+    //connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this,
             &TcpHandler::onDisconnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
@@ -47,6 +59,11 @@ void TcpHandler::onDisconnected() {
     m_periodicTimer.stop();
 }
 
+void TcpHandler::onDisconnectedRMO() {
+     std::cout << "RMO disconnected from TCP host" << std::endl;
+    m_socketRMO = nullptr;
+}
+
 void TcpHandler::onError(QAbstractSocket::SocketError error) {
     if(error)
         emit errorOccurred(m_socket->errorString());
@@ -61,10 +78,57 @@ void TcpHandler::onReadyRead() {
     }
 }
 
+void TcpHandler::onReadyReadRMO() {
+    while (m_socketRMO->bytesAvailable() > 0) {
+        QByteArray data = m_socketRMO->readAll();
+        if (data.size() >= static_cast<int>(sizeof(TcpHeader))) {
+            processIncomingMessageRMO(data);
+        }
+    }
+}
+
 void TcpHandler::sendMessage(const QByteArray& data) {
     if (m_socket->state() == QAbstractSocket::ConnectedState) {
         m_socket->write(data);
     }
+}
+
+void TcpHandler::sendMessageRMO(const QByteArray& data) {
+    if (m_socketRMO == nullptr) return;
+    if (m_socketRMO->state() == QAbstractSocket::ConnectedState) {
+        m_socketRMO->write(data);
+    }
+}
+
+void TcpHandler::sendMessageResult(const QByteArray &data)
+{
+
+}
+
+/// Приём запросов от клиентов на подключение:
+void TcpHandler::incomingConnection()
+{
+    m_socketRMO = m_serverRMO->nextPendingConnection();
+    if (m_socketRMO != nullptr) {
+        qDebug() << "!!!!! Someone tried to connect with us !!!!!";
+        qDebug() << "socketDescriptor =" << m_socketRMO->socketDescriptor();
+    }
+
+    // Подключаем сигнал readyRead сокета
+    // к соответствующему слоту сервера
+    // для чтения входящих данных от клиента:
+    connect(m_socketRMO, &QTcpSocket::readyRead, this, &TcpHandler::onReadyReadRMO);
+
+    // Подключаем сигнал disconnected к функции deleteLater,
+    // чтобы после отключения сокета от клиента, удалить
+    // сокет сразу, как только это станет возможно:
+    connect(m_socketRMO, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnectedRMO);
+
+    // Помещаем новый сокет в вектор:
+    //vecSocketAll.append(socket);
+
+    // Отладочное сообщение - новый сокет создан:
+    qDebug() << QString("m_socketRMO has been created: %1").arg(m_socketRMO->socketDescriptor());
 }
 
 void TcpHandler::handleRegistration() {
@@ -113,7 +177,7 @@ void TcpHandler::sendPeriodicMessages() {
     }
 }
 
-void TcpHandler::processIncomingMessage(QByteArray &data) {;
+void TcpHandler::processIncomingMessage(QByteArray &data) {
     auto parsed = MessageFactory::parse(data);
     if(parsed) {
         std::cout << "Received message:\n"
@@ -188,44 +252,64 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
                       << std::endl << "\n";
             sendMessage(msg_0x24.serializeFull());
 
-            auto msg_0x1022 = MessageFactory::
-                        create<TcpMessage_0x1022>(nullptr, 0, 0);
-            // auto msg_0x1022 = MessageFactory::
-            //          create<TcpMessage_0x1022>(nullptr);
+            // Задать ЦУ для ППУ
+            AppConfig::instance().setModulePPU_CU(
+                        AppConfig::instance().ModulePPU_num_RLMN_1,
+                        static_cast<double>(msg_0x641->ceilAz),
+                        static_cast<double>(msg_0x641->ceilElev),
+                        static_cast<double>(msg_0x641->ceilVAz),
+                        static_cast<double>(msg_0x641->ceilVElev));
 
-            msg_0x1022.trackStatus = 0;
-            msg_0x1022.isExtra = 0;
-            msg_0x1022.isTest = 0;
-            msg_0x1022.snrSum = 0;
-            msg_0x1022.epr = 0;
-            msg_0x1022.maxRange = 20;
-            msg_0x1022.numbTrack = msg_0x641->idxCeilVOI;
-            msg_0x1022.rangeCnt = 0;
-            msg_0x1022.speedCnt = 0;
-            msg_0x1022.chanCnt = 1; /// Всегда один канал!
-            msg_0x1022.rangeStart = 0;
-            msg_0x1022.rangeStep = 0.1;
-            msg_0x1022.vradStart = 0;
-            msg_0x1022.vradStep = 0.1;
+            // Определяем, насколько текущие координаты ППУ отличаются от ЦУ
+            double dAz = AppConfig::instance().getModulePPU_az(
+                        AppConfig::instance().ModulePPU_num_RLMN_1)
+                    - static_cast<double>(msg_0x641->ceilAz);
+            double dAn = AppConfig::instance().getModulePPU_an(
+                        AppConfig::instance().ModulePPU_num_RLMN_1)
+                    - static_cast<double>(msg_0x641->ceilElev);
 
-            msg_0x1022.numDrive = msg_0x641->numDrive;
-            msg_0x1022.azimuth = msg_0x641->ceilAz;
-            msg_0x1022.range = msg_0x641->ceilRange;
-            msg_0x1022.eps = msg_0x641->ceilElev;
-            msg_0x1022.vel = msg_0x641->ceilVr;
-            msg_0x1022.velAz = msg_0x641->ceilVAz;
-            msg_0x1022.velEps = msg_0x641->ceilVElev;
-            msg_0x1022.sigAz = msg_0x641->sigAz;
-            msg_0x1022.sigEps = msg_0x641->sigElev;
-            msg_0x1022.sigD = msg_0x641->sigRange;
-            msg_0x1022.sigVr = msg_0x641->sigVr;
-            msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
-            msg_0x1022.typeTrack = static_cast<uint8_t>(msg_0x641->typeCeil);
+            // Если координаты отличаются незначительно, то отправляем ответ
+            if (dAz < 0.6 && dAn < 0.6)
+            {
+                auto msg_0x1022 = MessageFactory::
+                            create<TcpMessage_0x1022>(nullptr, 0, 0);
+                // auto msg_0x1022 = MessageFactory::
+                //          create<TcpMessage_0x1022>(nullptr);
 
-            std::cout << "Sent message 0x1022:\n"
-                      << msg_0x1022.toString()
-                      << std::endl << "\n";
-            sendMessage(msg_0x1022.serializeFull());
+                msg_0x1022.trackStatus = 0;
+                msg_0x1022.isExtra = 0;
+                msg_0x1022.isTest = 0;
+                msg_0x1022.snrSum = 0;
+                msg_0x1022.epr = 0;
+                msg_0x1022.maxRange = 20;
+                msg_0x1022.numbTrack = msg_0x641->idxCeilVOI;
+                msg_0x1022.rangeCnt = 0;
+                msg_0x1022.speedCnt = 0;
+                msg_0x1022.chanCnt = 1; /// Всегда один канал!
+                msg_0x1022.rangeStart = 0;
+                msg_0x1022.rangeStep = 0.1;
+                msg_0x1022.vradStart = 0;
+                msg_0x1022.vradStep = 0.1;
+
+                msg_0x1022.numDrive = msg_0x641->numDrive;
+                msg_0x1022.azimuth = msg_0x641->ceilAz;
+                msg_0x1022.range = msg_0x641->ceilRange;
+                msg_0x1022.eps = msg_0x641->ceilElev;
+                msg_0x1022.vel = msg_0x641->ceilVr;
+                msg_0x1022.velAz = msg_0x641->ceilVAz;
+                msg_0x1022.velEps = msg_0x641->ceilVElev;
+                msg_0x1022.sigAz = msg_0x641->sigAz;
+                msg_0x1022.sigEps = msg_0x641->sigElev;
+                msg_0x1022.sigD = msg_0x641->sigRange;
+                msg_0x1022.sigVr = msg_0x641->sigVr;
+                msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
+                msg_0x1022.typeTrack = static_cast<uint8_t>(msg_0x641->typeCeil);
+
+                std::cout << "Sent message 0x1022:\n"
+                          << msg_0x1022.toString()
+                          << std::endl << "\n";
+                sendMessage(msg_0x1022.serializeFull());
+            }
 
             AppConfig::instance().SET_PBU_PROTO_0X24_MODE(0);
             AppConfig::instance().SET_PBU_PROTO_0X23_CODE(
@@ -254,4 +338,20 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {;
     }
 
 
+}
+
+
+/// Разбор сообщений, принятых от РМО
+void TcpHandler::processIncomingMessageRMO(QByteArray &data) {
+    qDebug() << Qt::endl << "RMO Message:" << data.toHex(' ').toUpper();
+
+    // Задать ЦУ для ППУ
+    if (data.size() < 8*4) return;
+    QDataStream stream(data);
+    stream.setByteOrder(QDataStream::LittleEndian); // Порядок байтов должен совпадать с записью
+    double azTarget, anTarget, azTargetVel, anTargetVel;
+    stream >> azTarget >> anTarget >> azTargetVel >> anTargetVel;
+    AppConfig::instance().setModulePPU_CU(
+                AppConfig::instance().ModulePPU_num_RLMN_1,
+                azTarget, anTarget, azTargetVel, anTargetVel);
 }

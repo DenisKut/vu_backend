@@ -627,6 +627,12 @@ public:
         uint64_t    waitCommands;   ///< Время ожидания команд, мс (1 = 5 мс)
         uint64_t    waitTarget;     ///< Время ожидания ЦУ, мс (1 = 5 мс)
 
+        double      azTarget;
+        double      anTarget;
+
+        double      azTargetVel;
+        double      anTargetVel;
+
         /// ===========================
         /// Поля для сообщений о состояниях с ПБУ
         /// ===========================
@@ -644,6 +650,10 @@ public:
             borders(0),
             waitCommands(0),
             waitTarget(0),
+            azTarget(0),
+            anTarget(0),
+            azTargetVel(0),
+            anTargetVel(0),
             isRemote(0)
         {};
     };
@@ -695,6 +705,16 @@ public:
     void setModulePPU_isRemote(ModulePPU_num moduleNum, ModulePPU_isRemote value) {
         ModulePPU_mas[moduleNum]->isRemote = to_uint8(value);
     }
+
+    /// ЦУ для ППУ
+    void setModulePPU_CU(ModulePPU_num moduleNum,
+                         double azTarget,    double anTarget,
+                         double azTargetVel, double anTargetVel) {
+        ModulePPU_mas[moduleNum]->azTarget = azTarget;
+        ModulePPU_mas[moduleNum]->anTarget = anTarget;
+        ModulePPU_mas[moduleNum]->azTargetVel = azTargetVel;
+        ModulePPU_mas[moduleNum]->anTargetVel = anTargetVel;
+    }
     /// @}
 
     /// @name Чтение структуры состояний ППУ
@@ -743,6 +763,26 @@ public:
     /// Признак внешнего управления
     uint8_t getModulePPU_isRemote(ModulePPU_num moduleNum) {
         return ModulePPU_mas[moduleNum]->isRemote;
+    }
+
+    /// Координата ЦУ по азимуту
+    double getModulePPU_azTarget(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->azTarget;
+    }
+
+    /// Координата ЦУ по углу места
+    double getModulePPU_anTarget(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->anTarget;
+    }
+
+    /// Скорость ЦУ по азимуту
+    double getModulePPU_azTargetVel(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->azTargetVel;
+    }
+
+    /// Скорость ЦУ по углу места
+    double getModulePPU_anTargetVel(ModulePPU_num moduleNum) {
+        return ModulePPU_mas[moduleNum]->anTargetVel;
     }
     /// @}
 
