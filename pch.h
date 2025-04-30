@@ -54,8 +54,8 @@
  * @param ... Варианты:
  *   - QString parsed       : парсированные данные \n
  *   - LogLevel level, QString parsed : с указанием уровня
- * @example LOG_INTERNAL(typeid(this).name(), "структура, обработанная через toJSON")
- * @example LOG_INTERNAL(typeid(this).name(), LogLevel::Debug, "структура, обработанная через toJSON")
+ * @example LOG_INTERNAL(typeid(this).name(), "заголовок, или тип сообщения" ,"структура, обработанная через toJSON")
+ * @example LOG_INTERNAL(typeid(this).name(), LogLevel::Debug, "заголовок, или тип сообщения", "структура, обработанная через toJSON")
  */
 #define LOG_INTERNAL(source, ...) \
     Logger::instance().log(InternalMessageLog(source, ##__VA_ARGS__))

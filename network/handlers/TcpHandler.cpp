@@ -34,22 +34,21 @@ void TcpHandler::disconnect() {
     }
     m_registrationTimer.stop();
     m_periodicTimer.stop();
-
 }
 
 void TcpHandler::onConnected() {
     std::cout << "Connected to TCP host" << std::endl;
     int timer = 800;
+    m_registrationTimer.start(timer); // Отправка 0x01 
     LOG_INTERNAL(typeid(this).name(), "СОКЕТ TCP", QString("ПОДКЛЮЧЁН, отправка раз в %1 мсек.").arg(timer));
-    m_registrationTimer.start(timer); // Отправка 0x01 каждую секунду
 }
 
 void TcpHandler::onDisconnected() {
      std::cout << "Disconnected from TCP host" << std::endl;
     m_isRegistered = false;
-     LOG_INTERNAL(typeid(this).name(), "СОКЕТ TCP", "ОТКЛЮЧЁН");
     m_registrationTimer.stop();
     m_periodicTimer.stop();
+    LOG_INTERNAL(typeid(this).name(), "СОКЕТ TCP", "ОТКЛЮЧЁН");
 }
 
 void TcpHandler::onError(QAbstractSocket::SocketError error) {
@@ -61,6 +60,7 @@ void TcpHandler::onError(QAbstractSocket::SocketError error) {
 }
 
 void TcpHandler::onReadyRead() {
+    LOG_INTERNAL(typeid(this).name(), "СОКЕТ TCP", "Готов считывать сообщения");
     while (m_socket->bytesAvailable() > 0) {
         QByteArray data = m_socket->readAll();
         if (data.size() >= static_cast<int>(sizeof(TcpHeader))) {
@@ -122,9 +122,13 @@ void TcpHandler::sendPeriodicMessages() {
                   << std::endl << "\n";
 
         sendMessage(msg_0x1021_1.serializeFull());
-        LOG_PROTOCOL(typeid(this).name(), LogLevel::MessageSent, Protocol::TCP, msg_0x1021_1.serializeFull(), QJsonDocument(msg_0x1021_1.to_json()).toJson(QJsonDocument::Indented));
+        LOG_PROTOCOL(typeid(this).name(), LogLevel::MessageSent, Protocol::TCP, 
+            msg_0x1021_1.serializeFull(), 
+            Logger::jobj_toString(msg_0x1021_1.to_json()));
+            
         sendMessage(msg_0x1021_2.serializeFull());
-        LOG_PROTOCOL(typeid(this).name(), LogLevel::MessageSent, Protocol::TCP, msg_0x1021_2.serializeFull(), QJsonDocument(msg_0x1021_2.to_json()).toJson(QJsonDocument::Indented));
+        LOG_PROTOCOL(typeid(this).name(), LogLevel::MessageSent, Protocol::TCP, 
+            msg_0x1021_2.serializeFull(), Logger::jobj_toString(msg_0x1021_2.to_json()));
     }
 }
 

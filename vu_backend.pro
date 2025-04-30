@@ -38,7 +38,6 @@ SOURCES += \
     network/handlers/EthHandler.cpp \
     network/handlers/TcpHandler.cpp \
     network/handlers/UdpHandler.cpp \
-    pch.cpp \
     utils/time_provider/TimeProvider.cpp \
     utils/env_loader/EnvLoader.cpp
 
