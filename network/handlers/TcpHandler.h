@@ -46,16 +46,22 @@ private:
     QTcpServer* m_serverRMO;
     QTcpSocket* m_socketRMO;
 
+    QByteArray m_buffer;
+    QByteArray m_bufferRMO;
+
     QTimer m_registrationTimer;
     QTimer m_periodicTimer;
 
     bool m_isRegistered = false;
 
     void sendMessage(const QByteArray &data);
-    void processIncomingMessage(QByteArray &data);
+    void processIncomingMessage(const QByteArray &data);
 
     /// Разбор сообщений, принятых от РМО
-    void processIncomingMessageRMO(QByteArray &data);
+    void processIncomingMessageRMO(const QByteArray &data);
+
+    template<typename F>
+    void processBuffer(QByteArray& buffer, F processFunc);
 };
 
 #endif // TCPHANDLER_H

@@ -227,7 +227,7 @@ struct TcpHeader {
         return oss.str();
     }
 
-protected:
+//protected:
     /**
      * @brief Конструктор для создания заголовка
      * @param msgType Тип сообщения

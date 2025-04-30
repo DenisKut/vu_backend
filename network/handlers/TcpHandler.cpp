@@ -70,20 +70,54 @@ void TcpHandler::onError(QAbstractSocket::SocketError error) {
 }
 
 void TcpHandler::onReadyRead() {
-    while (m_socket->bytesAvailable() > 0) {
-        QByteArray data = m_socket->readAll();
-        if (data.size() >= static_cast<int>(sizeof(TcpHeader))) {
-            processIncomingMessage(data);
-        }
-    }
+    m_buffer.append(m_socket->readAll());
+    processBuffer(m_buffer, [this](const QByteArray& data) {
+        processIncomingMessage(data);
+    });
 }
 
 void TcpHandler::onReadyReadRMO() {
-    while (m_socketRMO->bytesAvailable() > 0) {
-        QByteArray data = m_socketRMO->readAll();
-        if (data.size() >= static_cast<int>(sizeof(TcpHeader))) {
-            processIncomingMessageRMO(data);
+    if (!m_socketRMO) return;
+    m_bufferRMO.append(m_socketRMO->readAll());
+    processBuffer(m_bufferRMO, [this](const QByteArray& data) {
+        processIncomingMessageRMO(data);
+    });
+}
+
+// Общая функция для обработки буферов
+template<typename F>
+void TcpHandler::processBuffer(QByteArray& buffer, F processFunc) {
+    while (true) {
+        // Проверяем минимальный размер заголовка
+        if (buffer.size() < static_cast<int>(sizeof(TcpHeader))) {
+            break;
         }
+
+        // Извлекаем заголовок
+        TcpHeader header;
+        memcpy(&header, buffer.constData(), sizeof(TcpHeader));
+
+
+        // Проверка валидности заголовка
+        if (!header.isValid()) {
+            qWarning() << "Invalid header checksum. Discarding data.";
+            buffer.clear();
+            break;
+        }
+
+        // Проверка размера данных
+        const uint32_t fullMessageSize = sizeof(TcpHeader)
+                + header.sizeData;
+        if ((uint32_t)buffer.size() < fullMessageSize) {
+            break; // Ждем остальные данные
+        }
+
+        // Извлекаем полное сообщение
+        QByteArray messageData = buffer.left(fullMessageSize);
+        buffer.remove(0, fullMessageSize);
+
+        // Передаем на обработку
+        processFunc(messageData);
     }
 }
 
@@ -177,7 +211,7 @@ void TcpHandler::sendPeriodicMessages() {
     }
 }
 
-void TcpHandler::processIncomingMessage(QByteArray &data) {
+void TcpHandler::processIncomingMessage(const QByteArray &data) {
     static int isRemoteCnt = 1;
     auto parsed = MessageFactory::parse(data);
     if(parsed) {
@@ -367,7 +401,7 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {
 
 
 /// Разбор сообщений, принятых от РМО
-void TcpHandler::processIncomingMessageRMO(QByteArray &data) {
+void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
     qDebug() << Qt::endl << "RMO Message:" << data.toHex(' ').toUpper();
 
     // Задать ЦУ для ППУ
