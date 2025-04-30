@@ -396,12 +396,12 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             double anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(
                                         AppConfig::instance().ModulePPU_num_RLMN_1);
 
-                            calculateCoefficientsPPU(azTarget, 10.0 * azTargetVel,
+                            calculateCoefficientsPPU(azTarget, azTargetVel,
                                                      az, &azLast, &azAccLast,
                                                      aMax, 10.0, 10.0, KP, KD, dtLast, dt,
                                                      &azC0, &azC1, &azC2);
 
-                            calculateCoefficientsPPU(anTarget, 10.0 * anTargetVel,
+                            calculateCoefficientsPPU(anTarget, anTargetVel,
                                                      an, &anLast, &anAccLast,
                                                      aMax, 10.0, 10.0, KP, KD, dtLast, dt,
                                                      &anC0, &anC1, &anC2);
@@ -471,7 +471,17 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                                    << AppConfig::instance().getModulePPU_an(
                                           AppConfig::instance().ModulePPU_num_RLMN_1)
                                    << azC0 << azC1 << azC2
-                                   << anC0 << anC1 << anC2;
+                                   << anC0 << anC1 << anC2
+                                   << AppConfig::instance().getModulePPU_azTarget(
+                                          AppConfig::instance().ModulePPU_num_RLMN_1)
+                                   << AppConfig::instance().getModulePPU_anTarget(
+                                          AppConfig::instance().ModulePPU_num_RLMN_1)
+                                   << AppConfig::instance().getModulePPU_azTargetVel(
+                                          AppConfig::instance().ModulePPU_num_RLMN_1)
+                                   << AppConfig::instance().getModulePPU_anTargetVel(
+                                          AppConfig::instance().ModulePPU_num_RLMN_1)
+                                   << AppConfig::instance().getModulePPU_isRemote(
+                                          AppConfig::instance().ModulePPU_num_RLMN_1);
 
 //                            m_udpHandler.sendDatagramDebug(QHostAddress::LocalHost, 12346, dataDebug);
                             m_tcpHandler.sendMessageRMO(dataDebug);

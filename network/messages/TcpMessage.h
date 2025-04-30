@@ -468,7 +468,8 @@ struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
         elCur(AppConfig::instance().getModulePPU_an(num_device)),
         dAzVisible(3),
         dElVisible(3) {
-        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+//        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        uint64_t time = TimeProvider::instance().getTimeForRequestPBU();
         time1 = to_uint32(time & 0xFFFFFFFF);
         time2 = to_uint32(time >> 32);
 
@@ -740,7 +741,8 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
     TcpMessage_0x1022(float* powData = nullptr, uint8_t rangeBins = 0,
                       uint8_t speedBins = 0)
         : rangeCnt(rangeBins), speedCnt(speedBins) {
-        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+//        uint64_t time = to_uint64(TimeProvider::instance().getMs());
+        uint64_t time = TimeProvider::instance().getTimeForRequestPBU();
         time1 = to_uint32(time & 0xFFFFFFFF);
         time2 = to_uint32(time >> 32);
 

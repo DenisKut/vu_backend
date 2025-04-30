@@ -19,7 +19,7 @@ TcpHandler::TcpHandler(TimeProvider* timeProvider, QObject* parent)
     }
     connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection);
 
-    //connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
+    connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this,
             &TcpHandler::onDisconnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
@@ -178,6 +178,7 @@ void TcpHandler::sendPeriodicMessages() {
 }
 
 void TcpHandler::processIncomingMessage(QByteArray &data) {
+    static int isRemoteCnt = 1;
     auto parsed = MessageFactory::parse(data);
     if(parsed) {
         std::cout << "Received message:\n"
@@ -229,6 +230,9 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {
                                         msg_0x04->timeAnswer2);
             std::cout << "Time synchronized using message 0x04."
                       << std::endl << "\n";
+
+            // Инкремент счётчика для отмены признака внешнего уравления
+            isRemoteCnt++;
             break;
         }
         case PBU_MessageNumbers::TARGET_DESIGNATION: {
@@ -239,6 +243,17 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {
                 to_underlying(PBU_MessageNumbers::TARGET_DESIGNATION));
             AppConfig::instance().SET_PBU_PROTO_0X23_CODE(
                 to_underlying(AppConfig::ReceiptCodes::IN_PROGRESS));
+
+            // Если пришла отмена ЦУ, то сбросить
+            // признак внешнего управления
+            if (msg_0x641->typeCeil == 3) {
+                isRemoteCnt = 100;
+                AppConfig::instance().setModulePPU_isRemote(
+                            AppConfig::instance().ModulePPU_num_RLMN_1,
+                            AppConfig::instance().ModulePPU_isRemote_defaulted);
+            } else {
+                isRemoteCnt = 0;
+            }
 
             auto msg_0x23 = MessageFactory::create<TcpMessage_0x23>();
             std::cout << "Sent message 0x23:\n"
@@ -269,7 +284,7 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {
                     - static_cast<double>(msg_0x641->ceilElev);
 
             // Если координаты отличаются незначительно, то отправляем ответ
-            if (dAz < 0.6 && dAn < 0.6)
+            if (abs(dAz) < 0.6 && abs(dAn) < 0.6)
             {
                 auto msg_0x1022 = MessageFactory::
                             create<TcpMessage_0x1022>(nullptr, 0, 0);
@@ -337,7 +352,17 @@ void TcpHandler::processIncomingMessage(QByteArray &data) {
         qDebug() << Qt::endl << "ETH Message:" << data.toHex(' ').toUpper();
     }
 
-
+    // Признак внешнего управления
+    if (isRemoteCnt == 0) {
+        AppConfig::instance().setModulePPU_isRemote(
+                    AppConfig::instance().ModulePPU_num_RLMN_1,
+                    AppConfig::instance().ModulePPU_isRemote_search);
+    }
+    if (isRemoteCnt > 10) {
+        AppConfig::instance().setModulePPU_isRemote(
+                    AppConfig::instance().ModulePPU_num_RLMN_1,
+                    AppConfig::instance().ModulePPU_isRemote_defaulted);
+    }
 }
 
 
