@@ -3,44 +3,167 @@
 NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
     : QObject(parent),
       m_timeProvider(timeProvider),
-      m_ethTimer(this),
-      m_tcpHandler(timeProvider),
-      m_udpHandler(timeProvider),
-      m_ethHandler(timeProvider)
+      m_tcpThread(new QThread(this)),  // Потоки создаются первыми
+      m_udpThread(new QThread(this)),
+      m_ethThread(new QThread(this))
 {
-    connect(&m_tcpHandler, &TcpHandler::messageReceived, this, &NetworkManager::onTcpReceived);
-    connect(&m_udpHandler, &UdpHandler::datagramReceived, this, &NetworkManager::onUdpReceived);
-    connect(&m_udpHandler, &UdpHandler::datagramReceivedDebug, this, &NetworkManager::onUdpReceivedDebug);
-    connect(&m_ethHandler, &EthHandler::messageReceived, this, &NetworkManager::onEthReceived);
+    // Создаем обработчики БЕЗ РОДИТЕЛЯ
+    m_tcpHandler = new TcpHandler(m_timeProvider);
+    m_udpHandler = new UdpHandler(m_timeProvider);
+    m_ethHandler = new EthHandler(m_timeProvider);
+
+    // Перемещаем объекты в потоки перед инициализацией
+    m_tcpHandler->moveToThread(m_tcpThread);
+    m_udpHandler->moveToThread(m_udpThread);
+    m_ethHandler->moveToThread(m_ethThread);
+
+    QMetaObject::invokeMethod(m_tcpHandler, "initialize", Qt::QueuedConnection);
+//    QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
+//    QMetaObject::invokeMethod(m_ethHandler, "initialize", Qt::QueuedConnection);
+
+    // Запускаем потоки
+    m_tcpThread->start();
+    m_udpThread->start();
+    m_ethThread->start();
+
+    if(m_tcpThread->isRunning()) {
+        m_tcpThread->setPriority(QThread::HighPriority);
+    }
+    if(m_ethThread->isRunning()) {
+        m_ethThread->setPriority(QThread::TimeCriticalPriority);
+    }
+
+    // Инициализация через очередь событий
+    QMetaObject::invokeMethod(m_tcpHandler, [this]() {
+       // Подключение сигналов после перемещения в поток
+       connect(m_tcpHandler, &TcpHandler::messageReceived,
+              this, &NetworkManager::onTcpReceived, Qt::QueuedConnection);
+    });
+
+    QMetaObject::invokeMethod(m_ethHandler, [this]() {
 #ifdef _WIN32
     connect(&m_ethTimer, &QTimer::timeout, &m_ethHandler, &EthHandler::checkReceived);
     connect(&m_ethHandler, &EthHandler::ethTimerReceiveRestart, [this](){ m_ethTimer.start(1); });
+#else
+    connect(m_ethHandler, &EthHandler::messageReceived,
+            this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
 #endif
+    });
+
+//    connect(&m_udpHandler, &UdpHandler::datagramReceived, this, &NetworkManager::onUdpReceived);
+//    connect(&m_udpHandler, &UdpHandler::datagramReceivedDebug, this, &NetworkManager::onUdpReceivedDebug);
+
 }
 
 NetworkManager::~NetworkManager() {
     stop();
+    // Остановка потоков
+    m_tcpThread->quit();
+    m_udpThread->quit();
+    m_ethThread->quit();
+
+    // Ожидание завершения
+    m_tcpThread->wait(1000);
+    m_udpThread->wait(1000);
+    m_ethThread->wait(1000);
+
+    // Принудительное удаление при необходимости
+    if(!m_tcpThread->isFinished()) {
+        delete m_tcpThread;
+    }
+    if(!m_udpThread->isFinished()) {
+        delete m_udpThread;
+    }
+    if(!m_ethThread->isFinished()) {
+        delete m_ethThread;
+    }
 }
 
 void NetworkManager::start() {
-    m_tcpHandler.connectToHost(
-        to_qstring(
-            AppConfig::instance().TCP_HOST_IP()),
-            AppConfig::instance().TCP_HOST_PORT()
-        );
-    m_udpHandler.startListening(AppConfig::instance().UDP_PORT());
-    m_ethHandler.start();
+    QMetaObject::invokeMethod(m_tcpHandler, "connectToHost",
+        Q_ARG(QString, to_qstring(AppConfig::instance().TCP_HOST_IP())),
+        Q_ARG(quint16, AppConfig::instance().TCP_HOST_PORT()));
+    QMetaObject::invokeMethod(m_tcpHandler, "startTimers");
+
+    QMetaObject::invokeMethod(m_udpHandler, "startListening",
+        Q_ARG(quint16, AppConfig::instance().UDP_PORT()));
+
+    QMetaObject::invokeMethod(m_ethHandler, "start");
     m_ethTimer.start(1);
 }
 
+
 void NetworkManager::stop() {
     m_ethTimer.stop();
-    m_tcpHandler.disconnect();
-    m_udpHandler.stopListening();
-    m_ethHandler.disconnectAdapter();
+    QMetaObject::invokeMethod(m_tcpHandler, "disconnect");
+    QMetaObject::invokeMethod(m_udpHandler, "stopListening");
+    QMetaObject::invokeMethod(m_ethHandler, "disconnectAdapter");
 }
 
+// ППУ:
+//----------------------------------------------------------
+void NetworkManager::calculateCoefficientsPPU(double angleTarget,  double velocityTarget,
+                              double angleCurrent, double* angleLast,
+                              double* accelerationLast, double accelerationMax,
+                              double angleMin, double velocityMin,
+                              double KP, double KD, double dtLast, double dt,
+                              double* C0, double* C1, double* C2) {
 
+
+    double xDist = angleTarget - angleCurrent;
+    if (xDist > 180.0) {
+        xDist -= 360.0;
+    } else if (xDist < -180.0) {
+        xDist += 360.0;
+    }
+    double dx = angleCurrent - (*angleLast);
+    if (dx > 180.0) {
+        dx -= 360.0;
+    } else if (dx < -180.0) {
+        dx += 360.0;
+    }
+    double v1 = dx / dt;// + 0.5 * (*accelerationLast) * dt;
+    double dv = velocityTarget - v1;
+    double a1 = 0.0;
+
+//        double breaking_dist = dv * dv / (2.0 * accelerationMax) + angleMin;
+
+//        if (abs(xDist) > angleMin) {
+//            // Максимальное ускорение в направлении цели
+//            a1 = (xDist > 0) ? accelerationMax : -accelerationMax;
+
+//            // Если расстояние торможения достигнуто, то тормозим:
+//            if (abs(xDist) < breaking_dist) {
+//                a1 = (dv < 0) ? -accelerationMax : accelerationMax;
+//            }
+
+//            // Плавное изменение ускорения:
+//            if (abs(dv) < velocityMin) {
+//                a1 = (*accelerationLast) + 0.5 * (a1 - (*accelerationLast));
+//            }
+//        } else {
+        // ПД-регулятор
+        a1 = KP * xDist + KD * dv;
+//        }
+
+    // Ограничение ускорения
+    a1 = fmax(fmin(a1, accelerationMax), -accelerationMax);
+
+//        // Плавное изменение ускорения:
+//        if (abs(dv) < velocityMin) {
+//            a1 = (*accelerationLast) + 0.8 * (a1 - (*accelerationLast));
+//        }
+
+    // Запоминаем предыдущие значения положения и ускорения точки 1
+    *angleLast = angleCurrent;
+    *accelerationLast = a1;
+
+    // Установка коэффициентов
+    *C0 = angleCurrent; // Начальное смещение (не используется)
+    *C1 = v1;           // Текущая скорость (начальная для интервала)
+    *C2 = 0.5 * a1;     // Ускорение, деленное на 2
+}
+//----------------------------------------------------------
 
 template<typename T>
 T clamp(T value, T min_val, T max_val) {
@@ -278,7 +401,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                                 qDebug() << "ETH Message from VU to BS:"
                                          << Qt::endl
                                          << data.toHex(' ').toUpper();
-                                isChangedImitPeriod = m_ethHandler.sendMessage(data);
+                                isChangedImitPeriod = m_ethHandler->sendMessage(data);
                                 if (isChangedImitPeriod) {
                                     mode = 1;
                                 }
@@ -484,14 +607,14 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                                           AppConfig::instance().ModulePPU_num_RLMN_1);
 
 //                            m_udpHandler.sendDatagramDebug(QHostAddress::LocalHost, 12346, dataDebug);
-                            m_tcpHandler.sendMessageRMO(dataDebug);
+                            m_tcpHandler->sendMessageRMO(dataDebug);
                             //-------------------------------------------------------------
 
                             QByteArray data = msg.serializeFull();
                             qDebug() << "Sending message to move the PPU:";
                             qDebug() << "Time BS:" << TimeProvider::instance().getTimeForRequestBS();
                             qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
-                            m_ethHandler.sendMessage(data);
+                            m_ethHandler->sendMessage(data);
                         }
                         else if (mode == 4) {
                             mode = 5;
@@ -509,7 +632,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                     QByteArray data = msg.serializeFull();
                     qDebug() << "Sending message to turn on the PPU:";
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
-                    m_ethHandler.sendMessage(data);
+                    m_ethHandler->sendMessage(data);
                 }
             }
         }

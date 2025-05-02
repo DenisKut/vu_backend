@@ -28,62 +28,7 @@ public:
                                   double* accelerationLast, double accelerationMax,
                                   double angleMin, double velocityMin,
                                   double KP, double KD, double dtLast, double dt,
-                                  double* C0, double* C1, double* C2) {
-
-
-        double xDist = angleTarget - angleCurrent;
-        if (xDist > 180.0) {
-            xDist -= 360.0;
-        } else if (xDist < -180.0) {
-            xDist += 360.0;
-        }
-        double dx = angleCurrent - (*angleLast);
-        if (dx > 180.0) {
-            dx -= 360.0;
-        } else if (dx < -180.0) {
-            dx += 360.0;
-        }
-        double v1 = dx / dt;// + 0.5 * (*accelerationLast) * dt;
-        double dv = velocityTarget - v1;
-        double a1 = 0.0;
-
-//        double breaking_dist = dv * dv / (2.0 * accelerationMax) + angleMin;
-
-//        if (abs(xDist) > angleMin) {
-//            // Максимальное ускорение в направлении цели
-//            a1 = (xDist > 0) ? accelerationMax : -accelerationMax;
-
-//            // Если расстояние торможения достигнуто, то тормозим:
-//            if (abs(xDist) < breaking_dist) {
-//                a1 = (dv < 0) ? -accelerationMax : accelerationMax;
-//            }
-
-//            // Плавное изменение ускорения:
-//            if (abs(dv) < velocityMin) {
-//                a1 = (*accelerationLast) + 0.5 * (a1 - (*accelerationLast));
-//            }
-//        } else {
-            // ПД-регулятор
-            a1 = KP * xDist + KD * dv;
-//        }
-
-        // Ограничение ускорения
-        a1 = fmax(fmin(a1, accelerationMax), -accelerationMax);
-
-//        // Плавное изменение ускорения:
-//        if (abs(dv) < velocityMin) {
-//            a1 = (*accelerationLast) + 0.8 * (a1 - (*accelerationLast));
-//        }
-
-        // Запоминаем предыдущие значения положения и ускорения точки 1
-        *angleLast = angleCurrent;
-        *accelerationLast = a1;
-
-        // Установка коэффициентов
-        *C0 = angleCurrent; // Начальное смещение (не используется)
-        *C1 = v1;           // Текущая скорость (начальная для интервала)
-        *C2 = 0.5 * a1;     // Ускорение, деленное на 2
-    }
+                                  double* C0, double* C1, double* C2);
     //----------------------------------------------------------
 
 
@@ -96,9 +41,14 @@ public slots:
 private:
     TimeProvider* m_timeProvider;
     QTimer m_ethTimer;
-    TcpHandler m_tcpHandler;
-    UdpHandler m_udpHandler;
-    EthHandler m_ethHandler;
+
+    TcpHandler* m_tcpHandler;
+    UdpHandler* m_udpHandler;
+    EthHandler* m_ethHandler;
+
+    QThread* m_tcpThread;
+    QThread* m_udpThread;
+    QThread* m_ethThread;
 };
 
 #endif // NETWORKMANAGER_H

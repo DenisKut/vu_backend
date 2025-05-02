@@ -1,40 +1,81 @@
 #include "TcpHandler.h"
 #include <QHostAddress>
 
-TcpHandler::TcpHandler(TimeProvider* timeProvider, QObject* parent)
-    : QObject(parent), m_timeProvider(timeProvider),
-        m_socket(new QTcpSocket(this))
-{
+TcpHandler::TcpHandler(TimeProvider* timeProvider)
+    : m_timeProvider(timeProvider){}
+
+void TcpHandler::initialize() {
+    m_socket = new QTcpSocket(); // Без родителя
+    m_serverRMO = new QTcpServer();
+    m_registrationTimer = new QTimer();
+    m_periodicTimer = new QTimer();
+    m_reconnectTimer = new QTimer();
+
+    Q_ASSERT_X(m_socket, "TcpHandler", "Failed to create TCP socket");
+    Q_ASSERT_X(m_serverRMO, "TcpHandler", "Failed to create TCP server");
+
     m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
-    m_socketRMO = nullptr;
-    m_serverRMO = new QTcpServer;
-    if (m_serverRMO->listen(QHostAddress::Any, 23456))
-    {
-        qDebug() << "Server listening on port" << 23456;
+    if (!initServer()) {
+        qFatal("Failed to initialize TCP server");
     }
-    else
-    {
-        qDebug() << "ERROR - server didn't start" << m_serverRMO->errorString();
-    }
-    connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection);
 
+    connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection);
     connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
-    connect(m_socket, &QTcpSocket::disconnected, this,
-            &TcpHandler::onDisconnected);
+    connect(m_socket, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnected);
+    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::errorOccurred),
+            this, &TcpHandler::onError);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
 
-    connect(&m_registrationTimer, &QTimer::timeout, this,
-            &TcpHandler::handleRegistration);
-    connect(&m_periodicTimer, &QTimer::timeout, this,
-            &TcpHandler::sendPeriodicMessages);
+    m_reconnectTimer->setInterval(1000);
+    connect(m_reconnectTimer, &QTimer::timeout, this, &TcpHandler::reconnect);
+
+    connect(m_registrationTimer, &QTimer::timeout, this,
+                &TcpHandler::handleRegistration);
+    connect(m_periodicTimer, &QTimer::timeout, this,
+                &TcpHandler::sendPeriodicMessages);
 }
 
 TcpHandler::~TcpHandler() {
     disconnect();
+    delete m_socket;        // Освобождение памяти
+    delete m_serverRMO;
+    delete m_registrationTimer;
+    delete m_periodicTimer;
+    delete m_reconnectTimer;
+}
+
+void TcpHandler::startTimers() {
+    m_reconnectTimer->start(1000);
+}
+
+void TcpHandler::stopTimers() {
+    m_registrationTimer->stop();
+    m_periodicTimer->stop();
+    m_reconnectTimer->stop();
+}
+
+
+bool TcpHandler::initServer() {
+    constexpr quint16 startPort = 23456;
+    constexpr quint16 maxAttempts = 10;
+
+    for (quint16 port = startPort; port < startPort + maxAttempts; ++port) {
+        if (m_serverRMO->listen(QHostAddress::Any, port)) {
+            qInfo() << "TCP server started on port" << port;
+            return true;
+        }
+    }
+    qCritical() << "Failed to start TCP server after"
+                << maxAttempts << "attempts";
+    return false;
 }
 
 void TcpHandler::connectToHost(const QString& host, quint16 port) {
+    m_host = host;
+    m_port = port;
+    qInfo() << "Connecting to" << host << ":" << port;
+//    m_socket->connectToHost(host, port);
     m_socket->connectToHost(host, port, QIODevice::ReadWrite,
                                             QAbstractSocket::AnyIPProtocol);
 }
@@ -43,25 +84,37 @@ void TcpHandler::disconnect() {
     if (m_socket->state() != QAbstractSocket::UnconnectedState) {
         m_socket->disconnectFromHost();
     }
-    m_registrationTimer.stop();
-    m_periodicTimer.stop();
+    m_registrationTimer->stop();
+    m_periodicTimer->stop();
 }
 
 void TcpHandler::onConnected() {
     std::cout << "Connected to TCP host" << std::endl;
-    m_registrationTimer.start(800); // Отправка 0x01 каждую секунду
+    m_reconnectTimer->stop();
+    m_registrationTimer->start(800); // Отправка 0x01 каждую секунду
 }
 
 void TcpHandler::onDisconnected() {
-     std::cout << "Disconnected from TCP host" << std::endl;
+    std::cout << "Disconnected from TCP host" << std::endl;
     m_isRegistered = false;
-    m_registrationTimer.stop();
-    m_periodicTimer.stop();
+    m_registrationTimer->stop();
+    m_periodicTimer->stop();
+    m_reconnectTimer->start();
+}
+
+void TcpHandler::reconnect() {
+    if (m_socket->state() == QAbstractSocket::UnconnectedState) {
+        qInfo() << "Reconnecting to" << m_host << ":" << m_port;
+        m_socket->connectToHost(m_host, m_port);
+    }
 }
 
 void TcpHandler::onDisconnectedRMO() {
-     std::cout << "RMO disconnected from TCP host" << std::endl;
-    m_socketRMO = nullptr;
+    std::cout << "RMO disconnected from TCP host" << std::endl;
+    if (m_socketRMO) {
+        m_socketRMO->deleteLater(); // Безопасное удаление
+        m_socketRMO = nullptr;
+    }
 }
 
 void TcpHandler::onError(QAbstractSocket::SocketError error) {
@@ -132,11 +185,6 @@ void TcpHandler::sendMessageRMO(const QByteArray& data) {
     if (m_socketRMO->state() == QAbstractSocket::ConnectedState) {
         m_socketRMO->write(data);
     }
-}
-
-void TcpHandler::sendMessageResult(const QByteArray &data)
-{
-
 }
 
 /// Приём запросов от клиентов на подключение:
@@ -229,7 +277,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                     .SET_PBU_PROTO_HEAD_IDX_MODULE(msg_0x02->idxModule);
 
                 m_isRegistered = true;
-                m_registrationTimer.stop();
+                m_registrationTimer->stop();
 
                 auto msg_0x05 = MessageFactory::create<TcpMessage_0x05>();
 
@@ -252,7 +300,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                 std::cout << "Sent message 0x1023:\n"
                           << msg_0x1023.toString()
                           << std::endl << "\n";
-                m_periodicTimer.start(900); // Периодическая отправка сообщений
+                m_periodicTimer->start(900); // Периодическая отправка сообщений
             }
             break;
         }

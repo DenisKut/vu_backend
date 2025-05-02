@@ -22,6 +22,11 @@ EthHandler::EthHandler(TimeProvider* timeProvider, QObject* parent)
 #endif
 }
 
+void EthHandler::initialize() {
+    // Создайте здесь все внутренние объекты, связанные с сетью
+    connectAdapter(); // Например, вызов метода подключения адаптера
+}
+
 EthHandler::~EthHandler() {
     disconnectAdapter();
 #ifdef _WIN32
@@ -287,6 +292,7 @@ void EthHandler::checkReceived()
             // Отправка данных в NetworkManager для разбора:
             QByteArray msg = QByteArray(reinterpret_cast<const char*>(data), length);
             emit messageReceived(msg);
+            QCoreApplication::processEvents();
         }
     }
 #else
@@ -306,6 +312,7 @@ void EthHandler::checkReceived()
         // Отправка данных в NetworkManager для разбора:
         QByteArray msg = QByteArray(reinterpret_cast<const char*>(buf), length);
         emit messageReceived(msg);
+        QCoreApplication::processEvents();
     }
     free(buf);
     //---------------------------------------------------------------------

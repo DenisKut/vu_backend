@@ -28,6 +28,9 @@ int main(int argc, char* argv[]) {
     // Глобальная кодировка UTF-8
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
 
+    qRegisterMetaType<QAbstractSocket::
+            SocketError>("QAbstractSocket::SocketError");
+
     QCoreApplication a(argc, argv);
 
     // Путь к .env

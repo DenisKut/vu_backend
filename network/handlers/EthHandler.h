@@ -6,6 +6,7 @@
 #include <QByteArray>
 #include <QDebug>
 #include <QDataStream>
+#include <QCoreApplication>
 #include "../messages/EthMessage.h"
 #include "utils/time_provider/TimeProvider.h"
 #include "core/logger/Logger.h"
@@ -39,6 +40,8 @@ class EthHandler : public QObject {
 public:
     explicit EthHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
     ~EthHandler();
+
+     void initialize();
 
     // Адаптеры FastEthernet:
     //---------------------------------------------------------------------

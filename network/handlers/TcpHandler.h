@@ -13,10 +13,9 @@
 class TcpHandler : public QObject {
     Q_OBJECT
 public:
-    explicit TcpHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
+    explicit TcpHandler(TimeProvider* timeProvider);
     ~TcpHandler();
 
-    void connectToHost(const QString& host, quint16 port);
     void disconnect();
 
     void sendMessageRMO(const QByteArray &data);
@@ -28,8 +27,13 @@ signals:
 
 public slots:
     void incomingConnection(); // Приём запросов от клиентов на подключение
+    void reconnect(); // Новый слот для переподключения
+    void connectToHost(const QString& host, quint16 port);
+    void startTimers();
+    void stopTimers();
 
 private slots:
+    void initialize();
     void onReadyRead();
     void onReadyReadRMO();
     void onConnected();
@@ -40,19 +44,24 @@ private slots:
     void handleRegistration();
 
 private:
-    TimeProvider* m_timeProvider;
-    QTcpSocket* m_socket;
 
-    QTcpServer* m_serverRMO;
-    QTcpSocket* m_socketRMO;
+    TimeProvider* m_timeProvider = nullptr;
+    QTcpSocket* m_socket = nullptr;
+    QTcpSocket* m_socketRMO = nullptr;
+    QTcpServer* m_serverRMO = nullptr;
+    QTimer* m_registrationTimer = nullptr;
+    QTimer* m_periodicTimer = nullptr;
+    QTimer* m_reconnectTimer = nullptr;
 
     QByteArray m_buffer;
     QByteArray m_bufferRMO;
 
-    QTimer m_registrationTimer;
-    QTimer m_periodicTimer;
+    QString m_host;
+    quint16 m_port;
 
     bool m_isRegistered = false;
+
+    bool initServer();
 
     void sendMessage(const QByteArray &data);
     void processIncomingMessage(const QByteArray &data);
