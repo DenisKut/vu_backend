@@ -41,8 +41,9 @@ public:
     std::string currentTimeString();
     //----------------------------------------------------------------------
 
-    void setPbuTimestamp(int64_t new_time);
-    void setTimeOnTimestamp(int64_t new_time);
+    void setPbuTimestamp1(int64_t new_time);
+    void setSysTimeOnTimestamp1(int64_t new_time);
+    int64_t getPbuTimeDelta();
 
     // Функции периода БС:
     //----------------------------------------------------------------------
@@ -64,11 +65,15 @@ public:
     // Получить значение периода синхронизации БС:
     uint32_t getBsPeriodWidth() const;
 
+    void initTimes();
+
     // Синхронизировать время:
-    void syncTime(uint32_t time1, uint32_t time2);
+    void syncTime(uint32_t timeRequest1,
+                  uint32_t timeRequest2,
+                  uint32_t timeAnswer1,
+                  uint32_t timeAnswer2);
 
     uint64_t getTimeForRequest();
-
     //----------------------------------------------------------------------
 
 private:
@@ -82,12 +87,25 @@ private:
     uint32_t bsPeriodWidth;        ///< Значение периода синхронизации
     //----------------------------------------------------------------------
 
-    int64_t pbuTimestamp = getMs();     ///< Время из пакета "Отметка
-                                        ///< времени" (мс)
+    int64_t pbuTimestamp1;          ///< Время из пакета "Отметка
+                                    ///< времени" (мс)
 
-    int64_t timeOnTimestamp = getMs();  ///< Время на момент получения
-                                        ///< пакета "Отметка времени"
-                                        ///< (мс)
+    int64_t sysTimeOnTimestamp1;    ///< Время на момент получения
+                                    ///< пакета "Отметка времени"
+                                    ///< (мс)
+
+    int64_t sysOnTimeReq;           ///< Время на момент отправки
+                                    ///< пакета "Запрос времени"
+                                    ///< (мс)
+
+    int64_t pbuTimeKorr = 0;        ///< Задержка распространения
+                                    ///< до ПБУ (мс)
+
+    int64_t pbuTimeDelta = 0;       ///< Разница времени между
+                                    ///< временем ПБУ и нашим
+                                    ///< системным временем (мс)
 };
+
+
 
 #endif // TIMEPROVIDER_H
