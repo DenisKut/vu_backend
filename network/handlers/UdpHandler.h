@@ -1,29 +1,39 @@
-#ifndef UDPHANDLER_H
-#define UDPHANDLER_H
+#pragma once
 
 #include <QObject>
+#include <QHostAddress>
 #include <QUdpSocket>
+#include <atomic>
+#include <thread>
 #include "utils/time_provider/TimeProvider.h"
 
 class UdpHandler : public QObject {
     Q_OBJECT
-
 public:
-    explicit UdpHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
-    Q_INVOKABLE void initialize();
-    Q_INVOKABLE void startListening(quint16 port);
-    Q_INVOKABLE void stopListening();
+    explicit UdpHandler(TimeProvider* timeProvider,
+                        QObject* parent = nullptr);
+
+    ~UdpHandler();
+
+    Q_INVOKABLE void start(int port);
+    void stop();
 
 signals:
-    void datagramReceived(const QByteArray& datagram);
+    void packetReceived(const QByteArray& data,
+                        const QHostAddress& sender,
+                        quint16 senderPort);
 
-private slots:
-    void onReadyRead();
+public slots:
+    void sendResponse(const QByteArray& data,
+                      const QHostAddress& addr,
+                      quint16 port);
 
 private:
-    TimeProvider* m_timeProvider;
-    QUdpSocket* m_udpSocket = nullptr;
-    bool m_isBound = false;
-};
+    void run();
 
-#endif // UDPHANDLER_H
+    TimeProvider* m_timeProvider;
+    quint16 m_port;
+    std::thread m_thread;
+    std::atomic<bool> m_running;
+    QUdpSocket* m_socket = nullptr;
+};

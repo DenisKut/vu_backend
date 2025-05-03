@@ -15,15 +15,19 @@ NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
     m_ethHandler->moveToThread(m_ethThread);
 
     QMetaObject::invokeMethod(m_tcpHandler, "initialize", Qt::QueuedConnection);
-    QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
+    // QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_ethHandler, "initialize", Qt::QueuedConnection);
 
     m_tcpThread->start();
     m_udpThread->start();
     m_ethThread->start();
 
-    if(m_tcpThread->isRunning()) m_tcpThread->setPriority(QThread::HighPriority);
-    if(m_ethThread->isRunning()) m_ethThread->setPriority(QThread::TimeCriticalPriority);
+    if(m_tcpThread->isRunning())
+        m_tcpThread->setPriority(QThread::HighPriority);
+    if(m_ethThread->isRunning())
+        m_ethThread->setPriority(QThread::TimeCriticalPriority);
+    if(m_udpThread->isRunning())
+        m_udpThread->setPriority(QThread::HighPriority);
 
     QMetaObject::invokeMethod(m_tcpHandler, [this]() {
         connect(m_tcpHandler, &TcpHandler::messageReceived,
@@ -31,11 +35,18 @@ NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
     });
 
     QMetaObject::invokeMethod(m_udpHandler, [this]() {
-        connect(m_udpHandler, &UdpHandler::datagramReceived, this, [this](const QByteArray& datagram) {
-            // Преобразование QByteArray в Message
+        connect(m_udpHandler, &UdpHandler::packetReceived, this,
+                [this](const QByteArray& data,
+                        const QHostAddress& sender,
+                        quint16 senderPort) {
+            // Быстрая обработка пакета
             Message msg;
-            msg.payload = datagram; // Предполагается, что Message имеет поле payload типа QByteArray
-            onUdpReceived(msg);     // Вызов слота с преобразованным объектом
+            msg.payload = data;
+            onUdpReceived(msg);
+
+            // // Сформировать ответ (пример)
+            // QByteArray response = processUdpPacket(data); // функция обработки
+            // m_udpHandler->sendResponse(response, sender, senderPort);
         }, Qt::QueuedConnection);
     });
 
@@ -63,8 +74,8 @@ void NetworkManager::start() {
         Q_ARG(QString, to_qstring(AppConfig::instance().TCP_HOST_IP())),
         Q_ARG(quint16, AppConfig::instance().TCP_HOST_PORT()));
     QMetaObject::invokeMethod(m_tcpHandler, "startTimers");
-    QMetaObject::invokeMethod(m_udpHandler, "startListening",
-        Q_ARG(quint16, AppConfig::instance().UDP_PORT()));
+    QMetaObject::invokeMethod(m_udpHandler, "start",
+        Q_ARG(int, AppConfig::instance().UDP_PORT()));
     // QMetaObject::invokeMethod(m_ethHandler, "start");
     m_ethTimer.start(1);
 }

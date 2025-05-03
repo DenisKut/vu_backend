@@ -1,43 +1,56 @@
 #include "UdpHandler.h"
+#include "utils/AppConfig.h"
 #include <QNetworkDatagram>
 
 UdpHandler::UdpHandler(TimeProvider* timeProvider, QObject* parent)
-    : QObject(parent), m_timeProvider(timeProvider) {}
-
-void UdpHandler::initialize() {
-    if (!m_udpSocket) {
-        m_udpSocket = new QUdpSocket(this);
-        connect(m_udpSocket, &QUdpSocket::readyRead, this, &UdpHandler::onReadyRead);
-    }
+    : QObject(parent),
+    m_timeProvider(timeProvider),
+    m_running(false) {
 }
 
-void UdpHandler::startListening(quint16 port) {
-	if (!m_udpSocket || m_isBound) return;
-    if (!m_udpSocket->bind(QHostAddress::Any, port)) {
-        qWarning() << "Failed to bind UDP socket on port" << port;
-    } else {
-        qDebug() << "UDP socket bound on port" << port;
-    }
+
+UdpHandler::~UdpHandler() { stop(); }
+
+void UdpHandler::start(int port) {
+    if (m_running) return;
+    m_port = port;
+    m_running = true;
+    m_thread = std::thread([this]() { this->run(); });
 }
 
-void UdpHandler::stopListening() {
-    if (m_udpSocket && m_isBound) {
-        m_udpSocket->close();
-        m_isBound = false;
-    }
+void  UdpHandler::stop() {
+    m_running = false;
+    if (m_thread.joinable()) m_thread.join();
 }
 
-void UdpHandler::onReadyRead() {
-    QList<QByteArray> datagrams;
+void UdpHandler::sendResponse(const QByteArray& data,
+                  const QHostAddress& addr,
+                  quint16 port) {
+    if (m_socket) m_socket->writeDatagram(data, addr, port);
+}
 
-    while (m_udpSocket->hasPendingDatagrams()) {
-        QByteArray datagram;
-        datagram.resize(m_udpSocket->pendingDatagramSize());
-        m_udpSocket->readDatagram(datagram.data(), datagram.size());
-        datagrams.append(datagram);
-    }
+void UdpHandler::run() {
+    qDebug() << "UDP started";
+    QUdpSocket socket;
+    m_socket = &socket;
+    socket.bind(QHostAddress::Any, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
 
-    for (const QByteArray& datagram : datagrams) {
-        emit datagramReceived(datagram);
+    char buf[1024]; // Сюда фиксированный размер буфера
+    while (m_running) {
+        if (socket.waitForReadyRead(1)) {
+            while (socket.hasPendingDatagrams()) {
+                QHostAddress sender;
+                quint16 senderPort;
+                qint64 len = socket.readDatagram(buf, sizeof(buf), &sender, &senderPort);
+                if (len > 0) {
+                    QByteArray data(buf, int(len));
+                    emit packetReceived(data, sender, senderPort);
+                    // Здесь можно сразу разобрать пакет и отправить ответ:
+                    // QByteArray response = processPacket(data);
+                    // sendResponse(response, sender, senderPort);
+                }
+            }
+        }
     }
+    m_socket = nullptr;
 }
