@@ -1,36 +1,21 @@
 #ifndef ETHHANDLER_H
 #define ETHHANDLER_H
 
-#include <QTimer>
 #include <QObject>
-#include <QByteArray>
-#include <QDebug>
-#include <QDataStream>
 #include <QCoreApplication>
-#include "../messages/EthMessage.h"
+#include <QByteArray>
 #include "utils/time_provider/TimeProvider.h"
-#include "core/logger/Logger.h"
-#include "utils/AppConfig.h"
 
-#include <chrono>
-
-// Библиотека WinPCap для работы с
-// Ethernet raw data под Windows:
 #ifdef _WIN32
 #include <pcap.h>
 #else
-// Заголовочные файлы для работы с
-// Ethernet raw data под Linux:
 #include <QSocketNotifier>
 #include <QNetworkInterface>
 #include <arpa/inet.h>
 #include <linux/if_packet.h>
-#include <linux/ip.h>
-#include <linux/udp.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>
-#include <netinet/ether.h>
 #include <unistd.h>
 #endif
 
@@ -41,45 +26,37 @@ public:
     explicit EthHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
     ~EthHandler();
 
-     void initialize();
-
-    // Адаптеры FastEthernet:
-    //---------------------------------------------------------------------
-#ifdef _WIN32
-    pcap_if_t *pcapAllDevs;                 // Список доступных адаптеров
-    pcap_t *pcapTx;                         // Передатчик
-    pcap_t *pcapRx;                         // Приёмник
-#else
-    int ethSocketID;
-    char ifName[IFNAMSIZ];
-    bool isEthernetInterface(const QNetworkInterface &interface);
-    QString findWiredInterface();
-#endif
-    quint64 getTimestamp();
-
-    void connectAdapter();                  // Подключиться к адаптеру Ethernet под номером inum в списке адаптеров
-    void disconnectAdapter();               // Отключиться от адаптера Ethernet
-    //---------------------------------------------------------------------
-
-    bool sendMessage(const QByteArray &data);
+    Q_INVOKABLE void initialize();
+    void connectAdapter();
+    Q_INVOKABLE void disconnectAdapter();
+    Q_INVOKABLE bool sendMessage(const QByteArray &data);
 
 public slots:
     void start();
-    void checkReceived(); // Проверка сокета на наличие принятых Ethernet пакетов
+    void checkReceived();
 
 signals:
     void messageReceived(const QByteArray& msg);
 
 #ifdef _WIN32
-signals:
-    void ethTimerReceiveRestart(); // Запуск таймера вызова обработчика принятых Ethernet пакетов
-#else
-private:
-    QSocketNotifier* m_notifier = nullptr;
+    void ethTimerReceiveRestart();
 #endif
 
 private:
     TimeProvider* m_timeProvider;
+    bool m_adapterOpened = false; // Новый флаг
+
+#ifdef _WIN32
+    pcap_if_t *pcapAllDevs = nullptr;
+    pcap_t *pcapTx = nullptr;
+    pcap_t *pcapRx = nullptr;
+#else
+    int ethSocketID = -1;
+    char ifName[IFNAMSIZ] = {0};
+    QSocketNotifier* m_notifier = nullptr;
+    bool isEthernetInterface(const QNetworkInterface &interface);
+    QString findWiredInterface();
+#endif
 };
 
 #endif // ETHHANDLER_H

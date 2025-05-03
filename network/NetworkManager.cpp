@@ -3,80 +3,59 @@
 NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
     : QObject(parent),
       m_timeProvider(timeProvider),
-      m_tcpThread(new QThread(this)),  // Потоки создаются первыми
+      m_tcpThread(new QThread(this)),
       m_udpThread(new QThread(this)),
-      m_ethThread(new QThread(this))
-{
-    // Создаем обработчики БЕЗ РОДИТЕЛЯ
+      m_ethThread(new QThread(this)) {
     m_tcpHandler = new TcpHandler(m_timeProvider);
     m_udpHandler = new UdpHandler(m_timeProvider);
     m_ethHandler = new EthHandler(m_timeProvider);
 
-    // Перемещаем объекты в потоки перед инициализацией
     m_tcpHandler->moveToThread(m_tcpThread);
     m_udpHandler->moveToThread(m_udpThread);
     m_ethHandler->moveToThread(m_ethThread);
 
     QMetaObject::invokeMethod(m_tcpHandler, "initialize", Qt::QueuedConnection);
-//    QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
-//    QMetaObject::invokeMethod(m_ethHandler, "initialize", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_ethHandler, "initialize", Qt::QueuedConnection);
 
-    // Запускаем потоки
     m_tcpThread->start();
     m_udpThread->start();
     m_ethThread->start();
 
-    if(m_tcpThread->isRunning()) {
-        m_tcpThread->setPriority(QThread::HighPriority);
-    }
-    if(m_ethThread->isRunning()) {
-        m_ethThread->setPriority(QThread::TimeCriticalPriority);
-    }
+    if(m_tcpThread->isRunning()) m_tcpThread->setPriority(QThread::HighPriority);
+    if(m_ethThread->isRunning()) m_ethThread->setPriority(QThread::TimeCriticalPriority);
 
-    // Инициализация через очередь событий
     QMetaObject::invokeMethod(m_tcpHandler, [this]() {
-       // Подключение сигналов после перемещения в поток
-       connect(m_tcpHandler, &TcpHandler::messageReceived,
-              this, &NetworkManager::onTcpReceived, Qt::QueuedConnection);
+        connect(m_tcpHandler, &TcpHandler::messageReceived,
+                this, &NetworkManager::onTcpReceived, Qt::QueuedConnection);
+    });
+
+    QMetaObject::invokeMethod(m_udpHandler, [this]() {
+        connect(m_udpHandler, &UdpHandler::datagramReceived, this, [this](const QByteArray& datagram) {
+            // Преобразование QByteArray в Message
+            Message msg;
+            msg.payload = datagram; // Предполагается, что Message имеет поле payload типа QByteArray
+            onUdpReceived(msg);     // Вызов слота с преобразованным объектом
+        }, Qt::QueuedConnection);
     });
 
     QMetaObject::invokeMethod(m_ethHandler, [this]() {
-#ifdef _WIN32
-    connect(&m_ethTimer, &QTimer::timeout, &m_ethHandler, &EthHandler::checkReceived);
-    connect(&m_ethHandler, &EthHandler::ethTimerReceiveRestart, [this](){ m_ethTimer.start(1); });
-#else
-    connect(m_ethHandler, &EthHandler::messageReceived,
-            this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
-#endif
+        connect(m_ethHandler, &EthHandler::messageReceived,
+                this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
     });
-
-//    connect(&m_udpHandler, &UdpHandler::datagramReceived, this, &NetworkManager::onUdpReceived);
-//    connect(&m_udpHandler, &UdpHandler::datagramReceivedDebug, this, &NetworkManager::onUdpReceivedDebug);
-
 }
 
 NetworkManager::~NetworkManager() {
     stop();
-    // Остановка потоков
     m_tcpThread->quit();
     m_udpThread->quit();
     m_ethThread->quit();
-
-    // Ожидание завершения
     m_tcpThread->wait(1000);
     m_udpThread->wait(1000);
     m_ethThread->wait(1000);
-
-    // Принудительное удаление при необходимости
-    if(!m_tcpThread->isFinished()) {
-        delete m_tcpThread;
-    }
-    if(!m_udpThread->isFinished()) {
-        delete m_udpThread;
-    }
-    if(!m_ethThread->isFinished()) {
-        delete m_ethThread;
-    }
+    if(!m_tcpThread->isFinished()) delete m_tcpThread;
+    if(!m_udpThread->isFinished()) delete m_udpThread;
+    if(!m_ethThread->isFinished()) delete m_ethThread;
 }
 
 void NetworkManager::start() {
@@ -84,14 +63,11 @@ void NetworkManager::start() {
         Q_ARG(QString, to_qstring(AppConfig::instance().TCP_HOST_IP())),
         Q_ARG(quint16, AppConfig::instance().TCP_HOST_PORT()));
     QMetaObject::invokeMethod(m_tcpHandler, "startTimers");
-
     QMetaObject::invokeMethod(m_udpHandler, "startListening",
         Q_ARG(quint16, AppConfig::instance().UDP_PORT()));
-
-    QMetaObject::invokeMethod(m_ethHandler, "start");
+    // QMetaObject::invokeMethod(m_ethHandler, "start");
     m_ethTimer.start(1);
 }
-
 
 void NetworkManager::stop() {
     m_ethTimer.stop();

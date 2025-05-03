@@ -3,36 +3,27 @@
 
 #include <QObject>
 #include <QUdpSocket>
-#include "../messages/Message.h"
 #include "utils/time_provider/TimeProvider.h"
-#include "core/logger/Logger.h"
 
 class UdpHandler : public QObject {
     Q_OBJECT
+
 public:
     explicit UdpHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
-    ~UdpHandler();
-
-    QUdpSocket* m_socket_debug;
-
-public slots:
-    void startListening(quint16 port);
-    void stopListening();
-    void sendDatagram(const QHostAddress& address, quint16 port, const QByteArray& data);
-    void sendDatagramDebug(const QHostAddress& address, quint16 port, const QByteArray& data);
+    Q_INVOKABLE void initialize();
+    Q_INVOKABLE void startListening(quint16 port);
+    Q_INVOKABLE void stopListening();
 
 signals:
-    void datagramReceived(const Message& message);
-    void datagramReceivedDebug(const Message& message);
-    void errorOccurred(const QString& error);
+    void datagramReceived(const QByteArray& datagram);
 
 private slots:
     void onReadyRead();
-    void onReadyReadDebug();
 
 private:
     TimeProvider* m_timeProvider;
-    QUdpSocket* m_socket;
+    QUdpSocket* m_udpSocket = nullptr;
+    bool m_isBound = false;
 };
 
 #endif // UDPHANDLER_H

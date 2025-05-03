@@ -44,7 +44,6 @@ private slots:
     void handleRegistration();
 
 private:
-
     TimeProvider* m_timeProvider = nullptr;
     QTcpSocket* m_socket = nullptr;
     QTcpSocket* m_socketRMO = nullptr;

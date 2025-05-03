@@ -3,14 +3,12 @@
 
 #include <QObject>
 #include <QTimer>
-#include <QDebug>
 #include "handlers/TcpHandler.h"
 #include "handlers/UdpHandler.h"
 #include "handlers/EthHandler.h"
+#include "messages/EthMessage.h"
+#include "network/messages/Message.h"
 #include "utils/time_provider/TimeProvider.h"
-#include "core/logger/Logger.h"
-#include "utils/AppConfig.h"
-#include <math.h>
 
 class NetworkManager : public QObject {
     Q_OBJECT
@@ -31,8 +29,7 @@ public:
                                   double* C0, double* C1, double* C2);
     //----------------------------------------------------------
 
-
-public slots:
+	public slots:
     void onTcpReceived(const TcpHeader& msg);
     void onUdpReceived(const Message& msg);
     void onUdpReceivedDebug(const Message& msg);
