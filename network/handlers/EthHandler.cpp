@@ -16,6 +16,7 @@ EthHandler::EthHandler(QObject* parent)
     } else {
         strncpy(ifName, AppConfig::instance().ETH_INTERFACE_NAME().c_str(), IFNAMSIZ-1);
     }
+    qDebug() << "interfaceName =" << interfaceName;
 #endif
 }
 
@@ -201,7 +202,6 @@ void EthHandler::disconnectAdapter() {
     ethSocketID = -1;
 #endif
     m_adapterOpened = false;
-    Logger::instance().writeText("Ethernet адаптер отключен");
 }
 
 bool EthHandler::sendMessage(const QByteArray &data) {
@@ -211,9 +211,39 @@ bool EthHandler::sendMessage(const QByteArray &data) {
     qDebug("Ошибка при отправке Ethernet-пакета");
     return false;
 #else
-    if (ethSocketID == -1) return false;
-    ssize_t sent = send(ethSocketID, data.constData(), data.size(), 0);
-    return sent == data.size();
+    if (ethSocketID == -1) {
+            qDebug() << "Socket not initialized";
+            return false;
+        }
+
+        // Структура для указания интерфейса и адреса
+        struct sockaddr_ll socket_addr;
+        memset(&socket_addr, 0, sizeof(socket_addr));
+
+        // Получить индекс интерфейса
+        socket_addr.sll_family = AF_PACKET;
+        socket_addr.sll_ifindex = if_nametoindex(ifName);
+        socket_addr.sll_halen = ETH_ALEN;
+
+        // MAC-адрес получателя (если нужен конкретный)
+        // memcpy(socket_addr.sll_addr, dest_mac, ETH_ALEN);
+
+        // Отправка пакета
+        ssize_t sent = sendto(
+            ethSocketID,
+            data.constData(),
+            data.size(),
+            0,
+            (struct sockaddr*)&socket_addr,
+            sizeof(socket_addr)
+        );
+
+        if (sent == -1) {
+            perror("sendto");
+            return false;
+        }
+
+        return true;
 #endif
 }
 
@@ -232,12 +262,18 @@ void EthHandler::checkReceived() {
 #else
     if (ethSocketID == -1) return;
     const size_t buf_size = AppConfig::instance().ETH_SOCKET_BUF_SIZE();
-    QByteArray buf;
-    buf.resize(buf_size);
-    ssize_t length = 0;
-    while((length = recvfrom(ethSocketID, buf.data(), buf_size, 0, NULL, NULL)) > 0) {
-        emit messageReceived(buf.left(length));
+    char buf[buf_size];
+
+    // Чтение данных в статический буфер
+    ssize_t length = recvfrom(ethSocketID, buf, buf_size, MSG_DONTWAIT, NULL, NULL);
+    while(length > 0) {
+        // Создаем QByteArray из полученных данных
+        QByteArray packet(buf, length);
+        emit messageReceived(packet);
         QCoreApplication::processEvents();
+
+        // Читаем следующий пакет
+        length = recvfrom(ethSocketID, buf, buf_size, MSG_DONTWAIT, NULL, NULL);
     }
 #endif
 }

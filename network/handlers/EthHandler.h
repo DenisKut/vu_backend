@@ -17,6 +17,12 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <unistd.h>
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include <netinet/ether.h>
 #endif
 
 class EthHandler : public QObject {

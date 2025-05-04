@@ -22,8 +22,8 @@ void TcpHandler::initialize() {
     connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection);
     connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnected);
-    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::errorOccurred),
-            this, &TcpHandler::onError);
+//    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::errorOccurred),
+//            this, &TcpHandler::onError);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
 
     m_reconnectTimer->setInterval(1000);

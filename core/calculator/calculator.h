@@ -8,10 +8,13 @@ class Calculator : public QObject {
 public:
     Calculator();
 
-    // Целеуказание
-    struct newCU {
-        int numPPU; // Номер ППУ
-        int64_t time; // Время прихода ЦУ (системное)
+    struct Point {
+
+    };
+
+    // Параметры ЦУ
+    struct paramCU {
+        int64_t time;   // Время получения замера (системное)
 
         double az;      // Азимут
         double an;      // Угол места
@@ -27,6 +30,17 @@ public:
 
         // Информационные параметры (тип цели и т.д.)
     };
+
+    // Параметры ППУ
+    struct paramPPU {
+        int number;     // Номер ППУ
+        int64_t time;   // Время обновления координат от ППУ (системное)
+
+        paramCU m_paramCU;
+    };
+
+//    void getPoint(int64_t timePrev, int64_t timeNew
+//                  double);
 
 };
 
