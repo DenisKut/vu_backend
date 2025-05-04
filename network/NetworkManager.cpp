@@ -50,8 +50,17 @@ NetworkManager::NetworkManager(QObject* parent)
     });
 
     QMetaObject::invokeMethod(m_ethHandler, [this]() {
+#ifdef _WIN32
+        // В Windows - таймер опроса EthHandler::checkReceived
+        connect(&m_ethTimer, &QTimer::timeout, m_ethHandler, 
+			&EthHandler::checkReceived);
+        connect(m_ethHandler, SIGNAL(ethTimerReceiveRestart()), 
+			&m_ethTimer, SLOT(start()));
+#else
+        // В Linux - оставил обычный сигнал
         connect(m_ethHandler, &EthHandler::messageReceived,
                 this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
+#endif
     });
 }
 
@@ -76,7 +85,9 @@ void NetworkManager::start() {
     QMetaObject::invokeMethod(m_udpHandler, "start",
         Q_ARG(int, AppConfig::instance().UDP_PORT()));
     // QMetaObject::invokeMethod(m_ethHandler, "start");
-    m_ethTimer.start(1);
+	#ifdef _WIN32
+    	m_ethTimer.start(1);
+	#endif
 }
 
 void NetworkManager::stop() {
