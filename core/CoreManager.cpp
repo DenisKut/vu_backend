@@ -1,10 +1,9 @@
 // CoreManager.cpp
 #include "CoreManager.h"
 #include "network/NetworkManager.h"
-#include "utils/time_provider/TimeProvider.h"
 
 CoreManager::CoreManager(QObject* parent) : QObject(parent) {
-    m_networkManager = new NetworkManager(m_timeProvider, this);
+    m_networkManager = new NetworkManager(this);
 }
 
 void CoreManager::initialize() {

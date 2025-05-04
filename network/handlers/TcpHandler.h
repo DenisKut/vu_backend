@@ -13,7 +13,7 @@
 class TcpHandler : public QObject {
     Q_OBJECT
 public:
-    explicit TcpHandler(TimeProvider* timeProvider);
+    explicit TcpHandler(QObject* parent = nullptr);
     ~TcpHandler();
 
     void disconnect();
@@ -44,7 +44,6 @@ private slots:
     void handleRegistration();
 
 private:
-    TimeProvider* m_timeProvider = nullptr;
     QTcpSocket* m_socket = nullptr;
     QTcpSocket* m_socketRMO = nullptr;
     QTcpServer* m_serverRMO = nullptr;

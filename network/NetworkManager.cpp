@@ -1,15 +1,14 @@
 #include "NetworkManager.h"
 
-NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
+NetworkManager::NetworkManager(QObject* parent)
     : QObject(parent),
-      m_timeProvider(timeProvider),
-      m_tcpThread(new QThread(this)),
-      m_udpThread(new QThread(this)),
-      m_ethThread(new QThread(this)) {
-    m_tcpHandler = new TcpHandler(m_timeProvider);
-    m_udpHandler = new UdpHandler(m_timeProvider);
-    m_ethHandler = new EthHandler(m_timeProvider);
-
+    m_tcpHandler(new TcpHandler()),
+    m_udpHandler(new UdpHandler()),
+    m_ethHandler(new EthHandler()),
+    m_tcpThread(new QThread(this)),
+    m_udpThread(new QThread(this)),
+    m_ethThread(new QThread(this))
+{
     m_tcpHandler->moveToThread(m_tcpThread);
     m_udpHandler->moveToThread(m_udpThread);
     m_ethHandler->moveToThread(m_ethThread);

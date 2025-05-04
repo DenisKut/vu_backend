@@ -3,8 +3,8 @@
 #include "core/logger/Logger.h"
 #include "utils/AppConfig.h"
 
-EthHandler::EthHandler(TimeProvider* timeProvider, QObject* parent)
-    : QObject(parent), m_timeProvider(timeProvider), m_adapterOpened(false)
+EthHandler::EthHandler(QObject* parent)
+    : QObject(parent), m_adapterOpened(false)
 {
 #ifdef _WIN32
     pcapAllDevs = nullptr;

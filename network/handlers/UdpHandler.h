@@ -10,8 +10,7 @@
 class UdpHandler : public QObject {
     Q_OBJECT
 public:
-    explicit UdpHandler(TimeProvider* timeProvider,
-                        QObject* parent = nullptr);
+    explicit UdpHandler(QObject* parent = nullptr);
 
     ~UdpHandler();
 
@@ -31,7 +30,6 @@ public slots:
 private:
     void run();
 
-    TimeProvider* m_timeProvider;
     quint16 m_port;
     std::thread m_thread;
     std::atomic<bool> m_running;

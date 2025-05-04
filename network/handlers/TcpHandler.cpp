@@ -1,8 +1,7 @@
 #include "TcpHandler.h"
 #include <QHostAddress>
 
-TcpHandler::TcpHandler(TimeProvider* timeProvider)
-    : m_timeProvider(timeProvider){}
+TcpHandler::TcpHandler(QObject *parent):QObject(parent){}
 
 void TcpHandler::initialize() {
     m_socket = new QTcpSocket(); // Без родителя
@@ -306,7 +305,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
         }
         case PBU_MessageNumbers::TIMESTAMP: {
             auto msg_0x04 = reinterpret_cast<TcpMessage_0x04*>(parsed.get());
-            m_timeProvider->syncTimePBU(msg_0x04->timeRequest1,
+            TimeProvider::instance().syncTimePBU(msg_0x04->timeRequest1,
                                         msg_0x04->timeRequest2,
                                         msg_0x04->timeAnswer1,
                                         msg_0x04->timeAnswer2);

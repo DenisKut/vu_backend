@@ -6,14 +6,14 @@
 #include "handlers/TcpHandler.h"
 #include "handlers/UdpHandler.h"
 #include "handlers/EthHandler.h"
-#include "messages/EthMessage.h"
 #include "network/messages/Message.h"
-#include "utils/time_provider/TimeProvider.h"
+#include "network/messages/TcpMessage.h"
+#include "network/messages/EthMessage.h"
 
 class NetworkManager : public QObject {
     Q_OBJECT
 public:
-    explicit NetworkManager(TimeProvider* timeProvider, QObject* parent = nullptr);
+    explicit NetworkManager(QObject* parent = nullptr);
     ~NetworkManager();
 
     void start();
@@ -36,7 +36,6 @@ public:
     void onEthReceived(const QByteArray &msg);
 
 private:
-    TimeProvider* m_timeProvider;
     QTimer m_ethTimer;
 
     TcpHandler* m_tcpHandler;

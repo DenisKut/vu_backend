@@ -10,6 +10,9 @@ CONFIG += c++11 cmdline
 BIN_DIR = $$PWD/bin
 OBJECTS_DIR = $$PWD/objects
 
+# QMAKE_CXXFLAGS += -fsanitize=thread
+# QMAKE_LFLAGS += -fsanitize=thread
+
 # Настройка выходных директорий
 CONFIG(debug, debug|release) {
     DESTDIR = $$BIN_DIR/debug

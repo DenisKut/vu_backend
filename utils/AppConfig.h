@@ -1,4 +1,5 @@
 #pragma once
+#include "qmutex.h"
 #include "utils/env_loader/EnvLoader.h"
 #include <cstdint>
 #include <cmath>     // Для std::round
@@ -212,7 +213,10 @@ public:
     /// @name Параметры заголовков протоколов
     /// @{
     /// Идентификатор отправителя
-    uint32_t PBU_PROTO_HEAD_SENDER() const { return _pbuProtoHeadSender; }
+    uint32_t PBU_PROTO_HEAD_SENDER() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProtoHeadSender;
+    }
     /// @}
 
     /// @name Параметры протокола регистрации (0x01)
@@ -250,20 +254,34 @@ public:
     /// @name Заголовок TCP сообщений
     /// @{
     /// Индекс модуля
-    uint8_t PBU_PROTO_HEAD_IDX_MODULE() const { return _pbuProtoHeadIdxModule; }
+    uint8_t PBU_PROTO_HEAD_IDX_MODULE() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProtoHeadIdxModule;
+    }
     /// Установить индекс
     void SET_PBU_PROTO_HEAD_IDX_MODULE(uint8_t data) {
+        QMutexLocker lock(&m_mutex);
         _pbuProtoHeadIdxModule = data;
     }
 
     /// Номер пакета
-    uint16_t PBU_PROTO_HEAD_IDX_PACK() const { return _pbuProtoHeadIdxPack; }
+    uint16_t PBU_PROTO_HEAD_IDX_PACK() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProtoHeadIdxPack;
+    }
     /// Инкремент номера
-    void INCREMENT_PBU_PROTO_HEAD_IDX_PACK() { _pbuProtoHeadIdxPack++; }
+    void INCREMENT_PBU_PROTO_HEAD_IDX_PACK() {
+        QMutexLocker lock(&m_mutex);
+        _pbuProtoHeadIdxPack++;
+    }
     /// Флаг ПО АСКУ
-    uint8_t PBU_PROTO_HEAD_IS_ASKU() const { return _pbuProtoHeadIsAsku; }
+    uint8_t PBU_PROTO_HEAD_IS_ASKU() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProtoHeadIsAsku;
+    }
     /// Установить флаг
     void SET_PROTO_HEAD_IS_ASKU(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProtoHeadIsAsku = flag ? 1 : 0;
     }
     /// @}
@@ -271,7 +289,8 @@ public:
     /// @name Протокол регистрации (0x01)
     /// @{
     /// Флаг обработки информации
-    uint8_t PBU_PROTO_0X01_IS_INFO() const { return _pbuProto0x01IsInfo; }
+    uint8_t PBU_PROTO_0X01_IS_INFO() const {
+        return _pbuProto0x01IsInfo; }
     /// Установить флаг
     void SET_PBU_PROTO_0X01_IS_INFO(bool flag) {
         _pbuProto0x01IsInfo = flag ? 1 : 0;
@@ -288,7 +307,10 @@ public:
     /// @name Протокол геоданных (0x05)
     /// @{
     /// Тип данных позиционирования
-    uint8_t PBU_PROTO_0X05_TYPE_DATA() const { return _pbuProto0x05TypeData; }
+    uint8_t PBU_PROTO_0X05_TYPE_DATA() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x05TypeData;
+    }
 
     /**
      * @brief Установка типа данных позиционирования
@@ -296,6 +318,7 @@ public:
      * @throws std::invalid_argument При недопустимом значении
      */
     void SET_PBU_PROTO_0X05_TYPE_DATA(PBU_0x05_TypeData type) {
+        QMutexLocker lock(&m_mutex);
         uint8_t value = to_uint8(type);
         if (value != 1 && value != 2) {
             throw std::invalid_argument("Invalid PBU_0x05_TypeData value");
@@ -304,30 +327,40 @@ public:
     }
 
     /// Достоверность данных
-    uint8_t PBU_PROTO_0X05_IS_VALID() const { return _pbuProto0x05IsValid; }
+    uint8_t PBU_PROTO_0X05_IS_VALID() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x05IsValid;
+    }
     /// Установить достоверность
     void SET_PBU_PROTO_0X05_IS_VALID(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x05IsValid = flag ? 1 : 0;
     }
 
     float PBU_PROTO_0X05_X_LAT_GEO() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x05_X_lat_geo;
     }
     float PBU_PROTO_0X05_X_LAT_COORD() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x05_X_lat_coord;
     }
 
     float PBU_PROTO_0X05_Y_LONG_GEO() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x05_Y_long_geo;
     }
     float PBU_PROTO_0X05_Y_LONG_COORD() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x05_Y_long_coord;
     }
 
     float PBU_PROTO_0X05_Z_HEIGHT_GEO() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x05_Z_height_geo;
     }
     float PBU_PROTO_0X05_Z_HEIGHT_COORD() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x05_Z_height_coord;
     }
     /// @}
@@ -336,17 +369,21 @@ public:
     /// @{
     /// typePack последней полученной команды от ПБУ
     uint16_t PBU_PROTO_0X23_ID_COM() {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x23_IDCom;
     }
     void SET_PBU_PROTO_0X23_ID_COM(uint16_t message_num) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x23_IDCom = message_num;
     }
 
     /// Код выполнения команды ReceiptCodes
     uint16_t PBU_PROTO_0X23_CODE() {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x23_code;
     }
     void SET_PBU_PROTO_0X23_CODE(uint16_t code) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x23_code = code;
     }
     /// @}
@@ -355,86 +392,135 @@ public:
     /// @name Протокол Статуса модуля (0x24)
     /// @{
     /// Состояние модуля
-    uint8_t PBU_PROTO_0X24_STATUS() const { return _pbuProto0x24_status; }
+    uint8_t PBU_PROTO_0X24_STATUS() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_status;
+    }
+
     void SET_PBU_PROTO_0X24_STATUS(uint8_t data) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_status = data;
     }
 
     /// Статус работы
-    uint8_t PBU_PROTO_0X24_WORK() const { return _pbuProto0x24_work; }
+    uint8_t PBU_PROTO_0X24_WORK() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_work;
+    }
     void SET_PBU_PROTO_0X24_WORK(uint8_t data) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_work = data;
     }
 
     /// Признак включения РГДВ
-    uint8_t PBU_PROTO_0X24_IS_RGDV() const { return _pbuProto0x24_isRGDV; }
+    uint8_t PBU_PROTO_0X24_IS_RGDV() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_isRGDV;
+    }
     void SET_PBU_PROTO_0X24_IS_RGDV(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_isRGDV = flag ? 1 : 0;
     }
 
     /// Признак включения РАФ
-    uint8_t PBU_PROTO_0X24_IS_RAF() const { return _pbuProto0x24_isRAF; }
+    uint8_t PBU_PROTO_0X24_IS_RAF() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_isRAF;
+    }
     void SET_PBU_PROTO_0X24_IS_RAF(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_isRAF = flag ? 1 : 0;
     }
 
     /// Признак включения местного режима
-    uint8_t PBU_PROTO_0X24_IS_LOCAL() const { return _pbuProto0x24_isLocal; }
+    uint8_t PBU_PROTO_0X24_IS_LOCAL() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_isLocal;
+    }
     void SET_PBU_PROTO_0X24_IS_LOCAL(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_isLocal = flag ? 1 : 0;
     }
 
     /// Признак имитатора
-    uint8_t PBU_PROTO_0X24_IS_IMIT() const { return _pbuProto0x24_isImit; }
+    uint8_t PBU_PROTO_0X24_IS_IMIT() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_isImit;
+    }
     void SET_PBU_PROTO_0X24_IS_IMIT(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_isImit = flag ? 1 : 0;
     }
 
     /// Признак наличия транспортного положения
-    uint8_t PBU_PROTO_0X24_HAS_TP() const { return _pbuProto0x24_hasTP; }
+    uint8_t PBU_PROTO_0X24_HAS_TP() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_hasTP;
+    }
     void SET_PBU_PROTO_0X24_HAS_TP(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_hasTP = flag ? 1 : 0;
     }
 
     /// Признак нахождения в транспортном положении
-    uint8_t PBU_PROTO_0X24_IS_TP() const { return _pbuProto0x24_isTP; }
+    uint8_t PBU_PROTO_0X24_IS_TP() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_isTP;
+    }
     void SET_PBU_PROTO_0X24_IS_TP(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_isTP = flag ? 1 : 0;
     }
 
     /// Признак нахождения в РП
-    uint8_t PBU_PROTO_0X24_IS_WP() const { return _pbuProto0x24_isWP; }
+    uint8_t PBU_PROTO_0X24_IS_WP() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_isWP;
+    }
     void SET_PBU_PROTO_0X24_IS_WP(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_isWP = flag ? 1 : 0;
     }
 
     /// Признак достоверности флага ТП
     uint8_t PBU_PROTO_0X24_IS_TP_VALID() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x24_isTPValid;
     }
     void SET_PBU_PROTO_0X24_IS_TP_VALID(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_isTPValid = flag ? 1 : 0;
     }
 
     /// Признак достоверности флага РП
     uint8_t PBU_PROTO_0X24_IS_WP_VALID() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x24_isWPValid;
     }
     void SET_PBU_PROTO_0X24_IS_WP_VALID(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_isWPValid = flag ? 1 : 0;
     }
 
     /// Статус положения
     uint8_t PBU_PROTO_0X24_STATUS_TWP() const {
+        QMutexLocker lock(&m_mutex);
         return _pbuProto0x24_statusTWP;
     }
     void SET_PBU_PROTO_0X24_STATUS_TWP(bool flag) {
+        QMutexLocker lock(&m_mutex);
         _pbuProto0x24_statusTWP = flag ? 1 : 0;
     }
 
     /// Режим функционирования
-    uint16_t PBU_PROTO_0X24_MODE() const { return _pbuProto0x24_mode; }
-    void SET_PBU_PROTO_0X24_MODE(uint16_t data) { _pbuProto0x24_mode = data; }
+    uint16_t PBU_PROTO_0X24_MODE() const {
+        QMutexLocker lock(&m_mutex);
+        return _pbuProto0x24_mode;
+    }
+    void SET_PBU_PROTO_0X24_MODE(uint16_t data) {
+        QMutexLocker lock(&m_mutex);
+        _pbuProto0x24_mode = data;
+    }
     /// @}
 
     /// @name Параметры Ethernet-пакетов
@@ -662,47 +748,59 @@ public:
     /// @{
     /// Код последней полученной команды
     void setModulePPU_lastCommand(ModulePPU_num moduleNum, uint8_t value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->lastCommand = value;
     }
     /// Состояние
     void setModulePPU_state(ModulePPU_num moduleNum, uint8_t value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->state = value;
     }
     /// Исправность оборудования
     void setModulePPU_ispr(ModulePPU_num moduleNum, uint8_t value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->ispr = value;
     }
     /// Текущая координата по азимуту (65536/360 = 1 град)
     void setModulePPU_az(ModulePPU_num moduleNum, uint8_t *value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->az = from_anglePPU(value);
     }
     /// Задержка измерения координаты по азимуту (20 = 1 мс = 10000 тактов)
     void setModulePPU_azDelay(ModulePPU_num moduleNum, uint8_t value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->azDelay = to_uint64(value) * 500; // Преобразование в такты БС
     }
     /// Текущая координата по углу места (65536/360 = 1 град)
     void setModulePPU_an(ModulePPU_num moduleNum, uint8_t *value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->an = from_anglePPU(value);
     }
     /// Задержка измерения координаты по углу места (20 = 1 мс = 10000 тактов)
     void setModulePPU_anDelay(ModulePPU_num moduleNum, uint8_t value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->anDelay = to_uint64(value) * 500; // Преобразование в такты БС
     }
     /// Состояние границ
     void setModulePPU_borders(ModulePPU_num moduleNum, uint8_t value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->borders = value;
     }
     /// Время ожидания команд (1 = 5 мс = 50000 тактов)
     void setModulePPU_waitCommands(ModulePPU_num moduleNum, uint8_t value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->waitCommands = to_uint64(value) * 50000; // Преобразование в такты БС
     }
     /// Время ожидания ЦУ (1 = 5 мс = 50000 тактов)
     void setModulePPU_waitTarget(ModulePPU_num moduleNum, uint8_t value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->waitTarget = to_uint64(value) * 50000; // Преобразование в такты БС
     }
 
     /// Признак внешнего управления
-    void setModulePPU_isRemote(ModulePPU_num moduleNum, ModulePPU_isRemote value) {
+    void setModulePPU_isRemote(ModulePPU_num moduleNum,
+                               ModulePPU_isRemote value) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->isRemote = to_uint8(value);
     }
 
@@ -710,6 +808,7 @@ public:
     void setModulePPU_CU(ModulePPU_num moduleNum,
                          double azTarget,    double anTarget,
                          double azTargetVel, double anTargetVel) {
+        QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->azTarget = azTarget;
         ModulePPU_mas[moduleNum]->anTarget = anTarget;
         ModulePPU_mas[moduleNum]->azTargetVel = azTargetVel;
@@ -721,67 +820,82 @@ public:
     /// @{
     /// Код последней полученной команды
     uint8_t getModulePPU_lastCommand(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->lastCommand;
     }
     /// Состояние
     uint8_t getModulePPU_state(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->state;
     }
     /// Исправность оборудования
     uint8_t getModulePPU_ispr(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->ispr;
     }
     /// Текущая координата по азимуту (65536/360 = 1 град)
     double getModulePPU_az(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->az;
     }
     /// Задержка измерения координаты по азимуту (20 = 1 мс = 10000 тактов)
     uint64_t getModulePPU_azDelay(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->azDelay;
     }
     /// Текущая координата по углу места (65536/360 = 1 град)
     double getModulePPU_an(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->an;
     }
     /// Задержка измерения координаты по углу места (20 = 1 мс = 10000 тактов)
     uint64_t getModulePPU_anDelay(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->anDelay;
     }
     /// Состояние границ
     uint8_t getModulePPU_borders(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->borders;
     }
     /// Время ожидания команд (1 = 5 мс = 50000 тактов)
     uint64_t getModulePPU_waitCommands(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->waitCommands;
     }
     /// Время ожидания ЦУ (1 = 5 мс = 50000 тактов)
     uint64_t getModulePPU_waitTarget(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->waitTarget;
     }
 
     /// Признак внешнего управления
     uint8_t getModulePPU_isRemote(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->isRemote;
     }
 
     /// Координата ЦУ по азимуту
     double getModulePPU_azTarget(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->azTarget;
     }
 
     /// Координата ЦУ по углу места
     double getModulePPU_anTarget(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->anTarget;
     }
 
     /// Скорость ЦУ по азимуту
     double getModulePPU_azTargetVel(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->azTargetVel;
     }
 
     /// Скорость ЦУ по углу места
     double getModulePPU_anTargetVel(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->anTargetVel;
     }
     /// @}
@@ -790,6 +904,7 @@ public:
 private:
     AppConfig() = default; ///< Приватный конструктор
 
+    mutable QMutex m_mutex{QMutex::Recursive};
     /// @name Параметры сети
     /// @{
     std::string _tcpHostIP;         ///< IP адрес TCP сервера

@@ -23,7 +23,7 @@ class EthHandler : public QObject {
     Q_OBJECT
 
 public:
-    explicit EthHandler(TimeProvider* timeProvider, QObject* parent = nullptr);
+    explicit EthHandler(QObject* parent = nullptr);
     ~EthHandler();
 
     Q_INVOKABLE void initialize();
@@ -43,7 +43,6 @@ signals:
 #endif
 
 private:
-    TimeProvider* m_timeProvider;
     bool m_adapterOpened = false; // Новый флаг
 
 #ifdef _WIN32

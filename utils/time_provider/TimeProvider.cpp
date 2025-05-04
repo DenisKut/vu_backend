@@ -80,11 +80,13 @@ std::string TimeProvider::currentTimeString() {
 
 // Установить номер текущего периода БС:
 void TimeProvider::setBsPeriodNumber(const uint32_t value) {
+    QMutexLocker lock(&m_mutex);
     bsPeriodNumber = value;
 }
 
 // Установить время текущего приода БС:
 void TimeProvider::setBsPeriodTime(const uint8_t *value) {
+    QMutexLocker lock(&m_mutex);
 //    bsPeriodTime = from_timeBS(value);
     for (int i = 4; i >= 0; --i) { // Обратный порядок (Little-endian)
         bsPeriodTime = (bsPeriodTime << 8) | value[i];
@@ -94,83 +96,98 @@ void TimeProvider::setBsPeriodTime(const uint8_t *value) {
 
 // Установить значение периода синхронизации БС:
 void TimeProvider::setBsPeriodWidth(const uint32_t value) {
+    QMutexLocker lock(&m_mutex);
     bsPeriodWidth = value;
 }
 
 // Установить значение разницы во времени между ВУ и БС:
-void TimeProvider::setBsTimeDelta(const int64_t value)
-{
+void TimeProvider::setBsTimeDelta(const int64_t value) {
+    QMutexLocker lock(&m_mutex);
     bsTimeDelta = value;
 }
 
 // Установить значение времени БС по приходу сообщения 11.1:
-void TimeProvider::setBsTimePPU(const int64_t value)
-{
+void TimeProvider::setBsTimePPU(const int64_t value) {
+    QMutexLocker lock(&m_mutex);
     bsTimePPU = value;
 }
 
 // Получить номер текущего периода БС:
 uint32_t TimeProvider::getBsPeriodNumber() const {
+    QMutexLocker lock(&m_mutex);
     return bsPeriodNumber;
 }
 
 // Получить время текущего периода БС:
 int64_t TimeProvider::getBsPeriodTime() const {
+    QMutexLocker lock(&m_mutex);
     return bsPeriodTime;
 }
 
 // Получить значение периода синхронизации БС:
 int64_t TimeProvider::getBsPeriodWidth() const {
+    QMutexLocker lock(&m_mutex);
     return bsPeriodWidth;
 }
 
 // Получить значение разницы во времени между ВУ и БС:
 int64_t TimeProvider::getBsTimeDelta() const {
+    QMutexLocker lock(&m_mutex);
     return bsTimeDelta;
 }
 
 // Получить значение разницы во времени между предыдущим
 // сообщением 11.1 и текущим временем БС:
 int64_t TimeProvider::getBsDeltaPPU() const {
-    return getNs() / 100 - TimeProvider::instance().getBsTimeDelta() - bsTimePPU;
+    QMutexLocker lock(&m_mutex);
+    return getNs() / 100 - getBsTimeDelta() \
+           - bsTimePPU;
 }
 
 void TimeProvider::initTimes() {
+    QMutexLocker lock(&m_mutex);
     int64_t time_now = getMs();
-    TimeProvider::instance().setSysOnTimeReq(time_now);
-    TimeProvider::instance().setPbuTimeDelta(0);
-    TimeProvider::instance().setPbuTimeKorr(0);
+    setSysOnTimeReq(time_now);
+    setPbuTimeDelta(0);
+    setPbuTimeKorr(0);
 }
 
 void TimeProvider::setSysOnTimeReq(const int64_t time) {
+    QMutexLocker lock(&m_mutex);
     sysOnTimeReq = time;
 }
 
 void TimeProvider::setPbuTimeDelta(const int64_t time) {
+    QMutexLocker lock(&m_mutex);
     pbuTimeDelta = time;
 }
 
 void TimeProvider::setPbuTimeKorr(const int64_t time) {
+    QMutexLocker lock(&m_mutex);
     pbuTimeKorr = time;
 }
 
 int64_t TimeProvider::getSysOnTimeReq() const {
+    QMutexLocker lock(&m_mutex);
     return sysOnTimeReq;
 }
 
 int64_t TimeProvider::getPbuTimeDelta() const {
+    QMutexLocker lock(&m_mutex);
     return pbuTimeDelta;
 }
 
 int64_t TimeProvider::getPbuTimeKorr() const {
+    QMutexLocker lock(&m_mutex);
     return pbuTimeKorr;
 }
 
 // Синхронизировать время с БС:
 void TimeProvider::syncTimeBS() {
+    QMutexLocker lock(&m_mutex);
     int64_t timeDelta = getNs() / 100 -
-            TimeProvider::instance().getBsPeriodTime();
-    TimeProvider::instance().setBsTimeDelta(timeDelta);
+            getBsPeriodTime();
+    setBsTimeDelta(timeDelta);
 }
 
 // Синхронизировать время с ПБУ:
@@ -178,6 +195,7 @@ void TimeProvider::syncTimePBU(uint32_t timeRequest1,
                                uint32_t timeRequest2,
                                uint32_t timeAnswer1,
                                uint32_t timeAnswer2) {
+    QMutexLocker lock(&m_mutex);
 
     // Объединяем два 32-битных значения в 64-битное время
     int64_t timePBU = static_cast<int64_t>(
@@ -189,11 +207,11 @@ void TimeProvider::syncTimePBU(uint32_t timeRequest1,
 
     // Вычисляем коррекцию времени
     int64_t sys_time_now = getMs();
-    int64_t sys_time_req = TimeProvider::instance().getSysOnTimeReq();
+    int64_t sys_time_req = getSysOnTimeReq();
     int64_t _pbuTimeDelta = timePBU - sys_time_now;
     int64_t _pbuTimeKorr = sys_time_now - sys_time_req;
-    TimeProvider::instance().setPbuTimeDelta(_pbuTimeDelta);
-    TimeProvider::instance().setPbuTimeKorr(_pbuTimeKorr);
+    setPbuTimeDelta(_pbuTimeDelta);
+    setPbuTimeKorr(_pbuTimeKorr);
     qDebug() << "Delta time between VU and PBU ="
              << timePBU - timePBURequest << "ms";
 //    qDebug() << "pbuTimeDelta =" << _pbuTimeDelta;
@@ -202,10 +220,11 @@ void TimeProvider::syncTimePBU(uint32_t timeRequest1,
 
 // Запрос времени ПБУ для отправки сообщения на ПБУ
 uint64_t TimeProvider::getTimeForRequestPBU() {
+    QMutexLocker lock(&m_mutex);
     int64_t _sysOnTimeReq = getMs();
-    TimeProvider::instance().setSysOnTimeReq(_sysOnTimeReq);
-    int64_t _pbuTimeDelta = TimeProvider::instance().getPbuTimeDelta();
-    int64_t _pbuTimeKorr = TimeProvider::instance().getPbuTimeKorr();
+    setSysOnTimeReq(_sysOnTimeReq);
+    int64_t _pbuTimeDelta = getPbuTimeDelta();
+    int64_t _pbuTimeKorr = getPbuTimeKorr();
     uint64_t resultTime = static_cast<uint64_t>(
             _sysOnTimeReq + _pbuTimeDelta + _pbuTimeKorr
        );
@@ -218,7 +237,8 @@ uint64_t TimeProvider::getTimeForRequestPBU() {
 
 // Запрос времени БС для отправки сообщения на БС
 uint64_t TimeProvider::getTimeForRequestBS() {
+    QMutexLocker lock(&m_mutex);
     uint64_t _timeBS = static_cast<uint64_t>(getNs() / 100 -
-            TimeProvider::instance().getBsTimeDelta());
+            getBsTimeDelta());
     return _timeBS;
 }

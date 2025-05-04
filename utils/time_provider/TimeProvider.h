@@ -9,15 +9,16 @@
 // Для кроссплатформенности (Windows/Linux) используется библиотека <chrono>:
 #include <chrono>
 
+#include <QMutex>
 #include <sstream>
+
 
 class TimeProvider : public QObject {
     Q_OBJECT
 public:
-    // Удалить копирование и присваивание:
+    // Удаляем копирование и присваивание
     TimeProvider(const TimeProvider&) = delete;
     TimeProvider& operator=(const TimeProvider&) = delete;
-
     // Получить экземпляр синглтона:
     static TimeProvider& instance();
 
@@ -70,6 +71,8 @@ public:
     // Установить значение времени БС по приходу сообщения 11.1:
     void setBsTimePPU(const int64_t value);
 
+    int64_t getBsTimePPU() const;
+
     // Получить номер текущего периода БС:
     uint32_t getBsPeriodNumber() const;
 
@@ -108,6 +111,10 @@ private:
     // Приватный конструктор:
     TimeProvider() = default;
 
+    // QMutexLocker m_mutexLocker(QMutex&);
+
+    mutable QMutex m_mutex{QMutex::Recursive};
+
     // Переменные периода БС:
     //----------------------------------------------------------------------
     int32_t bsPeriodNumber = 0;     ///< Порядковый номер нового периода
@@ -120,7 +127,7 @@ private:
                                     ///< 11.1 от ППУ
     //----------------------------------------------------------------------
 
-    int64_t sysOnTimeReq;           ///< Время на момент отправки
+    int64_t sysOnTimeReq = 0;       ///< Время на момент отправки
                                     ///< пакета "Запрос времени"
                                     ///< (мс)
 
@@ -131,7 +138,5 @@ private:
                                     ///< временем ПБУ и нашим
                                     ///< системным временем (мс)
 };
-
-
 
 #endif // TIMEPROVIDER_H
