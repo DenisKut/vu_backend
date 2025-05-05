@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: nikit
+      POSTGRES_PASSWORD: admin000
+      POSTGRES_DB: vu_backend
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    ports:
+      - "5431:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:

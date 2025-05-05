@@ -1030,11 +1030,9 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
 
         QJsonArray powArray;
         if (powRangeVel) {
-            for (uint8_t i = 0; i < rangeCnt; ++i) {
+            for (uint8_t i = 0; i < rangeCnt*speedCnt; ++i) {
                 QJsonArray speedArray;
-                for (uint16_t j = 0; j < speedCnt; ++j) {
-                    speedArray.append(powRangeVel[i][j]);
-                }
+                speedArray.append(powRangeVel[i]);
                 powArray.append(speedArray);
             }
         }

@@ -1,0 +1,23 @@
+{
+    "db": {
+        "host": "localhost",
+        "port": 5432,
+        "name": "vu_backend",
+        "user": "nikit",
+        "password": "admin000"
+    },
+    "vu_settings": {
+        "tcp_host_ip": "127.0.0.1",
+        "tcp_host_port": 17001,
+        "udp_port": 54321,
+        "eth_socket_buf_size": 2048,
+        "eth_interface_name": "eth0"
+    },
+    "vu_settings_almaz": {
+        "tcp_host_ip": "37.29.39.245",
+        "tcp_host_port": 15001,
+        "udp_port": 54321,
+        "eth_socket_buf_size": 2048,
+        "eth_interface_name": "eth0"
+    }
+}
