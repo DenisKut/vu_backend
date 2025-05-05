@@ -139,38 +139,54 @@ void TcpHandler::onReadyReadRMO() {
 // Общая функция для обработки буферов
 template<typename F>
 void TcpHandler::processBuffer(QByteArray& buffer, F processFunc) {
-    while (true) {
-        // Проверяем минимальный размер заголовка
-        if (buffer.size() < static_cast<int>(sizeof(TcpHeader))) {
-            break;
-        }
+    int pos = 0;
+    const int minHeader = static_cast<int>(sizeof(TcpHeader));
+    const int maxPacket = 4096; // Максимальный допустимый размер пакета 
 
-        // Извлекаем заголовок
+    while (buffer.size() - pos >= minHeader) {
+        // 1. Пробуем прочитать заголовок с текущей позиции
         TcpHeader header;
-        memcpy(&header, buffer.constData(), sizeof(TcpHeader));
+        memcpy(&header, buffer.constData() + pos, minHeader);
 
-
-        // Проверка валидности заголовка
+        // 2. Проверяем контрольную сумму
         if (!header.isValid()) {
-            qWarning() << "Invalid header checksum. Discarding data.";
-            buffer.clear();
+            // Не валидный заголовок — сдвигаем окно поиска на 1 байт
+            ++pos;
+            continue;
+        }
+
+        // 3. Проверяем размер пакета
+        uint32_t fullMessageSize = minHeader + header.sizeData;
+        if (header.sizeData > maxPacket) {
+            // sizeData неадекватен — сдвигаем окно поиска на 1 байт
+            ++pos;
+            continue;
+        }
+
+        if (buffer.size() - pos < static_cast<int>(fullMessageSize)) {
+            // Ждём остальные байты
             break;
         }
 
-        // Проверка размера данных
-        const uint32_t fullMessageSize = sizeof(TcpHeader)
-                + header.sizeData;
-        if ((uint32_t)buffer.size() < fullMessageSize) {
-            break; // Ждем остальные данные
-        }
+        // 4. Всё ок — извлекаем пакет
+        QByteArray messageData = buffer.mid(pos, fullMessageSize);
 
-        // Извлекаем полное сообщение
-        QByteArray messageData = buffer.left(fullMessageSize);
-        buffer.remove(0, fullMessageSize);
-
-        // Передаем на обработку
+		// В processBuffer перед разбором:
+        qDebug() << "Buffer size:" << buffer.size()
+                 << "\n\tpos:" << pos << "\n";
+        qDebug() << "Header type:" << header.typePack
+                 << "\n\tsizeData:" << header.sizeData
+                 << "\n\tchecksum:" << header.checkSum
+                 << "\n\tisValid:" << header.isValid() << "\n";
         processFunc(messageData);
+
+        // 5. Сдвигаем позицию на размер пакета
+        pos += fullMessageSize;
     }
+
+    // 6. Удаляем обработанные байты из буфера
+    if (pos > 0)
+        buffer.remove(0, pos);
 }
 
 void TcpHandler::sendMessage(const QByteArray& data) {

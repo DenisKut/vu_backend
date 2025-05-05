@@ -1943,13 +1943,13 @@ struct TcpMessage_0x641 : TcpMessage<TcpMessage_0x641,
     float sigVr;                ///< @brief Ошибка скорости изменения дальности
                                 ///< объекта (м/с)
 
-    uint32_t numBPLA;           ///< @brief Серийный номер перехватчика
-                                ///< @details В данном поле передается серийный
-                                ///< номер перехватчика
-                                ///< @warning Если в поле "Тип целеуказания"
-                                ///< указан признак перехватчика (при любом
-                                ///< другом признаке поле Серийный номер
-                                ///< перехватчика игнорируется).
+    // uint32_t numBPLA;           ///< @brief Серийный номер перехватчика
+    //                             ///< @details В данном поле передается серийный
+    //                             ///< номер перехватчика
+    //                             ///< @warning Если в поле "Тип целеуказания"
+    //                             ///< указан признак перехватчика (при любом
+    //                             ///< другом признаке поле Серийный номер
+    //                             ///< перехватчика игнорируется).
     /**
      * @note В ответ на данную команду ПО модуля должно отправить квитанцию
      * (сообщение 0х23) либо расширенную квитанцию (сообщение 0х27) о выполнении
@@ -2005,16 +2005,16 @@ struct TcpMessage_0x641 : TcpMessage<TcpMessage_0x641,
             << "    Elevation Velocity: " << sigVElev << "°/s\n"
             << "    Radial Velocity: " << sigVr << " m/s";
 
-        if (typeCeil == 2) {
-            oss << "\n  BPLA Serial Number: " << numBPLA;
-        }
+        // if (typeCeil == 2) {
+        //     oss << "\n  BPLA Serial Number: " << numBPLA;
+        // }
 
         return oss.str();
     }
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TcpMessage_0x641) == 16 + 64,
+static_assert(sizeof(TcpMessage_0x641) == 16 + 60,
               "Invalid size [TcpMessage_0x641]");
 
 // -----------------------------------------
