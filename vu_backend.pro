@@ -38,6 +38,7 @@ QMAKE_DISTCLEAN += $$QMAKE_CLEAN
 # Общие для всех платформ настройки
 SOURCES += \
     main.cpp \
+    pch.cpp \
     core/CoreManager.cpp \
     core/logger/Logger.cpp \
     network/NetworkManager.cpp \

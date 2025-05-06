@@ -2,8 +2,15 @@ CREATE TABLE IF NOT EXISTS log_headers (
     id SERIAL PRIMARY KEY,
     src TEXT NOT NULL,
     timestamp_micro BIGINT NOT NULL,
-    timestamp_milli BIGINT NOT NULL,
-    log_level TEXT NOT NULL CHECK (log_level IN ('TRACE', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL', 'MESSAGESENT', 'MESSAGERECEIVED'))
+    date DATE NOT NULL,
+    hrs SMALLINT NOT NULL CHECK (hrs BETWEEN 0 AND 23),
+    minutes SMALLINT NOT NULL CHECK (minutes BETWEEN 0 AND 59),
+    seconds SMALLINT NOT NULL CHECK (seconds BETWEEN 0 AND 59),
+    msec SMALLINT NOT NULL CHECK (msec BETWEEN 0 AND 999),
+    mksec INTEGER NOT NULL CHECK (mksec BETWEEN 0 AND 999999),
+    log_level TEXT NOT NULL CHECK (log_level IN (
+        'TRACE', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL', 'MESSAGESENT', 'MESSAGERECEIVED'
+    ))
 );
 
 CREATE TABLE IF NOT EXISTS init_logs (

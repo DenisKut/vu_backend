@@ -43,7 +43,7 @@ void NetworkManager::start() {
 #endif
     m_ethHandler.start();
     m_ethTimer.start(1);
-    LOG_INIT(typeid(this).name(), StatusInit::LOADED);
+    LOG_INIT(CLASS_NAME, StatusInit::LOADED);
 }
 
 void NetworkManager::stop() {
@@ -51,7 +51,7 @@ void NetworkManager::stop() {
     m_tcpHandler.disconnect();
     m_udpHandler.stopListening();
     m_ethHandler.disconnectAdapter();
-    LOG_INTERNAL(typeid(this).name(), "NetworkManager. останов.", "");
+    LOG_INTERNAL(CLASS_NAME, "NetworkManager. останов.", "");
 }
 
 
@@ -112,7 +112,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 qDebug() << "periodWidth =" << TO_HEX_STR(&msgBS_SYNC->periodWidth, 4);             // Значение периода синхронизации
                 qDebug() << "--------------------------------------------";
 
-                LOG(ProtocolMessageLog(typeid(this).name(), LogLevel::MessageReceived,Protocol::RAW_MAC, msg, 
+                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,Protocol::RAW_MAC, msg, 
                 Logger::jobj_toString(msgBS_SYNC->to_json())));
             }
         }
@@ -183,7 +183,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 qDebug() << "waitCommands =" << TO_HEX_STR(&msgPPU_POSITION->waitCommands, 1);      // Время ожидания команд, мс
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);          // Время ожидания целеуказаний, мс
                 qDebug() << "--------------------------------------------";
-                LOG(ProtocolMessageLog(typeid(this).name(), LogLevel::MessageReceived, Protocol::RAW_MAC,
+                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC,
                     msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
                 // Отладочный вывод параметров ППУ
                 qDebug() << "PPU";
@@ -370,7 +370,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                         qDebug() << "Sending message to move the PPU:";
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
                         m_ethHandler.sendMessage(data);
-                        LOG(ProtocolMessageLog(typeid(this).name(), LogLevel::MessageSent, Protocol::RAW_MAC, 
+                        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, 
                         data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
                     }
                 }
@@ -383,7 +383,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                     qDebug() << "Sending message to turn on the PPU:";
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
                     m_ethHandler.sendMessage(data);
-                    LOG(ProtocolMessageLog(typeid(this).name(), LogLevel::MessageSent, Protocol::RAW_MAC, 
+                    LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, 
                     data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
                 }
             }

@@ -11,6 +11,6 @@ void CoreManager::initialize() {
         m_networkManager->start(); // Запуск сетевого модуля
     }
     catch (...){
-        LOG_INIT(typeid(this).name(), StatusInit::NOT_LOADED__ERROR_CRITICAL);
+        LOG_INIT(CLASS_NAME, StatusInit::NOT_LOADED__ERROR_CRITICAL);
     }
 }

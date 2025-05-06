@@ -24,12 +24,12 @@
  * @def LOG(logObject)
  * @brief Универсальный макрос для логирования
  * @param logObject Допустимые типы: InitLog, InternalMessageLog, ProtocolMessageLog
- * @example LOG(InitLog(typeid(this).name(), StatusInit::LOADED))
- * @example LOG(InitLog(typeid(this).name(), LogLevel::Info, StatusInit::LOADED))
- * @example LOG(InternalMessageLog(typeid(this).name(), "message type", "payloadPart Here"))
- * @example LOG(InternalMessageLog(typeid(this).name(), LogLevel::Info,  "message type", "payloadPart Here"))
- * @example LOG(ProtocolMessageLog(typeid(this).name(), Protocol::TCP, QByteArray, "{json_data}"))
- * @example LOG(ProtocolMessageLog(typeid(this).name(), LogLevel::Info, Protocol::TCP, QByteArray, "{json_data}"))
+ * @example LOG(InitLog(CLASS_NAME, StatusInit::LOADED))
+ * @example LOG(InitLog(CLASS_NAME, LogLevel::Info, StatusInit::LOADED))
+ * @example LOG(InternalMessageLog(CLASS_NAME, "message type", "payloadPart Here"))
+ * @example LOG(InternalMessageLog(CLASS_NAME, LogLevel::Info,  "message type", "payloadPart Here"))
+ * @example LOG(ProtocolMessageLog(CLASS_NAME, Protocol::TCP, QByteArray, "{json_data}"))
+ * @example LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::Info, Protocol::TCP, QByteArray, "{json_data}"))
  */
 #define LOG(logObject) Logger::instance().log(logObject)
 
@@ -40,8 +40,8 @@
  * @param ... Варианты:
  *   - StatusInit status                      : статус инициализации \n
  *   - LogLevel level, StatusInit status     : уровень при логировании сбщ. и статус
- * @example LOG_INIT(typeid(this).name(), StatusInit::LOADED)
- * @example LOG_INIT(typeid(this).name(), LogLevel::Info, StatusInit::NOT_LOADED)
+ * @example LOG_INIT(CLASS_NAME, StatusInit::LOADED)
+ * @example LOG_INIT(CLASS_NAME, LogLevel::Info, StatusInit::NOT_LOADED)
  */
 #define LOG_INIT(source, ...) \
     Logger::instance().log(InitLog(source, ##__VA_ARGS__))
@@ -53,8 +53,8 @@
  * @param ... Варианты:
  *   - QString parsed       : парсированные данные \n
  *   - LogLevel level, QString parsed : с указанием уровня
- * @example LOG_INTERNAL(typeid(this).name(), "заголовок, или тип сообщения" ,"структура, обработанная через toJSON")
- * @example LOG_INTERNAL(typeid(this).name(), LogLevel::Debug, "заголовок, или тип сообщения", "структура, обработанная через toJSON")
+ * @example LOG_INTERNAL(CLASS_NAME, "заголовок, или тип сообщения" ,"структура, обработанная через toJSON")
+ * @example LOG_INTERNAL(CLASS_NAME, LogLevel::Debug, "заголовок, или тип сообщения", "структура, обработанная через toJSON")
  */
 #define LOG_INTERNAL(source, ...) \
     Logger::instance().log(InternalMessageLog(source, ##__VA_ARGS__))
@@ -66,11 +66,20 @@
  * @param ... Варианты:
  *   - QString protocol, QByteArray rawData, QString jsonData      : тип протокола, сырые данные, данные в ф-те json \n
  *   - LogLevel level, QString protocol, QByteArray rawData, QString jsonData    : с указанием уровня
- * @example LOG_PROTOCOL(typeid(this).name(), "TCP", "HEX DATA", "JSON data")
- * @example LOG_PROTOCOL(typeid(this).name(), LogLevel::Info, "MAC", "HEX DATA", "JSON data")
+ * @example LOG_PROTOCOL(CLASS_NAME, "TCP", "HEX DATA", "JSON data")
+ * @example LOG_PROTOCOL(CLASS_NAME, LogLevel::Info, "MAC", "HEX DATA", "JSON data")
  */
 #define LOG_PROTOCOL(source, ...) \
     Logger::instance().log(ProtocolMessageLog(source, ##__VA_ARGS__))
+
+
+
+namespace Utils {
+    QString demangleClassName(const char* name);
+}
+
+#define CLASS_NAME Utils::demangleClassName(typeid(*this).name())
+
 
 
 #endif

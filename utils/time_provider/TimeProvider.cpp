@@ -167,3 +167,29 @@ uint64_t TimeProvider::getTimeForRequest() {
        );
     return resultTime;
 }
+
+TimeProvider::HumanReadableTimestamp TimeProvider::to_HR_Fmt(uint64_t timestamp)
+{
+    using namespace std::chrono;
+    HumanReadableTimestamp timeInfo;
+
+    auto duration = microseconds(timestamp);
+    system_clock::time_point tp(duration);
+
+    auto tp_seconds = time_point_cast<seconds>(tp);
+    auto subseconds = duration_cast<microseconds>(tp - tp_seconds);
+
+    time_t time = system_clock::to_time_t(tp_seconds);
+    std::tm tm = *std::localtime(&time);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d");
+    timeInfo.data = QString::fromStdString(oss.str());
+
+    timeInfo.hrs = static_cast<u_char>(tm.tm_hour);
+    timeInfo.minutes = static_cast<u_char>(tm.tm_min);
+    timeInfo.sec = static_cast<u_char>(tm.tm_sec);
+    timeInfo.m_sec = static_cast<u_short>(subseconds.count() / 1000);
+    timeInfo.mk_sec = static_cast<u_short>(subseconds.count());
+    return timeInfo;
+}

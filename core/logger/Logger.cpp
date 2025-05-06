@@ -118,15 +118,15 @@ void Logger::initialize(const QString& connectionString) {
 
 
     if (statusQueryExecution){
-        LOG_INIT(typeid(this).name(), StatusInit::LOADED);
+        LOG_INIT(CLASS_NAME, StatusInit::LOADED);
     }else
         qCritical()<< "CRITICAL!!! ONE OR MORE TABLES NOT CREATED";
 
     #ifdef QT_DEBUG
-        //log(InternalMessageLog(typeid(this).name(), "orig", "processed"));
-        //LOG_INTERNAL(typeid(this).name(), LogLevel::Debug, "orig1", "processed1");
-        //log(ProtocolMessageLog(typeid(this).name(), "UDP", "orig"));
-        //LOG_PROTOCOL(typeid(this).name(), "MAC", "RAW");
+        //log(InternalMessageLog(CLASS_NAME, "orig", "processed"));
+        //LOG_INTERNAL(CLASS_NAME, LogLevel::Debug, "orig1", "processed1");
+        //log(ProtocolMessageLog(CLASS_NAME, "UDP", "orig"));
+        //LOG_PROTOCOL(CLASS_NAME, "MAC", "RAW");
     #endif
     start();
 }

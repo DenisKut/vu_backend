@@ -17,7 +17,7 @@ bool EnvLoader::load() {
 
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << "Failed to open .env file:" << file.errorString() << "| Path:" << _path;
-        LOG_INIT(typeid(this).name(), StatusInit::NOT_LOADED__ERROR_CRITICAL);
+        LOG_INIT(CLASS_NAME, StatusInit::NOT_LOADED__ERROR_CRITICAL);
         return false;
     }
 
@@ -39,7 +39,7 @@ bool EnvLoader::load() {
 
         _variables.insert(key, value);
     }
-    LOG_INIT(typeid(this).name(), StatusInit::LOADED);
+    LOG_INIT(CLASS_NAME, StatusInit::LOADED);
     file.close();
 
     return true;

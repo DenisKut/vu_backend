@@ -23,7 +23,6 @@
 #include <QJsonDocument>
 
 
-
 // FLAGS AND MARKS
 //-------------------------------------------------------------------
 
@@ -109,7 +108,6 @@ QString inline protocolToString(Protocol proto) {
 struct LogHeader {
     qint64 timestampMicroseconds; ///< Время в микросекундах.
     QString src;                  ///< Источник сообщения.
-    qint64 timestampMilliseconds; ///< Время в миллисекундах. Уникальный признак сообщения, сродни ID
     LogLevel level;              ///< Уровень важности
 
     /**
@@ -120,9 +118,9 @@ struct LogHeader {
      */
     LogHeader(const QString& source,
               const LogLevel& logLevel)
-        : timestampMicroseconds(TimeProvider::instance().getMks()),
+        : 
+        timestampMicroseconds(TimeProvider::instance().getMks()),
         src(source),
-        timestampMilliseconds(TimeProvider::instance().getMs()),
         level(logLevel)
     {}
 };
@@ -360,17 +358,24 @@ private:
     */
     void flushBuffer();
 
-    QString bakeQuery(const LogHeader& logHead) {
-        return QString("INSERT INTO log_headers "
-                       "(src, timestamp_micro, timestamp_milli, log_level) "
-                       "VALUES ('%1', %2, %3, '%4') RETURNING id")
+    QString bakeQuery(const LogHeader &logHead)
+    {
+        const TimeProvider::HumanReadableTimestamp ts = TimeProvider::instance().to_HR_Fmt(logHead.timestampMicroseconds);
+
+        return QString(
+                   "INSERT INTO log_headers "
+                   "(src, timestamp_micro, date, hrs, minutes, seconds, msec, mksec, log_level) "
+                   "VALUES ('%1', %2, '%3', %4, %5, %6, %7, %8, '%9') RETURNING id")
             .arg(logHead.src)
             .arg(logHead.timestampMicroseconds)
-            .arg(logHead.timestampMilliseconds)
+            .arg(ts.data)
+            .arg(ts.hrs)
+            .arg(ts.minutes)
+            .arg(ts.sec)
+            .arg(ts.m_sec)
+            .arg(ts.mk_sec)
             .arg(logLevelToString(logHead.level).toUpper());
     }
-
-
 
     QSqlDatabase m_db; ///< Подключение к базе данных.
     QMutex m_mutex; ///< Мьютекс для синхронизации.

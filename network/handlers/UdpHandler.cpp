@@ -17,7 +17,7 @@ void UdpHandler::startListening(quint16 port) {
     if (m_socket->state() != QAbstractSocket::BoundState) {
         if (!m_socket->bind(port, QUdpSocket::ShareAddress)) {
             emit errorOccurred(m_socket->errorString());
-            LOG_INTERNAL(typeid(this).name(), "UDP SOCKET", 
+            LOG_INTERNAL(CLASS_NAME, "UDP SOCKET", 
             "ERROR OCCCURED. DETAILS LISTED BELOW:\n"+ m_socket->errorString());
         }
     }
@@ -26,7 +26,7 @@ void UdpHandler::startListening(quint16 port) {
 void UdpHandler::stopListening() {
     if (m_socket->state() == QAbstractSocket::BoundState) {
         m_socket->close();
-        LOG_INTERNAL(typeid(this).name(), "UDP SOCKET", "сокет закрыт.");
+        LOG_INTERNAL(CLASS_NAME, "UDP SOCKET", "сокет закрыт.");
     }
 }
 
@@ -38,11 +38,11 @@ void UdpHandler::onReadyRead() {
     while (m_socket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = m_socket->receiveDatagram();
         Message msg;
-        //LOG(ProtocolMessageLog(typeid(this).name(), Protocol::UDP, ));
+        //LOG(ProtocolMessageLog(CLASS_NAME, Protocol::UDP, ));
         //msg.timestamp = m_timeProvider->currentTimestamp();
         msg.payload = datagram.data();
         emit datagramReceived(msg);
-        LOG_INTERNAL(typeid(this).name(), "UDP SOCKET", "получена дейтаграмма,"
+        LOG_INTERNAL(CLASS_NAME, "UDP SOCKET", "получена дейтаграмма,"
                                                         "но не описано с ней взаимодействие");
     }
 }

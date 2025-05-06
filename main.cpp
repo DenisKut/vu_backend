@@ -30,6 +30,17 @@ int main(int argc, char* argv[]) {
 
     QCoreApplication a(argc, argv);
 
+    // Инициализация Логгера (обязательно, иначе Логгер не запустится)
+    QString connectionString = QString("host=%1 port=%2 dbname=%3 user=%4 password=%5")
+                                   .arg(appSettings().value("database/host").toString())
+                                   .arg(appSettings().value("database/port").toString())
+                                   .arg(appSettings().value("database/db_name").toString())
+                                   .arg(appSettings().value("database/user").toString())
+                                   .arg(appSettings().value("database/password").toString());
+
+    Logger::instance().initialize(connectionString);
+
+
     // Путь к .env
     QString envPath = QCoreApplication::applicationDirPath() + "/.env";
     envPath = QDir::toNativeSeparators(envPath);
@@ -64,15 +75,7 @@ int main(int argc, char* argv[]) {
     qDebug().noquote() << "MAC Source:" << Qt::hex
                        << AppConfig::instance().ETH_PROTO_MAC_SRC();
 
-    // Инициализация Логгера (обязательно, иначе Логгер не запустится)
-    QString connectionString = QString("host=%1 port=%2 dbname=%3 user=%4 password=%5")
-                                   .arg(appSettings().value("database/host").toString())
-                                   .arg(appSettings().value("database/port").toString())
-                                   .arg(appSettings().value("database/db_name").toString())
-                                   .arg(appSettings().value("database/user").toString())
-                                   .arg(appSettings().value("database/password").toString());
 
-    Logger::instance().initialize(connectionString);
 
 
     // Запуск ядра приложения

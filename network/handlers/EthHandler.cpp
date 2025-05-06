@@ -19,7 +19,7 @@ EthHandler::EthHandler(TimeProvider* timeProvider, QObject* parent)
         strcpy(ifName, interfaceName.toStdString().c_str());
     } else {
         qDebug() << "Интерфейс не найден";
-        LOG_INTERNAL(typeid(this).name(), "MAC SOCKET", "сетевой интерфейс не найден");
+        LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "сетевой интерфейс не найден");
 
         strcpy(ifName, appSettings().value("iface_info/eth_interface_name").toString().toUtf8().constData());
     }
@@ -135,7 +135,7 @@ void EthHandler::connectAdapter()
                                ) ) == nullptr)
     {
         qDebug() << "Failed to open pcapTx";
-        LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET"."WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
         // Free the device list
         return;
     }
@@ -144,7 +144,7 @@ void EthHandler::connectAdapter()
 //        emit adapterUpdatePM(pcapTx);  // Обновить указатель на адаптер для менеджера пакетов
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapTx";
-        LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET"."WINPCAP; pcapTx открыт"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; pcapTx открыт"));
     }
 
     pcap_setbuff(pcapTx, 160*1024*1024);
@@ -164,7 +164,7 @@ void EthHandler::connectAdapter()
                                ) ) == nullptr)
     {
         qDebug() << "Failed to open pcapRx";
-        LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET"."WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
         // Free the device list
         return;
     }
@@ -172,7 +172,7 @@ void EthHandler::connectAdapter()
     {
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapRx";
-        LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET"."WINPCAP; pcapTx открыт"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; pcapTx открыт"));
         // Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
     }
 
@@ -195,7 +195,7 @@ void EthHandler::connectAdapter()
     strAdapterNames.append(ds);
 
     qDebug() << QString("Opened Ethernet adapter: %1").arg(strAdapterNames.at(0));
-    LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET"."WINPCAP; " + 
+    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; " + 
     QString("Подключен Ethernet адаптер: %1").arg(strAdapterNames.at(0))));
 #else
     // ETH_P_ALL                - принимать пакеты с любым ether type
@@ -209,7 +209,7 @@ void EthHandler::connectAdapter()
     //if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(etherType))) == -1) {
     if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(0x2020))) == -1) {
         perror("socket");
-        LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET", "ОШИБКА: EthHandler::connectAdapter() - socket"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", "ОШИБКА: EthHandler::connectAdapter() - socket"));
     }
 
     struct ifreq ifopts;
@@ -220,13 +220,13 @@ void EthHandler::connectAdapter()
 
     if (setsockopt(ethSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
         perror("SO_BINDTODEVICE");
-        LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET", 
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", 
         "ОШИБКА : EthHandler::connectAdapter() - SO_BINDTODEVICE "));
         close(ethSocketID);
     }
 
     qDebug() << "Starting capture on interface" << ifName << "...\n";
-    LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET", QString("Подключен Ethernet адаптер: %1").arg(ifName)));
+    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", QString("Подключен Ethernet адаптер: %1").arg(ifName)));
 
     // Создание SocketNotifier
     m_notifier = new QSocketNotifier(ethSocketID, QSocketNotifier::Read, this);
@@ -258,7 +258,7 @@ bool EthHandler::sendMessage(const QByteArray &data)
     if (pcap_sendpacket(pcapTx, reinterpret_cast<const u_char*>(data.data()), data.size()) != 0)
     {
         qDebug("Ошибка при отправке Ethernet-пакета");
-        LOG(InternalMessageLog(typeid(this).name(), "MAC SOCKET",
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET",
                                "WIN32; Ошибка при отправке Ethernet-пакета"));
         return false;
     }
@@ -296,7 +296,7 @@ void EthHandler::checkReceived()
             
             // Отправка данных в NetworkManager для разбора:
             QByteArray msg = QByteArray(reinterpret_cast<const char*>(data), length);
-            LOG(ProtocolMessageLog(typeid(this).name(), Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(length)));
+            LOG(ProtocolMessageLog(CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(length)));
             emit messageReceived(msg);
         }
     }
@@ -318,7 +318,7 @@ void EthHandler::checkReceived()
 
         // Отправка данных в NetworkManager для разбора:
         QByteArray msg = QByteArray(reinterpret_cast<const char*>(buf), length);
-        LOG(ProtocolMessageLog(typeid(this).name(), Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(length)));
+        LOG(ProtocolMessageLog(CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(length)));
         emit messageReceived(msg);
     }
     free(buf);
