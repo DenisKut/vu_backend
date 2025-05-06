@@ -9,14 +9,6 @@ NetworkManager::NetworkManager(QObject* parent)
     m_udpThread(new QThread(this)),
     m_ethThread(new QThread(this))
 {
-    m_tcpHandler->moveToThread(m_tcpThread);
-    m_udpHandler->moveToThread(m_udpThread);
-    m_ethHandler->moveToThread(m_ethThread);
-
-    QMetaObject::invokeMethod(m_tcpHandler, "initialize", Qt::QueuedConnection);
-    // QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
-    QMetaObject::invokeMethod(m_ethHandler, "initialize", Qt::QueuedConnection);
-
     m_tcpThread->start();
     m_udpThread->start();
     m_ethThread->start();
@@ -27,6 +19,15 @@ NetworkManager::NetworkManager(QObject* parent)
         m_ethThread->setPriority(QThread::TimeCriticalPriority);
     if(m_udpThread->isRunning())
         m_udpThread->setPriority(QThread::HighPriority);
+
+    m_tcpHandler->moveToThread(m_tcpThread);
+    m_udpHandler->moveToThread(m_udpThread);
+    m_ethHandler->moveToThread(m_ethThread);
+
+    QMetaObject::invokeMethod(m_tcpHandler, "initialize", Qt::QueuedConnection);
+    // QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(m_ethHandler, "initialize", Qt::QueuedConnection);
+
 
     QMetaObject::invokeMethod(m_tcpHandler, [this]() {
         connect(m_tcpHandler, &TcpHandler::messageReceived,

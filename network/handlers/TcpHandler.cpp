@@ -1,47 +1,57 @@
 #include "TcpHandler.h"
 #include <QHostAddress>
+// #include <QJsonDocument>
+// #include <QJsonObject>
 
 TcpHandler::TcpHandler(QObject *parent):QObject(parent){}
 
 void TcpHandler::initialize() {
-    m_socket = new QTcpSocket(); // Без родителя
-    m_serverRMO = new QTcpServer();
+    m_socket = new QTcpSocket(this); // Привязываем к текущему потоку
+    m_serverRMO = new QTcpServer(this); // Привязываем к текущему потоку
     m_registrationTimer = new QTimer();
     m_periodicTimer = new QTimer();
     m_reconnectTimer = new QTimer();
 
+    // WebSocket сервер
+    m_wsServer = new QWebSocketServer(QStringLiteral("RMO WebSocket Server"),
+                                      QWebSocketServer::NonSecureMode, this);
+
     Q_ASSERT_X(m_socket, "TcpHandler", "Failed to create TCP socket");
     Q_ASSERT_X(m_serverRMO, "TcpHandler", "Failed to create TCP server");
+    Q_ASSERT_X(m_wsServer, "TcpHandler", "Failed to create WebSocket server");
 
     m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
     if (!initServer()) {
         qFatal("Failed to initialize TCP server");
     }
+    if (!initWebSocketServer()) {
+        qWarning() << "WebSocket server not started";
+    }
 
     connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection);
     connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnected);
-//    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::errorOccurred),
-//            this, &TcpHandler::onError);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
 
     m_reconnectTimer->setInterval(1000);
     connect(m_reconnectTimer, &QTimer::timeout, this, &TcpHandler::reconnect);
 
-    connect(m_registrationTimer, &QTimer::timeout, this,
-                &TcpHandler::handleRegistration);
-    connect(m_periodicTimer, &QTimer::timeout, this,
-                &TcpHandler::sendPeriodicMessages);
+    connect(m_registrationTimer, &QTimer::timeout, this, &TcpHandler::handleRegistration);
+    connect(m_periodicTimer, &QTimer::timeout, this, &TcpHandler::sendPeriodicMessages);
+    // connect(m_socket, &QTcpSocket::errorOccurred, this, &TcpHandler::onError);
+    connect(m_wsServer, &QWebSocketServer::newConnection, this, &TcpHandler::onWebSocketNewConnection);
 }
 
 TcpHandler::~TcpHandler() {
     disconnect();
-    delete m_socket;        // Освобождение памяти
+    delete m_socket;
     delete m_serverRMO;
     delete m_registrationTimer;
     delete m_periodicTimer;
     delete m_reconnectTimer;
+    delete m_wsServer;
+    // Клиенты удаляются автоматически через deleteLater()
 }
 
 void TcpHandler::startTimers() {
@@ -54,19 +64,25 @@ void TcpHandler::stopTimers() {
     m_reconnectTimer->stop();
 }
 
-
 bool TcpHandler::initServer() {
     constexpr quint16 startPort = 23456;
     constexpr quint16 maxAttempts = 10;
-
     for (quint16 port = startPort; port < startPort + maxAttempts; ++port) {
         if (m_serverRMO->listen(QHostAddress::Any, port)) {
             qInfo() << "TCP server started on port" << port;
             return true;
         }
     }
-    qCritical() << "Failed to start TCP server after"
-                << maxAttempts << "attempts";
+    qCritical() << "Failed to start TCP server after" << maxAttempts << "attempts";
+    return false;
+}
+
+bool TcpHandler::initWebSocketServer() {
+    constexpr quint16 wsPort = 23457;
+    if (m_wsServer->listen(QHostAddress::Any, wsPort)) {
+        qInfo() << "WebSocket server started on port" << wsPort;
+        return true;
+    }
     return false;
 }
 
@@ -74,9 +90,7 @@ void TcpHandler::connectToHost(const QString& host, quint16 port) {
     m_host = host;
     m_port = port;
     qInfo() << "Connecting to" << host << ":" << port;
-//    m_socket->connectToHost(host, port);
-    m_socket->connectToHost(host, port, QIODevice::ReadWrite,
-                                            QAbstractSocket::AnyIPProtocol);
+    m_socket->connectToHost(host, port, QIODevice::ReadWrite, QAbstractSocket::AnyIPProtocol);
 }
 
 void TcpHandler::disconnect() {
@@ -108,16 +122,40 @@ void TcpHandler::reconnect() {
     }
 }
 
-void TcpHandler::onDisconnectedRMO() {
-    std::cout << "RMO disconnected from TCP host" << std::endl;
-    if (m_socketRMO) {
-        m_socketRMO->deleteLater(); // Безопасное удаление
-        m_socketRMO = nullptr;
+void TcpHandler::incomingConnection() {
+    while (m_serverRMO->hasPendingConnections()) {
+        QTcpSocket* client = m_serverRMO->nextPendingConnection();
+        if (client) {
+            m_rmoSockets.append(client);
+            m_buffersRMO[client] = QByteArray();
+            qDebug() << "RMO TCP connected, descriptor:" << client->socketDescriptor();
+
+            connect(client, &QTcpSocket::readyRead, this, [this, client]() {
+                m_buffersRMO[client].append(client->readAll());
+                processBuffer(m_buffersRMO[client], [this, client](const QByteArray& data) {
+                    processIncomingMessageRMO(data, client);
+                });
+            });
+            connect(client, &QTcpSocket::disconnected, this, [this, client]() {
+                m_rmoSockets.removeOne(client);
+                m_buffersRMO.remove(client);
+                client->deleteLater();
+                qDebug() << "RMO TCP disconnected, descriptor:" << client->socketDescriptor();
+            });
+        }
     }
 }
 
+//void TcpHandler::onDisconnectedRMO() {
+//    std::cout << "RMO disconnected from TCP host" << std::endl;
+//    if (m_socketRMO) {
+//        m_socketRMO->deleteLater(); // Безопасное удаление
+//        m_socketRMO = nullptr;
+//    }
+//}
+
 void TcpHandler::onError(QAbstractSocket::SocketError error) {
-    if(error)
+    if (error)
         emit errorOccurred(m_socket->errorString());
 }
 
@@ -128,20 +166,20 @@ void TcpHandler::onReadyRead() {
     });
 }
 
-void TcpHandler::onReadyReadRMO() {
-    if (!m_socketRMO) return;
-    m_bufferRMO.append(m_socketRMO->readAll());
-    processBuffer(m_bufferRMO, [this](const QByteArray& data) {
-        processIncomingMessageRMO(data);
-    });
-}
+//void TcpHandler::onReadyReadRMO() {
+//    if (!m_socketRMO) return;
+//    m_bufferRMO.append(m_socketRMO->readAll());
+//    processBuffer(m_bufferRMO, [this](const QByteArray& data) {
+//        processIncomingMessageRMO(data, m_socketRMO);
+//    });
+//}
 
 // Общая функция для обработки буферов
 template<typename F>
 void TcpHandler::processBuffer(QByteArray& buffer, F processFunc) {
     int pos = 0;
     const int minHeader = static_cast<int>(sizeof(TcpHeader));
-    const int maxPacket = 4096; // Максимальный допустимый размер пакета 
+    const int maxPacket = 4096; // Максимальный допустимый размер пакета
 
     while (buffer.size() - pos >= minHeader) {
         // 1. Пробуем прочитать заголовок с текущей позиции
@@ -171,7 +209,7 @@ void TcpHandler::processBuffer(QByteArray& buffer, F processFunc) {
         // 4. Всё ок — извлекаем пакет
         QByteArray messageData = buffer.mid(pos, fullMessageSize);
 
-		// В processBuffer перед разбором:
+        // В processBuffer перед разбором:
         qDebug() << "Buffer size:" << buffer.size()
                  << "\n\tpos:" << pos << "\n";
         qDebug() << "Header type:" << header.typePack
@@ -196,36 +234,22 @@ void TcpHandler::sendMessage(const QByteArray& data) {
 }
 
 void TcpHandler::sendMessageRMO(const QByteArray& data) {
-    if (m_socketRMO == nullptr) return;
-    if (m_socketRMO->state() == QAbstractSocket::ConnectedState) {
-        m_socketRMO->write(data);
+    for (QTcpSocket* socket : m_rmoSockets) {
+        if (socket->state() == QAbstractSocket::ConnectedState) {
+            socket->write(data);
+        }
     }
 }
 
-/// Приём запросов от клиентов на подключение:
-void TcpHandler::incomingConnection()
-{
-    m_socketRMO = m_serverRMO->nextPendingConnection();
-    if (m_socketRMO != nullptr) {
-        qDebug() << "!!!!! Someone tried to connect with us !!!!!";
-        qDebug() << "socketDescriptor =" << m_socketRMO->socketDescriptor();
-    }
-
-    // Подключаем сигнал readyRead сокета
-    // к соответствующему слоту сервера
-    // для чтения входящих данных от клиента:
-    connect(m_socketRMO, &QTcpSocket::readyRead, this, &TcpHandler::onReadyReadRMO);
-
-    // Подключаем сигнал disconnected к функции deleteLater,
-    // чтобы после отключения сокета от клиента, удалить
-    // сокет сразу, как только это станет возможно:
-    connect(m_socketRMO, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnectedRMO);
-
-    // Помещаем новый сокет в вектор:
-    //vecSocketAll.append(socket);
-
-    // Отладочное сообщение - новый сокет создан:
-    qDebug() << QString("m_socketRMO has been created: %1").arg(m_socketRMO->socketDescriptor());
+// Отправка JSON-объекта всем WebSocket-клиентам РМО
+void TcpHandler::sendMessageRMOJson(const QJsonObject& obj) {
+//    QJsonDocument doc(obj);
+//    QString msg = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+//    for (QWebSocket* ws : m_wsClients) {
+//        if (ws->state() == QAbstractSocket::ConnectedState) {
+//            ws->sendTextMessage(msg);
+//        }
+//    }
 }
 
 void TcpHandler::handleRegistration() {
@@ -239,7 +263,6 @@ void TcpHandler::handleRegistration() {
 void TcpHandler::sendPeriodicMessages() {
     if (m_isRegistered) {
         // Отправка 0x03 (Запрос времени)
-        // TcpMessage_0x03 timeReq;
         auto msg_0x03 = MessageFactory::create<TcpMessage_0x03>();
         std::cout << "Sent message 0x03:\n"
                   << msg_0x03.toString()
@@ -252,7 +275,6 @@ void TcpHandler::sendPeriodicMessages() {
                   << msg_0x24.toString()
                   << std::endl << "\n";
         sendMessage(msg_0x24.serializeFull());
-        // TcpHandler::sendModuleStatus();
 
         // Отправка 0x1021 (Текущее состояние РЛС-Н)
         auto msg_0x1021_1 = MessageFactory
@@ -277,7 +299,7 @@ void TcpHandler::sendPeriodicMessages() {
 void TcpHandler::processIncomingMessage(const QByteArray &data) {
     static int isRemoteCnt = 1;
     auto parsed = MessageFactory::parse(data);
-    if(parsed) {
+    if (parsed) {
         std::cout << "Received message:\n"
                   << MessageFactory::messageToString(parsed)
                   << "\n" << std::endl << "\n";
@@ -462,18 +484,51 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
     }
 }
 
-
-/// Разбор сообщений, принятых от РМО
-void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
-    qDebug() << Qt::endl << "RMO Message:" << data.toHex(' ').toUpper();
-
-    // Задать ЦУ для ППУ
+// Универсальная обработка сообщений от РМО (TCP)
+void TcpHandler::processIncomingMessageRMO(const QByteArray &data, QTcpSocket* sender) {
+    qDebug() << Qt::endl << "RMO TCP Message:" << data.toHex(' ').toUpper();
+    // Пример: если это бинарные данные для ППУ
     if (data.size() < 8*4) return;
     QDataStream stream(data);
-    stream.setByteOrder(QDataStream::LittleEndian); // Порядок байтов должен совпадать с записью
+    stream.setByteOrder(QDataStream::LittleEndian);
     double azTarget, anTarget, azTargetVel, anTargetVel;
     stream >> azTarget >> anTarget >> azTargetVel >> anTargetVel;
     AppConfig::instance().setModulePPU_CU(
-                AppConfig::instance().ModulePPU_num_RLMN_1,
-                azTarget, anTarget, azTargetVel, anTargetVel);
+        AppConfig::instance().ModulePPU_num_RLMN_1,
+        azTarget, anTarget, azTargetVel, anTargetVel);
+}
+
+// --- WebSocket (браузерные РМО) ---
+
+void TcpHandler::onWebSocketNewConnection() {
+    QWebSocket* ws = m_wsServer->nextPendingConnection();
+    if (!ws) return;
+    m_wsClients.append(ws);
+    qDebug() << "RMO WebSocket connected:" << ws->peerAddress().toString();
+
+    connect(ws, &QWebSocket::textMessageReceived, this, &TcpHandler::onWebSocketTextMessageReceived);
+    connect(ws, &QWebSocket::disconnected, this, [this, ws]() {
+        m_wsClients.removeOne(ws);
+        ws->deleteLater();
+        qDebug() << "RMO WebSocket disconnected";
+    });
+}
+
+void TcpHandler::onWebSocketTextMessageReceived(const QString& message) {
+    // Пример: ожидаем JSON-объект с командами для ППУ
+//    QJsonParseError err;
+//    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8(), &err);
+//    if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+//        qWarning() << "Invalid JSON from WebSocket RMO:" << message;
+//        return;
+//    }
+//    QJsonObject obj = doc.object();
+//    // Пример: {"azTarget": 10.0, "anTarget": 5.0, ...}
+//    double azTarget = obj.value("azTarget").toDouble();
+//    double anTarget = obj.value("anTarget").toDouble();
+//    double azTargetVel = obj.value("azTargetVel").toDouble();
+//    double anTargetVel = obj.value("anTargetVel").toDouble();
+//    AppConfig::instance().setModulePPU_CU(
+//        AppConfig::instance().ModulePPU_num_RLMN_1,
+//        azTarget, anTarget, azTargetVel, anTargetVel);
 }

@@ -466,3 +466,17 @@ private:
  static_assert(sizeof(TcpMessage_0x21) == 16 + 8 + sizeof(ElementStatus*),
          "Invalid TcpMessage_0x21 size");
  ```
+
+---
+
+## Для работы по WebSocket
+
+> [!NOTE]
+> Нужно установить пакет для работы в WebSockets в Qt5 это:
+> `sudo apt-get install libqt5websockets5-dev`
+
+### Как это использовать
+
+- TCP РМО: любые десктопные клиенты могут подключаться к серверу (порт 23456), отправлять бинарные данные (например, команды для ППУ).
+- WebSocket РМО: браузерные клиенты (React, JS) подключаются к ws://<ip>:23457, отправляют/получают JSON-объекты.
+- Отправка данных: используйте sendMessageRMO() для бинарных TCP-клиентов и sendMessageRMOJson() для браузерных WebSocket-клиентов.

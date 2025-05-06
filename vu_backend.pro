@@ -1,4 +1,4 @@
-QT += core network sql
+QT += core network sql websockets
 
 TARGET = lun_vu
 CONFIG += c++11 cmdline

@@ -11,7 +11,6 @@ class UdpHandler : public QObject {
     Q_OBJECT
 public:
     explicit UdpHandler(QObject* parent = nullptr);
-
     ~UdpHandler();
 
     Q_INVOKABLE void start(int port);
@@ -27,11 +26,10 @@ public slots:
                       const QHostAddress& addr,
                       quint16 port);
 
-private:
-    void run();
+private slots:
+    void onReadyRead();
 
-    quint16 m_port;
-    std::thread m_thread;
-    std::atomic<bool> m_running;
+private:
+    quint16 m_port = 0;
     QUdpSocket* m_socket = nullptr;
 };
