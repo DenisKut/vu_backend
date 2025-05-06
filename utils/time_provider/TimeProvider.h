@@ -1,14 +1,10 @@
 #ifndef TIMEPROVIDER_H
 #define TIMEPROVIDER_H
 // Класс единого времени для всех компонентов с точностью до миллисекунд (Windows/Linux)
-#pragma once
-
-#include "qdebug.h"
 #include <QObject>
 
 // Для кроссплатформенности (Windows/Linux) используется библиотека <chrono>:
 #include <chrono>
-
 #include <sstream>
 
 class TimeProvider : public QObject {

@@ -1,8 +1,8 @@
 #include "EthHandler.h"
 #include <qfile.h>
 #include <qfile.h>
-
-
+#include "pch.h"
+#include "utils/env_loader/Settings.h"
 // Конструктор обработчика принятых MAC пакетов:
 EthHandler::EthHandler(TimeProvider* timeProvider, QObject* parent)
     : QObject(parent), m_timeProvider(timeProvider) 
@@ -20,7 +20,8 @@ EthHandler::EthHandler(TimeProvider* timeProvider, QObject* parent)
     } else {
         qDebug() << "Интерфейс не найден";
         LOG_INTERNAL(typeid(this).name(), "MAC SOCKET", "сетевой интерфейс не найден");
-        strcpy(ifName, AppConfig::instance().ETH_INTERFACE_NAME().c_str());
+
+        strcpy(ifName, appSettings().value("iface_info/eth_interface_name").toString().toUtf8().constData());
     }
 #endif
 }
@@ -263,6 +264,7 @@ bool EthHandler::sendMessage(const QByteArray &data)
     }
     return true;
 #else
+    return false;
 #endif
 }
 
@@ -301,8 +303,10 @@ void EthHandler::checkReceived()
 #else
     // Чтение пакета из интерфейса:
     //---------------------------------------------------------------------
-    const size_t buf_size = AppConfig::instance().ETH_SOCKET_BUF_SIZE();
-    uint8_t *buf = static_cast<uint8_t*>(malloc(buf_size * sizeof(uint8_t)));
+
+    const size_t buf_size = appSettings().value("iface_info/eth_socket_buf_size").toULongLong();
+
+    uint8_t *buf = static_cast<uint8_t *>(malloc(buf_size * sizeof(uint8_t)));
 
     // Проверка приёмника на наличие пакета:
     ssize_t length = 0;

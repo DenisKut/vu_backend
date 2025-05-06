@@ -1,5 +1,12 @@
 #include "NetworkManager.h"
 
+/**
+ * @brief макрос, управляющий назначением соединения
+ * @param VU_LOCALHOST - voimit
+ * @else @param VU_REMOTE_ALMAZ - almaz stend
+ */
+#define VU_LOCALHOST
+
 NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
     : QObject(parent),
       m_timeProvider(timeProvider),
@@ -21,14 +28,19 @@ NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
 NetworkManager::~NetworkManager() {
     stop();
 }
-
 void NetworkManager::start() {
+#ifdef VU_LOCALHOST
     m_tcpHandler.connectToHost(
-        to_qstring(
-            AppConfig::instance().TCP_HOST_IP()),
-            AppConfig::instance().TCP_HOST_PORT()
-        );
-    m_udpHandler.startListening(AppConfig::instance().UDP_PORT());
+        appSettings().value("vu_settings/tcp_host_ip").toString(),
+        appSettings().value("vu_settings/tcp_host_port").toInt());
+    m_udpHandler.startListening(appSettings().value("vu_settings/udp_port").toInt());
+#endif
+#ifdef VU_REMOTE_ALMAZ
+    m_tcpHandler.connectToHost(
+        appSettings().value("vu_settings_almaz/tcp_host_ip").toString(),
+        appSettings().value("vu_settings_almaz/tcp_host_port").toInt());
+    m_udpHandler.startListening(appSettings().value("vu_settings_almaz/udp_port").toInt());
+#endif
     m_ethHandler.start();
     m_ethTimer.start(1);
     LOG_INIT(typeid(this).name(), StatusInit::LOADED);

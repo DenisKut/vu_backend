@@ -7,9 +7,8 @@
 #include "handlers/TcpHandler.h"
 #include "handlers/UdpHandler.h"
 #include "handlers/EthHandler.h"
-#include "utils/time_provider/TimeProvider.h"
-#include "utils/AppConfig.h"
 #include <math.h>
+#include "utils/env_loader/Settings.h"
 
 class NetworkManager : public QObject {
     Q_OBJECT

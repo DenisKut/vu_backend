@@ -9,9 +9,9 @@
 #endif
 
 #include "utils/env_loader/EnvLoader.h"
-#include "utils/AppConfig.h"
 #include "core/CoreManager.h"
-#include "core/logger/Logger.h"
+#include "utils/env_loader/Settings.h"
+
 int main(int argc, char* argv[]) {
 #ifdef Q_OS_WIN
     // Настройка консоли Windows
@@ -66,20 +66,14 @@ int main(int argc, char* argv[]) {
 
     // Инициализация Логгера (обязательно, иначе Логгер не запустится)
     QString connectionString = QString("host=%1 port=%2 dbname=%3 user=%4 password=%5")
-                               .arg(env.getStr("DB_HOST"))
-                               .arg(env.getInt("DB_PORT"))
-                               .arg(env.getStr("DB_NAME"))
-                               .arg(env.getStr("DB_USER"))
-                               .arg(env.getStr("DB_PASSWORD"));
+                                   .arg(appSettings().value("database/host").toString())
+                                   .arg(appSettings().value("database/port").toString())
+                                   .arg(appSettings().value("database/db_name").toString())
+                                   .arg(appSettings().value("database/user").toString())
+                                   .arg(appSettings().value("database/password").toString());
 
-	Logger::instance().initialize(connectionString);
+    Logger::instance().initialize(connectionString);
 
-//    qDebug() << "Состояние Логгера:" << Logger::instance().isRunning();
-
-//    // Тест запуска Логгера без явного вызова writeText():
-//    QTimer::singleShot(0, []{
-//        Logger::instance().writeText("Тест Логгера");
-//    });
 
     // Запуск ядра приложения
     CoreManager core;

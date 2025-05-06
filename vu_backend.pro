@@ -2,8 +2,6 @@ QT += core network sql
 
 TARGET = lun
 CONFIG += c++11 cmdline
-# ЦЕЛЬ сборки {debug, release}
-CONFIG += debug
 # -------------------------------
 # 0. Пути сборки проекта
 # -------------------------------
@@ -11,12 +9,20 @@ CONFIG += debug
 BIN_DIR = $$PWD/bin
 OBJECTS_DIR = $$PWD/objects
 
-# Настройка выходных директорий
-CONFIG(debug, debug|release) {
-    DESTDIR = $$BIN_DIR/debug
-} else {
+# Цель сборки {debug, release}
+CONFIG(release, debug|release) {
+    message("Release build!")
+    CONFIG -= debug
     DESTDIR = $$BIN_DIR/release
 }
+else {
+    message("Debug build!")
+    CONFIG -= release
+    CONFIG += debug
+    DESTDIR = $$BIN_DIR/debug
+}
+
+
 
 MOC_DIR = $$OBJECTS_DIR
 UI_DIR = $$OBJECTS_DIR/ui
@@ -39,7 +45,8 @@ SOURCES += \
     network/handlers/TcpHandler.cpp \
     network/handlers/UdpHandler.cpp \
     utils/time_provider/TimeProvider.cpp \
-    utils/env_loader/EnvLoader.cpp
+    utils/env_loader/EnvLoader.cpp \
+    utils/env_loader/Settings.cpp 
 
 HEADERS += \
     core/CoreManager.h \
@@ -53,7 +60,8 @@ HEADERS += \
     network/messages/TcpMessage.h \
     utils/AppConfig.h \
     utils/time_provider/TimeProvider.h \
-    utils/env_loader/EnvLoader.h
+    utils/env_loader/EnvLoader.h \
+    utils/env_loader/Settings.h 
 
 #глобальное включение
 PRECOMPILED_HEADER = pch.h
@@ -122,13 +130,6 @@ DISTFILES += \
 #-------------------------------
 # 5. Копирование .env в выходную директорию
 #-------------------------------
-
-# Определение DESTDIR в зависимости от конфигурации
-CONFIG(debug, debug|release) {
-    DESTDIR = $$OUT_PWD/bin/debug
-} else {
-    DESTDIR = $$OUT_PWD/bin/release
-}
 
 # Копирование .env
 win32 {

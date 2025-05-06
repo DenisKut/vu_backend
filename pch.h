@@ -10,12 +10,11 @@
 // #include <atomic>
 // #include <vector>
 // защитник от множественногот включения
-#pragma once
+#ifndef PCH_H
+#define PCH_H
 #include <utils/time_provider/TimeProvider.h>
 #include "utils/AppConfig.h"
 #include "core/logger/Logger.h"
-
-
 
 /*
 Если хочется без указания типа класса, где был вызов, передавать *this в typeid
@@ -73,3 +72,5 @@
 #define LOG_PROTOCOL(source, ...) \
     Logger::instance().log(ProtocolMessageLog(source, ##__VA_ARGS__))
 
+
+#endif

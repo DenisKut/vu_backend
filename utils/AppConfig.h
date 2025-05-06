@@ -175,22 +175,6 @@ public:
     /// @brief Максимальное количество элементов в модуле
     /// @details 2 РЛМН
     static constexpr int MAX_ELEMENTS_MODULE = 2;
-
-    /// @name Методы доступа к параметрам из .env
-    /// @warning НЕИЗМЕННЫЕ в рантайме
-    /// @{
-    /// IP TCP сервера
-    std::string TCP_HOST_IP() const { return _tcpHostIP; }
-    /// Порт TCP сервера
-    int TCP_HOST_PORT() const { return _tcpHostPort; }
-    /// Порт UDP
-    int UDP_PORT() const { return _udpPort; }
-    /// Сетевой интерфейс
-    std::string ETH_INTERFACE_NAME() const { return _ethInterfaceName; }
-    /// Размер буфера сокета
-    int ETH_SOCKET_BUF_SIZE() const { return _ethSocketBuffSize; }
-    /// @}
-
     /// @name Версии протоколов
     /// @{
     /// Мажорная версия
@@ -442,13 +426,6 @@ public:
      * @param env Хэш-таблица с параметрами из .env файла
      */
     void initFromEnv(const EnvLoader& env) {
-        // Базовые настройки
-        this->_tcpHostIP = env.getStr("TCP_HOST_IP", "127.0.0.1").toStdString();
-        this->_tcpHostPort = env.getInt("TCP_HOST_PORT", 0);
-        this->_udpPort = env.getInt("UDP_PORT", 0);
-        this->_ethInterfaceName =
-            env.getStr("ETH_INTERFACE_NAME", "eth0").toStdString();
-        this->_ethSocketBuffSize = env.getInt("ETH_SOCKET_BUF_SIZE", 2048);
 
         // Версии протокола
         this->_pbuProtoMajorVersion = env
@@ -739,20 +716,6 @@ public:
 
 private:
     AppConfig() = default; ///< Приватный конструктор
-
-    /// @name Параметры сети
-    /// @{
-    std::string _tcpHostIP;         ///< IP адрес TCP сервера
-                                    ///
-    int _tcpHostPort;               ///< Порт TCP сервера
-                                    ///
-    int _udpPort;                   ///< Порт UDP
-                                    ///
-    std::string _ethInterfaceName;  ///< Имя сетевого интерфейса
-                                    ///
-    int _ethSocketBuffSize;         ///< Размер буфера MAC сокета
-    /// @}
-
     /// @name Версии протоколов
     /// @{
     uint8_t _pbuProtoMajorVersion;  ///< Мажорная версия протокола
