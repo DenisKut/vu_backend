@@ -56,6 +56,7 @@ HEADERS += \
     network/handlers/UdpHandler.h \
     network/messages/EthMessage.h \
     network/messages/Message.h \
+    network/messages/RmoMessage.h \
     network/messages/TcpMessage.h \
     utils/AppConfig.h \
     utils/time_provider/TimeProvider.h \

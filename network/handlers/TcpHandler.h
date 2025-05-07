@@ -12,7 +12,7 @@
 #include <QJsonObject>
 #include "TcpConnectionHandler.h"
 #include "../messages/TcpMessage.h"
-#include "libs/json/json.hpp"
+#include "../messages/RmoMessage.h"
 
 using json = nlohmann::json;
 
@@ -24,11 +24,11 @@ public:
 
     Q_INVOKABLE void disconnect();
 
-    Q_INVOKABLE void sendMessageToRMO(int idx, const QByteArray& data); // по индексу
-    Q_INVOKABLE void sendMessageToAllRMO(const QByteArray& data);       // всем TCP-RMO
+    Q_INVOKABLE void sendRmoMessage(int idx, const RmoBaseMessage& msg); // по индексу
+    Q_INVOKABLE void sendRmoMessageToAll(const RmoBaseMessage& msg);       // всем TCP-RMO
 
-    Q_INVOKABLE void sendWebSocketJson(QWebSocket* ws, const nlohmann::json& obj);
-    Q_INVOKABLE void sendWebSocketJsonAll(const nlohmann::json& obj);
+    Q_INVOKABLE void sendRmoMessageJSON(QWebSocket* ws, const RmoBaseMessage& msg);
+    Q_INVOKABLE void sendRmoMessageToAllJSON(const RmoBaseMessage& msg);
 
 signals:
     void messageReceived(const TcpHeader& msg);

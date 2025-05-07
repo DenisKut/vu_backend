@@ -82,12 +82,23 @@ NetworkManager::~NetworkManager() {
 }
 
 void NetworkManager::start() {
-    QMetaObject::invokeMethod(m_tcpHandler, "connectToHost",
-        Q_ARG(QString, to_qstring(AppConfig::instance().TCP_HOST_IP())),
-        Q_ARG(quint16, AppConfig::instance().TCP_HOST_PORT()));
-    QMetaObject::invokeMethod(m_tcpHandler, "startTimers");
-    QMetaObject::invokeMethod(m_udpHandler, "start",
-        Q_ARG(int, AppConfig::instance().UDP_PORT()));
+    QMetaObject::invokeMethod(m_tcpHandler, [this]() {
+        m_tcpHandler->connectToHost(
+            to_qstring(AppConfig::instance().TCP_HOST_IP()),
+            AppConfig::instance().TCP_HOST_PORT());        
+    });
+    QMetaObject::invokeMethod(m_tcpHandler, [this]() {
+        m_tcpHandler->startTimers();
+    });
+    QMetaObject::invokeMethod(m_udpHandler, [this]() {
+        m_udpHandler->start(AppConfig::instance().UDP_PORT());
+    });
+    // QMetaObject::invokeMethod(m_tcpHandler, "connectToHost",
+    //     Q_ARG(QString, to_qstring(AppConfig::instance().TCP_HOST_IP())),
+    //     Q_ARG(quint16, AppConfig::instance().TCP_HOST_PORT()));
+    // QMetaObject::invokeMethod(m_tcpHandler, "startTimers");
+    // QMetaObject::invokeMethod(m_udpHandler, "start",
+    //     Q_ARG(int, AppConfig::instance().UDP_PORT()));
     // QMetaObject::invokeMethod(m_ethHandler, "start");
 #ifdef _WIN32
     m_ethTimer.start(1);
@@ -405,9 +416,15 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                                 qDebug() << "ETH Message from VU to BS:"
                                          << Qt::endl
                                          << data.toHex(' ').toUpper();
-                                isChangedImitPeriod = QMetaObject::invokeMethod(m_ethHandler, "sendMessage",
-                                    Qt::QueuedConnection,
-                                    Q_ARG(QByteArray, data));
+
+                                isChangedImitPeriod = QMetaObject::invokeMethod(
+                                    m_ethHandler, [this, data]() {
+                                        m_ethHandler->sendMessage(data);
+                                    },
+                                    Qt::QueuedConnection);
+                                // isChangedImitPeriod = QMetaObject::invokeMethod(m_ethHandler, "sendMessage",
+                                //     Qt::QueuedConnection,
+                                //     Q_ARG(QByteArray, data));
                                 if (isChangedImitPeriod) {
                                     mode = 1;
                                 }
@@ -529,29 +546,27 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 
                     // Отправка отладочных данных на форму для отображения:
                     //-------------------------------------------------------------
-                    QByteArray dataDebug;
-                    QDataStream stream(&dataDebug, QIODevice::WriteOnly);
-                    stream << AppConfig::instance().getModulePPU_az(
-                                  AppConfig::instance().ModulePPU_num_RLMN_1)
-                           << AppConfig::instance().getModulePPU_an(
-                                  AppConfig::instance().ModulePPU_num_RLMN_1)
-                           << azC0 << azC1 << azC2
-                           << anC0 << anC1 << anC2
-                           << AppConfig::instance().getModulePPU_azTarget(
-                                  AppConfig::instance().ModulePPU_num_RLMN_1)
-                           << AppConfig::instance().getModulePPU_anTarget(
-                                  AppConfig::instance().ModulePPU_num_RLMN_1)
-                           << AppConfig::instance().getModulePPU_azTargetVel(
-                                  AppConfig::instance().ModulePPU_num_RLMN_1)
-                           << AppConfig::instance().getModulePPU_anTargetVel(
-                                  AppConfig::instance().ModulePPU_num_RLMN_1)
-                           << AppConfig::instance().getModulePPU_isRemote(
-                                  AppConfig::instance().ModulePPU_num_RLMN_1);
+                    // Теперь сообщение передаём через структуру
+                    // Номер сообщения будет заболняться в зависимости от названия по соответствию
+                    RmoMessage_TargetPPU msg;
+                    msg.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.azC0 = azC0;
+                    msg.azC1 = azC1;
+                    msg.azC2 = azC2;
+                    msg.anC0 = anC0;
+                    msg.anC1 = anC1;
+                    msg.anC2 = anC2;
+                    msg.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
 
                     // Отправить всем TCP-RMO клиентам
-                    QMetaObject::invokeMethod(m_tcpHandler, "sendMessageToAllRMO",
-                        Qt::QueuedConnection,
-                        Q_ARG(QByteArray, dataDebug));
+                    QMetaObject::invokeMethod(m_tcpHandler, [this, msg]() {
+                        m_tcpHandler->sendRmoMessageToAll(msg);
+                    }, Qt::QueuedConnection);
                     //-------------------------------------------------------------
                 }
                 else
