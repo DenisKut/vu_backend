@@ -9,9 +9,12 @@
 #include <QVector>
 #include <QWebSocketServer>
 #include <QWebSocket>
+#include <QJsonObject>
+#include "TcpConnectionHandler.h"
 #include "../messages/TcpMessage.h"
-#include "utils/time_provider/TimeProvider.h"
-#include "core/logger/Logger.h"
+#include "libs/json/json.hpp"
+
+using json = nlohmann::json;
 
 class TcpHandler : public QObject {
     Q_OBJECT
@@ -19,47 +22,46 @@ public:
     explicit TcpHandler(QObject* parent = nullptr);
     ~TcpHandler();
 
-    void disconnect();
+    Q_INVOKABLE void disconnect();
 
-    void sendMessageRMO(const QByteArray &data);
-    void sendMessageResult(const QByteArray &data);
+    Q_INVOKABLE void sendMessageToRMO(int idx, const QByteArray& data); // по индексу
+    Q_INVOKABLE void sendMessageToAllRMO(const QByteArray& data);       // всем TCP-RMO
 
-    // отправка WebSocket-клиентам
-    void sendMessageRMOJson(const QJsonObject& obj);
+    Q_INVOKABLE void sendWebSocketJson(QWebSocket* ws, const nlohmann::json& obj);
+    Q_INVOKABLE void sendWebSocketJsonAll(const nlohmann::json& obj);
 
 signals:
     void messageReceived(const TcpHeader& msg);
     void errorOccurred(const QString& error);
 
 public slots:
-    void incomingConnection(); // TCP: Приём запросов от клиентов на подключение
+    void initialize();
+    void incomingConnection();
     void reconnect();
     void connectToHost(const QString& host, quint16 port);
     void startTimers();
     void stopTimers();
 
 private slots:
-    void initialize();
     void onReadyRead();
-//    void onReadyReadRMO();
     void onConnected();
     void onDisconnected();
-//    void onDisconnectedRMO();
+    void onRmoDisconnected(TcpConnectionHandler* handler);
     void onError(QAbstractSocket::SocketError error);
     void sendPeriodicMessages();
     void handleRegistration();
 
     // WebSocket
     void onWebSocketNewConnection();
-//    void onWebSocketDisconnected();
-    void onWebSocketTextMessageReceived(const QString& message);
+    void onWebSocketTextMessageReceived(const QString& message, QWebSocket* ws);
 
 private:
     QTcpSocket* m_socket = nullptr;
     QTcpServer* m_serverRMO = nullptr;
-    QVector<QTcpSocket*> m_rmoSockets; // Список всех TCP-клиентов РМО
-
-    // WebSocket сервер и клиенты
+    QThread* m_mainSocketThread = nullptr;
+    TcpConnectionHandler* m_mainConnection = nullptr;
+//    QThread* m_rmoThread = nullptr; // Новый поток для всех RMO TCP-клиентов
+    QVector<TcpConnectionHandler*> m_rmoConnections;
     QWebSocketServer* m_wsServer = nullptr;
     QVector<QWebSocket*> m_wsClients;
 
@@ -68,7 +70,6 @@ private:
     QTimer* m_reconnectTimer = nullptr;
 
     QByteArray m_buffer;
-    QHash<QTcpSocket*, QByteArray> m_buffersRMO; // Буферы для каждого TCP-клиента РМО
 
     QString m_host;
     quint16 m_port;

@@ -22,7 +22,7 @@ signals:
                         quint16 senderPort);
 
 public slots:
-    void sendResponse(const QByteArray& data,
+    Q_INVOKABLE void sendResponse(const QByteArray& data,
                       const QHostAddress& addr,
                       quint16 port);
 

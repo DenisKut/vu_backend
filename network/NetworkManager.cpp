@@ -9,22 +9,12 @@ NetworkManager::NetworkManager(QObject* parent)
     m_udpThread(new QThread(this)),
     m_ethThread(new QThread(this))
 {
-    m_tcpThread->start();
-    m_udpThread->start();
-    m_ethThread->start();
-
-    if(m_tcpThread->isRunning())
-        m_tcpThread->setPriority(QThread::HighPriority);
-    if(m_ethThread->isRunning())
-        m_ethThread->setPriority(QThread::TimeCriticalPriority);
-    if(m_udpThread->isRunning())
-        m_udpThread->setPriority(QThread::HighPriority);
-
     m_tcpHandler->moveToThread(m_tcpThread);
     m_udpHandler->moveToThread(m_udpThread);
     m_ethHandler->moveToThread(m_ethThread);
 
-    QMetaObject::invokeMethod(m_tcpHandler, "initialize", Qt::QueuedConnection);
+    QObject::connect(m_tcpThread, &QThread::started, m_tcpHandler, &TcpHandler::initialize, Qt::QueuedConnection);
+    // QMetaObject::invokeMethod(m_tcpHandler, "initialize", Qt::QueuedConnection);
     // QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_ethHandler, "initialize", Qt::QueuedConnection);
 
@@ -44,9 +34,12 @@ NetworkManager::NetworkManager(QObject* parent)
             msg.payload = data;
             onUdpReceived(msg);
 
-            // // Сформировать ответ (пример)
-            // QByteArray response = processUdpPacket(data); // функция обработки
-            // m_udpHandler->sendResponse(response, sender, senderPort);
+            // Сформировать ответ (пример)
+            // QMetaObject::invokeMethod(m_udpHandler, "sendResponse",
+            //     Qt::QueuedConnection,
+            //     Q_ARG(QByteArray, data),
+            //     Q_ARG(QHostAddress, addr),
+            //     Q_ARG(quint16, port));
         }, Qt::QueuedConnection);
     });
 
@@ -62,6 +55,17 @@ NetworkManager::NetworkManager(QObject* parent)
         connect(m_ethHandler, &EthHandler::messageReceived,
                 this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
     });
+
+    m_tcpThread->start();
+    m_udpThread->start();
+    m_ethThread->start();
+
+    if(m_tcpThread->isRunning())
+        m_tcpThread->setPriority(QThread::HighPriority);
+    if(m_ethThread->isRunning())
+        m_ethThread->setPriority(QThread::TimeCriticalPriority);
+    if(m_udpThread->isRunning())
+        m_udpThread->setPriority(QThread::HighPriority);
 }
 
 NetworkManager::~NetworkManager() {
@@ -401,7 +405,9 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                                 qDebug() << "ETH Message from VU to BS:"
                                          << Qt::endl
                                          << data.toHex(' ').toUpper();
-                                isChangedImitPeriod = m_ethHandler->sendMessage(data);
+                                isChangedImitPeriod = QMetaObject::invokeMethod(m_ethHandler, "sendMessage",
+                                    Qt::QueuedConnection,
+                                    Q_ARG(QByteArray, data));
                                 if (isChangedImitPeriod) {
                                     mode = 1;
                                 }
@@ -542,7 +548,10 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                            << AppConfig::instance().getModulePPU_isRemote(
                                   AppConfig::instance().ModulePPU_num_RLMN_1);
 
-                    m_tcpHandler->sendMessageRMO(dataDebug);
+                    // Отправить всем TCP-RMO клиентам
+                    QMetaObject::invokeMethod(m_tcpHandler, "sendMessageToAllRMO",
+                        Qt::QueuedConnection,
+                        Q_ARG(QByteArray, dataDebug));
                     //-------------------------------------------------------------
                 }
                 else

@@ -39,6 +39,7 @@ SOURCES += \
     main.cpp \
     network/NetworkManager.cpp \
     network/handlers/EthHandler.cpp \
+    network/handlers/TcpConnectionHandler.cpp \
     network/handlers/TcpHandler.cpp \
     network/handlers/UdpHandler.cpp \
     utils/time_provider/TimeProvider.cpp \
@@ -50,6 +51,7 @@ HEADERS += \
     core/logger/Logger.h \
     network/NetworkManager.h \
     network/handlers/EthHandler.h \
+    network/handlers/TcpConnectionHandler.h \
     network/handlers/TcpHandler.h \
     network/handlers/UdpHandler.h \
     network/messages/EthMessage.h \
