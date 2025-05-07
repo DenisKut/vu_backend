@@ -70,3 +70,14 @@ _Описание Doxygen-комментариев [здесь](./docs/doxygen_g
 
 [общая сводка по markdown](https://github.com/sandino/Markdown-Cheatsheet)
 </spoiler>
+
+
+<spoiler>
+<summary>Подключение к удалённому стенду (durabook, astra)</summary>
+
+1) Убедиться, что ваша сеть поддерживает ipv6, ссылки для проверки: [1](https://test-ipv6.com), [2](https://ipv6-test.com)
+2) Сгенерировать rsa ssh ключ (если ключей в .ssh нету)
+   `ssh-keygen -t ed25519 -C "your_email@example.com"`, 
+   следовать инструкции (указать имя файла-ключа, задать пароль, ексли есть желание (доп. мера защиты)). В домашней директории найти каталог .ssh, передать .pub на nikitoniy2468@gmail.com
+3) после выполнения шагов 1,2, подключиться, `ssh -Xv6 user@nikitonz-astra.ddns.net`
+</spoiler>
