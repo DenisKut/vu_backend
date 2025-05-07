@@ -62,7 +62,7 @@ _Описание Doxygen-комментариев [здесь](./docs/doxygen_g
 <details>
 <summary>Логгер и его функциональность</summary>
 
-Описание логгера...скоро
+Описание логгера тут: [тык](docs/logger_man.md)
 </details>
 
 <spoiler>

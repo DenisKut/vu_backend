@@ -15,10 +15,14 @@ EthHandler::EthHandler(TimeProvider* timeProvider, QObject* parent)
 //    strcpy(ifName, "enp44s0");
     QString interfaceName = findWiredInterface();
     if (!interfaceName.isEmpty()) {
+#ifdef QT_DEBUG
         qDebug() << "Проводной интерфейс:" << interfaceName;
+#endif
         strcpy(ifName, interfaceName.toStdString().c_str());
     } else {
+#ifdef QT_DEBUG
         qDebug() << "Интерфейс не найден";
+#endif
         LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "сетевой интерфейс не найден");
 
         strcpy(ifName, appSettings().value("iface_info/eth_interface_name").toString().toUtf8().constData());
@@ -84,7 +88,9 @@ void EthHandler::connectAdapter()
     int numAdapters = 0;
     if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING), nullptr, &pcapAllDevs, errbuf) == -1)
     {
+#ifdef QT_DEBUG
         qDebug() << "Not found Ethernet adapters";
+#endif
        // Logger::instance().writeText("ОШИБКА: EthHandler::connectAdapter() - Не найден сетевой адаптер");
     }
     for(d = pcapAllDevs; d; d = d->next)
@@ -134,7 +140,9 @@ void EthHandler::connectAdapter()
                                errbuf       // error buffer
                                ) ) == nullptr)
     {
+#ifdef QT_DEBUG
         qDebug() << "Failed to open pcapTx";
+#endif
         LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
         // Free the device list
         return;
@@ -143,7 +151,9 @@ void EthHandler::connectAdapter()
     {
 //        emit adapterUpdatePM(pcapTx);  // Обновить указатель на адаптер для менеджера пакетов
 //        emit adapterConnected();    // Адаптер подключен
+#ifdef QT_DEBUG
         qDebug() << "Open pcapTx";
+#endif
         LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; pcapTx открыт"));
     }
 
@@ -163,7 +173,9 @@ void EthHandler::connectAdapter()
                                errbuf       // error buffer
                                ) ) == nullptr)
     {
+#ifdef QT_DEBUG
         qDebug() << "Failed to open pcapRx";
+#endif
         LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
         // Free the device list
         return;
@@ -171,7 +183,9 @@ void EthHandler::connectAdapter()
     else
     {
 //        emit adapterConnected();    // Адаптер подключен
+#ifdef QT_DEBUG
         qDebug() << "Open pcapRx";
+#endif
         LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; pcapTx открыт"));
         // Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
     }
@@ -193,8 +207,9 @@ void EthHandler::connectAdapter()
 //        ds.sprintf("%d. %s", ++i, d->name);
     }
     strAdapterNames.append(ds);
-
+#ifdef QT_DEBUG
     qDebug() << QString("Opened Ethernet adapter: %1").arg(strAdapterNames.at(0));
+#endif
     LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; " + 
     QString("Подключен Ethernet адаптер: %1").arg(strAdapterNames.at(0))));
 #else
@@ -203,9 +218,11 @@ void EthHandler::connectAdapter()
     uint64_t macDst = AppConfig::instance().ETH_PROTO_MAC_DST();
     uint64_t macSrc = AppConfig::instance().ETH_PROTO_MAC_SRC();
     uint16_t etherType = AppConfig::instance().ETH_PROTO_ETHER_TYPE();
+#ifdef QT_DEBUG
     qDebug() << "macDst =" << macDst;
     qDebug() << "macSrc =" << macSrc;
     qDebug() << "etherType =" << etherType;
+#endif
     //if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(etherType))) == -1) {
     if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(0x2020))) == -1) {
         perror("socket");
@@ -257,7 +274,9 @@ bool EthHandler::sendMessage(const QByteArray &data)
 #ifdef _WIN32
     if (pcap_sendpacket(pcapTx, reinterpret_cast<const u_char*>(data.data()), data.size()) != 0)
     {
+#ifdef QT_DEBUG
         qDebug("Ошибка при отправке Ethernet-пакета");
+#endif
         LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET",
                                "WIN32; Ошибка при отправке Ethernet-пакета"));
         return false;

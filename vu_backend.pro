@@ -132,11 +132,17 @@ DISTFILES += \
 # 5. Копирование .env в выходную директорию
 #-------------------------------
 
-# Копирование .env
+# Копирование .env, config.ini, database/init_db.sql
 win32 {
-    QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR & copy /Y $$shell_path($$PWD/.env) $$shell_path($$DESTDIR))
+    QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR \
+        & copy /Y $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) \
+        & copy /Y $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) \
+        & copy /Y $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
 } else {
-    QMAKE_POST_LINK += $$quote(mkdir -p $$DESTDIR && cp -f $$shell_path($$PWD/.env) $$shell_path($$DESTDIR))
+    QMAKE_POST_LINK += $$quote(mkdir -p $$DESTDIR && \
+        cp -f $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) && \
+        cp -f $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) && \
+        cp -f $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
 }
 
 # ===================================

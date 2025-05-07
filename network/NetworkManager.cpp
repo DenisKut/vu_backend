@@ -1,13 +1,7 @@
 #include "NetworkManager.h"
 
-/**
- * @brief макрос, управляющий назначением соединения
- * @param VU_LOCALHOST - voimit
- * @else @param VU_REMOTE_ALMAZ - almaz stend
- */
-#define VU_LOCALHOST
 
-NetworkManager::NetworkManager(TimeProvider* timeProvider, QObject* parent)
+    NetworkManager::NetworkManager(TimeProvider *timeProvider, QObject *parent)
     : QObject(parent),
       m_timeProvider(timeProvider),
       m_ethTimer(this),
@@ -29,18 +23,22 @@ NetworkManager::~NetworkManager() {
     stop();
 }
 void NetworkManager::start() {
-#ifdef VU_LOCALHOST
-    m_tcpHandler.connectToHost(
-        appSettings().value("vu_settings/tcp_host_ip").toString(),
-        appSettings().value("vu_settings/tcp_host_port").toInt());
-    m_udpHandler.startListening(appSettings().value("vu_settings/udp_port").toInt());
-#endif
-#ifdef VU_REMOTE_ALMAZ
-    m_tcpHandler.connectToHost(
-        appSettings().value("vu_settings_almaz/tcp_host_ip").toString(),
-        appSettings().value("vu_settings_almaz/tcp_host_port").toInt());
-    m_udpHandler.startListening(appSettings().value("vu_settings_almaz/udp_port").toInt());
-#endif
+    switch (currentMode())
+    {
+    case AppMode::VU_LOCALHOST:
+        m_tcpHandler.connectToHost(
+            appSettings().value("vu_settings/tcp_host_ip").toString(),
+            appSettings().value("vu_settings/tcp_host_port").toInt());
+        m_udpHandler.startListening(appSettings().value("vu_settings/udp_port").toInt());
+        break;
+    case AppMode::VU_REMOTE_ALMAZ:
+        m_tcpHandler.connectToHost(
+            appSettings().value("vu_settings_almaz/tcp_host_ip").toString(),
+            appSettings().value("vu_settings_almaz/tcp_host_port").toInt());
+        m_udpHandler.startListening(appSettings().value("vu_settings_almaz/udp_port").toInt());
+        break;
+    }
+   
     m_ethHandler.start();
     m_ethTimer.start(1);
     LOG_INIT(CLASS_NAME, StatusInit::LOADED);
@@ -64,11 +62,15 @@ T clamp(T value, T min_val, T max_val) {
 
 
 void NetworkManager::onTcpReceived(const TcpHeader& msg) {
+#ifdef QT_DEBUG
     qDebug() << "TCP Message:" << msg.checkSum;
+#endif
 }
 
 void NetworkManager::onUdpReceived(const Message& msg) {
+#ifdef QT_DEBUG
     qDebug() << "UDP Message:" << msg.payload;
+#endif
 }
 
 #define TO_HEX(T,len) (QByteArray::fromRawData(reinterpret_cast<const char*>(T), len).toHex(' '))
@@ -81,12 +83,13 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
     auto parsed = EthMessageFactory::parse(msg);
     if (parsed)
     {
+#ifdef QT_DEBUG
         // Отладочный вывод тела Ethernet пакета целиком
         qDebug() << Qt::endl << "ETH Message:" << msg.toHex(' ').toUpper();
 
         // Отладочный вывод номера принятого сообщения
         qDebug() << "parsed->mesNumber =" << TO_HEX_STR(&parsed->mesNumber, 2);
-
+#endif
         // Проверяем приход сообщений:
         //-----------------------------------------------------------------------------------
         // Сообщение синхронизации БС (2.5)
@@ -101,7 +104,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 TimeProvider::instance().setBsPeriodNumber(msgBS_SYNC->periodNumber);
                 TimeProvider::instance().setBsPeriodTime(msgBS_SYNC->periodTime);
                 TimeProvider::instance().setBsPeriodWidth(msgBS_SYNC->periodWidth);
-
+#ifdef QT_DEBUG
                 // Отладочный вывод параметров сообщения 2.5
                 qDebug() << "2.5 RECEIVED";
                 qDebug() << "--------------------------------------------";
@@ -111,7 +114,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 qDebug() << "periodTime =" << TO_HEX_STR(msgBS_SYNC->periodTime, 5);               // Время начала нового периода
                 qDebug() << "periodWidth =" << TO_HEX_STR(&msgBS_SYNC->periodWidth, 4);             // Значение периода синхронизации
                 qDebug() << "--------------------------------------------";
-
+#endif
                 LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,Protocol::RAW_MAC, msg, 
                 Logger::jobj_toString(msgBS_SYNC->to_json())));
             }
@@ -166,7 +169,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             AppConfig::instance().ModulePPU_num_RLMN_1,
                             msgPPU_POSITION->waitTarget);
                 //-------------------------------------------------------------
-
+#ifdef QT_DEBUG
                 // Отладочный вывод параметров сообщения 11.1
                 qDebug() << "11.1 RECEIVED";
                 qDebug() << "--------------------------------------------";
@@ -183,9 +186,11 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 qDebug() << "waitCommands =" << TO_HEX_STR(&msgPPU_POSITION->waitCommands, 1);      // Время ожидания команд, мс
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);          // Время ожидания целеуказаний, мс
                 qDebug() << "--------------------------------------------";
+#endif
                 LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC,
                     msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
                 // Отладочный вывод параметров ППУ
+#ifdef QT_DEBUG
                 qDebug() << "PPU";
                 qDebug() << "--------------------------------------------";
                 qDebug() << "lastCommand =" <<
@@ -225,14 +230,15 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 qDebug() << "getBsPeriodNumber =" << TimeProvider::instance().getBsPeriodNumber();
                 qDebug() << "getBsPeriodTime =" << TimeProvider::instance().getBsPeriodTime();
                 qDebug() << "getBsPeriodWidth =" << TimeProvider::instance().getBsPeriodWidth();
-
+#endif
                 // Если ППУ выключено, то отправить сообщение о включении:
                 uint8_t state = AppConfig::instance().getModulePPU_state(
                     AppConfig::instance().ModulePPU_num_RLMN_1); // Состояние ППУ
                 if (state & AppConfig::instance().ModulePPU_state_TurnedOn)
                 {
+#ifdef QT_DEBUG
                     qDebug() << "PPU is turned On" << Qt::endl;
-
+#endif
                     // Если ППУ включено, то подвинуть его в координаты 10, 10:
                     static int mode = 3;
                     //if (mode == 0)
@@ -335,7 +341,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             azC2u = azC2 * 65535.0 / 360.0;
                             anC1u = anC1 * 65535.0 / 360.0;
                             anC2u = anC2 * 65535.0 / 360.0;
-
+#ifdef QT_DEBUG
                             qDebug() << "azCur =" << azC0;
                             qDebug() << "azVel =" << azC1 << "=" << azC1u;
                             qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
@@ -350,7 +356,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 //                            qDebug() << "anC0 =" << anC0;
 //                            qDebug() << "anC1 =" << anC1 << "=" << anC1u;
 //                            qDebug() << "anC2 =" << anC2 << "=" << anC2u;
-
+#endif
                             msg.azC0[0] = 0;
                             msg.azC0[1] = 0;
                             msg.azC0[2] = 0;
@@ -367,8 +373,10 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             msg.anSector = 0;
                         }
                         QByteArray data = msg.serializeFull();
+#ifdef QT_DEBUG
                         qDebug() << "Sending message to move the PPU:";
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+#endif
                         m_ethHandler.sendMessage(data);
                         LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, 
                         data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
@@ -376,12 +384,16 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 }
                 else
                 {
+#ifdef QT_DEBUG
                     qDebug() << "PPU is turned Off" << Qt::endl;
+#endif
                     auto msg = EthMessageFactory::create<EthMessage_PPU_ENABLE>();
                     msg.state = 1; // Включить ППУ
                     QByteArray data = msg.serializeFull();
+#ifdef QT_DEBUG
                     qDebug() << "Sending message to turn on the PPU:";
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+#endif
                     m_ethHandler.sendMessage(data);
                     LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, 
                     data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
