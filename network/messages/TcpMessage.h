@@ -1,6 +1,8 @@
 #ifndef TCPMESSAGE_H
 #define TCPMESSAGE_H
 
+#include "qjsonobject.h"
+#include "qjsonobject.h"
 #pragma once
 #include <cstdint>
 #include <cstring>
@@ -10,9 +12,11 @@
 #include <QByteArray>
 #include <QDateTime>
 #include <type_traits>
+#include <QJsonArray>
+#include <QJsonArray>
 
-#include "utils/AppConfig.h"
-#include "utils/time_provider/TimeProvider.h"
+
+
 #include "libs/json/json.hpp"
 
 using json = nlohmann::json;
@@ -178,7 +182,7 @@ struct TcpHeader {
 
     // Word - 4
     uint16_t typePack;      ///< Тип пакета (из PBU_MessageNumbers)
-    uint16_t checkSum;      ///< Контрольная сумма заголовка
+    uint16_t checkSum;      ///< Контрольная сумма заголовкаs
 
     /**
      * @brief Сериализует заголовок в массив байтов
@@ -251,6 +255,22 @@ struct TcpHeader {
 
     /// @brief Конструктор по умолчанию для десериализации
     TcpHeader() = default;
+
+    QJsonObject to_json() const {
+        QJsonObject jsonObj;
+
+        jsonObj["sender"] = static_cast<qint64>(sender);
+        jsonObj["idxModule"] = static_cast<int>(idxModule);
+        jsonObj["vMajor"] = vMajor;
+        jsonObj["vMinor"] = vMinor;
+        jsonObj["idxPack"] = idxPack;
+        jsonObj["sizeData"] = static_cast<qint64>(sizeData);
+        jsonObj["isAsku"] = static_cast<bool>(isAsku);
+        jsonObj["typePack"] = typePack;
+        jsonObj["checkSum"] = checkSum;
+
+        return jsonObj;
+    }
 };
 #pragma pack(pop)
 
@@ -348,6 +368,22 @@ struct TcpMessage_0x01 : TcpMessage<TcpMessage_0x01,
             << "  Control Capability: " << (isControl ? "Yes" : "No");
         return oss.str();
     }
+
+    QJsonObject to_json() const {
+        QJsonObject jsonObj;
+
+        jsonObj["idManuf"] = static_cast<int>(idManuf);
+        jsonObj["serialNum"] = static_cast<qint64>(serialNum);
+        jsonObj["versHardMaj"] = versHardMaj;
+        jsonObj["versHardMin"] = versHardMin;
+        jsonObj["versProgMaj"] = static_cast<int>(versProgMaj);
+        jsonObj["isInfo"] = static_cast<bool>(isInfo);
+        jsonObj["versProgMin"] = static_cast<int>(versProgMin);
+        jsonObj["isControl"] = static_cast<bool>(isControl);
+
+        return jsonObj;
+    }
+
 };
 #pragma pack(pop)
 
@@ -379,6 +415,13 @@ struct TcpMessage_0x03 : TcpMessage<TcpMessage_0x03,
             << "  Human Readable: " << TimeProvider::instance()
                                                         .msToDateTime(time);
         return oss.str();;
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+        json["timeRequest1"] = QString::number(timeRequest1);
+        json["timeRequest2"] = QString::number(timeRequest2);
+        return json;
     }
 };
 #pragma pack(pop)
@@ -434,6 +477,22 @@ struct TcpMessage_0x05 : TcpMessage<TcpMessage_0x05,
         }
         return oss.str();
     }
+
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+
+        json["typeData"] = static_cast<int>(typeData);
+        json["isValid"] = static_cast<bool>(isValid);
+        json["reserve"] = static_cast<qint64>(reserve);
+        json["X_lat"] = X_lat;
+        json["Y_long"] = Y_long;
+        json["Z_height"] = Z_height;
+
+        return json;
+    }
+
+
 };
 #pragma pack(pop)
 
@@ -491,6 +550,24 @@ struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
             << "  Elevation Visible Zone: " << dElVisible << "°";
         return oss.str();
     }
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+
+
+        json["time1"] = static_cast<qint64>(time1);
+        json["time2"] = static_cast<qint64>(time2);
+        json["numDrive"] = numDrive;
+        json["isRemote"] = static_cast<bool>(isRemote);
+        json["reserve"] = reserve;
+        json["azCur"] = azCur;
+        json["elCur"] = elCur;
+        json["dAzVisible"] = dAzVisible;
+        json["dElVisible"] = dElVisible;
+
+        return json;
+    }
+
 };
 #pragma pack(pop)
 
@@ -917,6 +994,55 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
         return oss.str();
     }
 
+    QJsonObject to_json() const {
+        QJsonObject jsonObj = TcpHeader::to_json();
+
+        jsonObj["trackStatus"] = static_cast<int>(trackStatus);
+        jsonObj["isExtra"] = static_cast<bool>(isExtra);
+        jsonObj["isTest"] = static_cast<bool>(isTest);
+        jsonObj["numDrive"] = static_cast<int>(numDrive);
+        jsonObj["reserve_1"] = static_cast<int>(reserve_1);
+        jsonObj["typeTrack"] = typeTrack;
+        jsonObj["idxCeil"] = idxCeil;
+        jsonObj["azimuth"] = azimuth;
+        jsonObj["range"] = range;
+        jsonObj["eps"] = eps;
+        jsonObj["vel"] = vel;
+        jsonObj["velAz"] = velAz;
+        jsonObj["velEps"] = velEps;
+        jsonObj["time1"] = static_cast<qint64>(time1);
+        jsonObj["time2"] = static_cast<qint64>(time2);
+        jsonObj["snrSum"] = snrSum;
+        jsonObj["epr"] = epr;
+        jsonObj["maxRange"] = maxRange;
+        jsonObj["numbTrack"] = numbTrack;
+        jsonObj["numbTrackServr"] = numbTrackServr;
+        jsonObj["sigAz"] = sigAz;
+        jsonObj["sigEps"] = sigEps;
+        jsonObj["sigD"] = sigD;
+        jsonObj["sigVr"] = sigVr;
+        jsonObj["rangeCnt"] = static_cast<int>(rangeCnt);
+        jsonObj["speedCnt"] = static_cast<int>(speedCnt);
+        jsonObj["chanCnt"] = static_cast<int>(chanCnt);
+        jsonObj["reserve_2"] = static_cast<int>(reserve_2);
+        jsonObj["rangeStart"] = rangeStart;
+        jsonObj["rangeStep"] = rangeStep;
+        jsonObj["vradStart"] = vradStart;
+        jsonObj["vradStep"] = vradStep;
+
+        QJsonArray powArray;
+        if (powRangeVel) {
+            for (uint8_t i = 0; i < rangeCnt*speedCnt; ++i) {
+                QJsonArray speedArray;
+                speedArray.append(powRangeVel[i]);
+                powArray.append(speedArray);
+            }
+        }
+        jsonObj["powRangeVel"] = powArray;
+
+        return jsonObj;
+    }
+
 private:
 
     /// @brief Освобождает память массива мощностей
@@ -1080,6 +1206,10 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
             cap.maxRange = j.at("MaxRange").get<double>();
             return cap;
         }
+
+
+
+
     };
 
     /**
@@ -1155,6 +1285,33 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
         return buffer;
     }
 
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+        QJsonArray capabilitiesArray;
+
+        if (jsonData) {
+            try {
+                auto json = json::parse(jsonData, jsonData + getJsonSize());
+                for (const auto& item : json) {
+                    QJsonObject capObj;
+                    capObj["Number"] = item["Number"].get<int>();
+                    capObj["IsRotate"] = item.value("IsRotate", false);
+                    capObj["Name"] = QString::fromStdString(item.value("Name", std::string()));
+                    capObj["AzMin"] = item["AzMin"].get<double>();
+                    capObj["AzMax"] = item["AzMax"].get<double>();
+                    capObj["ElevMin"] = item["ElevMin"].get<double>();
+                    capObj["ElevMax"] = item["ElevMax"].get<double>();
+                    capObj["MaxRange"] = item["MaxRange"].get<double>();
+                    capabilitiesArray.append(capObj);
+                }
+            } catch (const json::exception&) {
+
+            }
+        }
+
+        json["capabilities"] = capabilitiesArray;
+        return json;
+    }
 /// @warning Отключение диагностики комплилятора для метода копирования
 /// @note Мы сами перепроверяем строку при её сериализации/десериализации
 #pragma GCC diagnostic push
@@ -1444,6 +1601,24 @@ struct TcpMessage_0x1024 : TcpMessage<TcpMessage_0x1024,
         return data;
     }
 
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+        QJsonArray sectorsArray;
+
+        for (const auto& sector : sectors) {
+            QJsonObject sectorObj;
+            sectorObj["limAzBegin"] = sector.limAzBegin;
+            sectorObj["limAzEnd"] = sector.limAzEnd;
+            sectorObj["limElevBegin"] = sector.limElevBegin;
+            sectorObj["limElevEnd"] = sector.limElevEnd;
+            sectorsArray.append(sectorObj);
+        }
+
+        json["sectors"] = sectorsArray;
+        return json;
+    }
+
     /**
      * @brief Десериализация сообщения
      */
@@ -1588,6 +1763,16 @@ struct TcpMessage_0x02 : TcpMessage<TcpMessage_0x02,
         }
         return oss.str();
     }
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+
+        json["idxModule"] = idxModule;
+        json["errorConnect"] = errorConnect;
+        json["reserve"] = reserve;
+
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -1625,6 +1810,17 @@ struct TcpMessage_0x04 : TcpMessage<TcpMessage_0x04,
             << "  Latency: " << TimeProvider::instance()
                             .msToDateTime(answerTime - requestTime) << " ms";
         return oss.str();
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+
+        json["timeRequest1"] = static_cast<qint64>(timeRequest1);
+        json["timeRequest2"] = static_cast<qint64>(timeRequest2);
+        json["timeAnswer1"] = static_cast<qint64>(timeAnswer1);
+        json["timeAnswer2"] = static_cast<qint64>(timeAnswer2);
+
+        return json;
     }
 };
 #pragma pack(pop)
@@ -1845,6 +2041,40 @@ struct TcpMessage_0x07 : TcpMessage<TcpMessage_0x07,
             << "  Reserved: " << reserve;
         return oss.str();
     }
+    QJsonObject to_json() {
+        QJsonObject json = TcpHeader::to_json();
+        json["time1"] = static_cast<int>(time1);
+        json["time2"] = static_cast<int>(time2);
+        json["cellVoi"] = static_cast<int>(cellVoi);
+        json["cellKOIR"] = static_cast<int>(cellKOIR);
+        json["ktPrizn"] = static_cast<int>(ktPrizn);
+        json["trPrizn"] = static_cast<int>(trPrizn);
+        json["typeCeil"] = static_cast<int>(typeCeil);
+        json["typeInfo"] = static_cast<int>(typeInfo);
+        json["isTest"] = static_cast<int>(isTest);
+        json["isKursMan"] = static_cast<int>(isKursMan);
+        json["isHMan"] = static_cast<int>(isHMan);
+        json["isH"] = static_cast<int>(isH);
+        json["isVr"] = static_cast<int>(isVr);
+        json["ceilX"] = ceilX;
+        json["ceilY"] = ceilY;
+        json["ceilZ"] = ceilZ;
+        json["latitude"] = latitude;
+        json["longitude"] = longitude;
+        json["height"] = height;
+        json["sizeAz"] = sizeAz;
+        json["sizeD"] = sizeD;
+        json["velX"] = velX;
+        json["velY"] = velY;
+        json["velZ"] = velZ;
+        json["velR"] = velR;
+        json["ceilPel"] = static_cast<int>(ceilPel);
+        json["ceilAddr"] = static_cast<int>(ceilAddr);
+        json["ceilCat"] = static_cast<int>(ceilCat);
+        json["reserve"] = static_cast<int>(reserve);
+        return json;
+    }
+
 };
 #pragma pack(pop)
 
@@ -1950,6 +2180,34 @@ struct TcpMessage_0x641 : TcpMessage<TcpMessage_0x641,
                                 ///< указан признак перехватчика (при любом
                                 ///< другом признаке поле Серийный номер
                                 ///< перехватчика игнорируется).
+                                ///
+
+
+    QJsonObject to_json() {
+        QJsonObject json = TcpHeader::to_json();
+        json["time1"] = static_cast<int>(time1);
+        json["time2"] = static_cast<int>(time2);
+        json["idxCeilVOI"] = static_cast<int>(idxCeilVOI);
+        json["numDrive"] = static_cast<int>(numDrive);
+        json["typeCeil"] = static_cast<int>(typeCeil);
+        json["isModel"] = static_cast<int>(isModel);
+        json["reserve"] = static_cast<int>(reserve);
+        json["ceilAz"] = ceilAz;
+        json["ceilElev"] = ceilElev;
+        json["ceilRange"] = ceilRange;
+        json["ceilVr"] = ceilVr;
+        json["ceilVAz"] = ceilVAz;
+        json["ceilVElev"] = ceilVElev;
+        json["sigAz"] = sigAz;
+        json["sigElev"] = sigElev;
+        json["sigRange"] = sigRange;
+        json["sigVAz"] = sigVAz;
+        json["sigVElev"] = sigVElev;
+        json["sigVr"] = sigVr;
+        json["numBPLA"] = static_cast<int>(numBPLA);
+        return json;
+    }
+
     /**
      * @note В ответ на данную команду ПО модуля должно отправить квитанцию
      * (сообщение 0х23) либо расширенную квитанцию (сообщение 0х27) о выполнении
@@ -2036,6 +2294,12 @@ struct TcpMessage_0x20 : TcpMessage<TcpMessage_0x20,
     struct ControlledParam;
     struct ConfigParam;
     struct Element;
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+        json["raw_json"] = jsonData;
+        return json;
+    }
 
     /**
      * @struct ParamTemplate
@@ -2441,6 +2705,10 @@ private:
         return sizeData - (sizeof(TcpMessage_0x20) - sizeof(TcpHeader));
     }
 
+
+
+
+
     TcpMessage_0x20() : jsonData(nullptr) {} // Для десериализации
 };
 #pragma pack(pop)
@@ -2710,6 +2978,15 @@ struct TcpMessage_0x23: TcpMessage<TcpMessage_0x23,
         oss << ")";
         return oss.str();
     }
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+        json["time1"] = static_cast<qint64>(time1);
+        json["time2"] = static_cast<qint64>(time2);
+        json["IDCom"] = static_cast<qint64>(IDCom);
+        json["code"] = static_cast<qint64>(code);
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -2936,6 +3213,27 @@ struct TcpMessage_0x24: TcpMessage<TcpMessage_0x24,
 
         return oss.str();
     }
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+        json["time1"] = static_cast<qint64>(time1);
+        json["time2"] = static_cast<qint64>(time2);
+        json["status"] = static_cast<qint64>(status);
+        json["work"] = static_cast<qint64>(work);
+        json["isRGDV"] = static_cast<qint64>(isRGDV);
+        json["isRAF"] = static_cast<qint64>(isRAF);
+        json["isLocal"] = static_cast<qint64>(isLocal);
+        json["isImit"] = static_cast<qint64>(isImit);
+        json["hasTP"] = static_cast<qint64>(hasTP);
+        json["isTP"] = static_cast<qint64>(isTP);
+        json["isWP"] = static_cast<qint64>(isWP);
+        json["isTPValid"] = static_cast<qint64>(isTPValid);
+        json["isWPValid"] = static_cast<qint64>(isWPValid);
+        json["statusTWP"] = static_cast<qint64>(statusTWP);
+        json["mode"] = static_cast<qint64>(mode);
+        json["reserve"] = static_cast<qint64>(reserve);
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -3009,6 +3307,12 @@ struct TcpMessage_0x40: TcpMessage<TcpMessage_0x40,
 
         return oss.str();
     }
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+        json["flags"] = static_cast<qint64>(flags);
+        return json;
+    }
 };
 #pragma pack(pop)
 
@@ -3075,6 +3379,14 @@ struct TcpMessage_0x41: TcpMessage<TcpMessage_0x41,
 
         return oss.str();
     }
+                    ///
+                    ///
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json(); //~
+        json["flags"] = static_cast<qint64>(flags); //+
+        return json; //+
+    }
 };
 #pragma pack(pop)
 
@@ -3115,6 +3427,13 @@ struct TcpMessage_0x42: TcpMessage<TcpMessage_0x42,
             << "  Element ID: " << IDElem << "\n"
             << "  Reserved: " << reserve;
         return oss.str();
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = TcpHeader::to_json();
+        json["IDElem"] = static_cast<qint64>(IDElem);
+        json["reserve"] = static_cast<qint64>(reserve);
+        return json;
     }
 };
 #pragma pack(pop)

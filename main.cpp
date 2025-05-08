@@ -9,9 +9,8 @@
 #endif
 
 #include "utils/env_loader/EnvLoader.h"
-#include "utils/AppConfig.h"
 #include "core/CoreManager.h"
-#include "core/logger/Logger.h"
+#include "utils/env_loader/Settings.h"
 
 int main(int argc, char* argv[]) {
 #ifdef Q_OS_WIN
@@ -33,6 +32,17 @@ int main(int argc, char* argv[]) {
             SocketError>("QAbstractSocket::SocketError");
 
     QCoreApplication a(argc, argv);
+
+    // Инициализация Логгера (обязательно, иначе Логгер не запустится)
+    QString connectionString = QString("host=%1 port=%2 dbname=%3 user=%4 password=%5")
+                                   .arg(appSettings().value("database/host").toString())
+                                   .arg(appSettings().value("database/port").toString())
+                                   .arg(appSettings().value("database/db_name").toString())
+                                   .arg(appSettings().value("database/user").toString())
+                                   .arg(appSettings().value("database/password").toString());
+
+    Logger::instance().initialize(connectionString);
+
 
     // Путь к .env
     QString envPath = QCoreApplication::applicationDirPath() + "/.env";
@@ -68,14 +78,8 @@ int main(int argc, char* argv[]) {
     qDebug().noquote() << "MAC Source:" << Qt::hex
                        << AppConfig::instance().ETH_PROTO_MAC_SRC();
 
-    // Инициализация Логгера (обязательно, иначе Логгер не запустится)
-    Logger::initialize();
-//    qDebug() << "Состояние Логгера:" << Logger::instance().isRunning();
 
-//    // Тест запуска Логгера без явного вызова writeText():
-//    QTimer::singleShot(0, []{
-//        Logger::instance().writeText("Тест Логгера");
-//    });
+
 
     // Запуск ядра приложения
     CoreManager core;

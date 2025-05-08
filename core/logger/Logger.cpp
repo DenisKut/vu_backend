@@ -1,144 +1,202 @@
 #include "Logger.h"
+#include <QSqlError>
+#include <QDebug>
+#include <QFile>
+#include <qcoreapplication.h>
 
-// Приватный конструктор
-Logger::Logger() {
-//    qDebug() << "Вызван конструктор лога";
+// РЕАЛИЗАЦИИ конструкторов, преобразований перед отправкой
+InitLog::InitLog(
+    const QString& source,
+    const StatusInit& statusInit)
+    : LogHeader(source, LogLevel::Info),
+    status(statusInit)
+{}
+
+InitLog::InitLog(
+    const QString& source,
+    const LogLevel& logLevel,
+    const StatusInit& statusInit)
+    : LogHeader(source, logLevel),
+    status(statusInit)
+{}
+
+InternalMessageLog::InternalMessageLog(
+    const QString& source,
+    const QString& messageType,
+    const QString& messageItself)
+    : LogHeader(source, LogLevel::Info),
+    messageType(messageType),
+    parsedData(messageItself)
+{}
+
+InternalMessageLog::InternalMessageLog(
+    const QString& source,
+    const LogLevel& logLevel,
+    const QString& messageType,
+    const QString& messageItself)
+    : LogHeader(source, logLevel),
+    messageType(messageType),
+    parsedData(messageItself)
+{}
+
+ProtocolMessageLog::ProtocolMessageLog(
+    const QString& source,
+    const Protocol& protocol,
+    const QByteArray& rawData,
+    const QString& jsonData)
+    : LogHeader(source, LogLevel::Info),
+    protocol(protocol), rawData(rawData), parsedData(jsonData)
+{}
+
+
+ProtocolMessageLog::ProtocolMessageLog(
+    const QString& source,
+    const LogLevel& logLevel,
+    const Protocol& protocol,
+    const QByteArray& rawData,
+    const QString& jsonData)
+    : LogHeader(source, logLevel),
+    protocol(protocol), rawData(rawData), parsedData(jsonData)
+{
 }
+
+// КЛАСС ЛОГГЕРА ----------------------------------------------
+// Приватный конструктор
+Logger::Logger() {}
 
 // Приватный деструктор:
 Logger::~Logger() {
     stop();
 }
 
-// Выполнить явную инициализацию с гарантией запуска потока:
-void Logger::initialize() {
-    auto& logger = instance();
-    if (!logger.isRunning()) {
-        logger.start();
-        QThread::msleep(10); // Подождать 10 мс для гарантированного запуск потока
-    }
-}
-
-// Получить экземпляр синглтона:
 Logger& Logger::instance() {
-    static Logger logger; // Экземпляр синглтона гарантированно создаётся один раз
+    static Logger logger;
     return logger;
 }
 
-// Записать текстовое сообщение в файл:
-void Logger::writeText(const QString& message) {
-    if (!isRunning()) {
-        qWarning() << "ОШИБКА: поток Логгера не запустился";
+void Logger::initialize(const QString& connectionString) {
+
+
+    qDebug() << "Драйвера:" << QSqlDatabase::drivers();
+
+    if (!QSqlDatabase::isDriverAvailable("QPSQL")) {
+        qCritical() << "QPSQL недоступен/не найден!";
         return;
     }
-    enqueueMessage(formatMessage(message));
+    m_db = QSqlDatabase::database();
+    if (!m_db.isValid()) {
+        m_db = QSqlDatabase::addDatabase("QPSQL", "postgres");
+        m_db.setConnectOptions(connectionString+" connect_timeout=5");
+    }
+
+    if (!m_db.open()) {
+        qCritical() << "Не смог подключиться к PostgreSQL:\n" << m_db.lastError().text()<<"\n\n";
+        return;
+    }
+
+    // создать структуру БД если это еще не было сделано ранее
+    //
+
+    QFile sqlFile(QCoreApplication::applicationDirPath()+"/init_db.sql");
+    if (!sqlFile.open(QIODevice::ReadOnly)) {
+        qCritical() << "\n\n=========    !!!НЕ НАЙДЕН ФАЙЛ SQL!!!    =========\n" << sqlFile.errorString() <<"\n==================================================\n\n";
+    }
+    QStringList queries = QString(sqlFile.readAll()).split(';', Qt::SkipEmptyParts);
+    sqlFile.close();
+
+    QSqlQuery query(m_db);
+    bool statusQueryExecution = false;
+    for (const QString& q : queries) {
+        QString trimmed = q.trimmed();
+        if (!trimmed.isEmpty() && !query.exec(trimmed)) {
+            qCritical() << "\n\n=========    !!!НЕ ВЫПОЛНЕН ЗАПРОС!!!    =========\n" << query.lastError().text()<<"\n==================================================\n\n";
+            qCritical() << "Провальный запрос:" << trimmed;
+            statusQueryExecution = false;
+            break;
+        }
+        statusQueryExecution = true;
+    }
+
+
+    if (statusQueryExecution){
+        LOG_INIT(CLASS_NAME, StatusInit::LOADED);
+    }else
+        qCritical()<< "CRITICAL!!! ONE OR MORE TABLES NOT CREATED";
+    start();
 }
 
-// Записать бинарные данные в файл в виде Hex:
-// "XX XX XX XX ..." из массива QByteArray:
-void Logger::writeBinary(const QString& message, const QByteArray& data) {
-    enqueueMessage(formatMessage(message + ":\n") + binaryToHex(data) + "\n");
-}
 
-// Записать бинарные данные в файл в виде Hex:
-// "XX XX XX XX ..." из массива const unsigned char* data:
-void Logger::writeBinary(const QString& message, const unsigned char* data, unsigned long long length) {
-    enqueueMessage(formatMessage(message + ":\n") + binaryToHex(data, length) + "\n");
-}
 
-// Запуск потока:
+// управление очередями запросов и их отправка
 void Logger::run() {
-//    qDebug() << "[Log] Thread ID:" << QThread::currentThreadId();
-
-    QFile file("vu_backend_log.log");
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-        qCritical() << "[Log] File error:" << file.errorString();
-        return;
-    }
-
-    // Принудительная запись заголовка:
-    file.write(TimeProvider::instance().currentDateString().c_str());
-    file.write("\n\n");
-
-    QElapsedTimer timer;
-    timer.start();
-
     while (!m_stop) {
         m_mutex.lock();
-        if (m_queue.isEmpty() && !m_stop) {
-            m_condition.wait(&m_mutex, 100); // Таймаут 100 мс
+        if (m_queryQueue.isEmpty() && !m_stop) {
+            m_condition.wait(&m_mutex);
         }
-        auto temp = std::move(m_queue);
+        QString query = m_queryQueue.dequeue();
         m_mutex.unlock();
 
-        while (!temp.isEmpty()) {
-            const auto& msg = temp.dequeue();
-            file.write(msg);
-//            qDebug() << "[Log] Written:" << msg.size() << "bytes";
+        m_buffer.push_back(query);
+        if (m_buffer.size() >= static_cast<std::vector<QString>::size_type>(m_bufferSize)) {
+            flushBuffer();
         }
 
-        file.flush(); // Принудительный сброс буфера
+        #ifdef QT_DEBUG
+            flushBuffer();
+        #endif
     }
 
-    file.close();
+    flushBuffer();
 }
 
-// Остановка Логгера:
 void Logger::stop() {
     m_stop = true;
     m_condition.wakeAll();
     wait();
+    if (m_db.isOpen()) {
+        m_db.close();
+    }
 }
 
-// Преобразование текстовой строки с временной меткой
-// в QByteArray для дальнейшей записи в файл:
-QByteArray Logger::formatMessage(const QString& message) {
-    return QString("%1 - %2\n")
-        .arg(TimeProvider::instance().currentTimeString().c_str())
-        .arg(message)
-        .toUtf8();
-}
 
-// Преобразование массива данных в Hex-формат
-// для корректного отображения в файле:
-template<typename T>
-QByteArray Logger::binaryToHex(const T* data, size_t length) {
-    QByteArray hex;
-    if(length == 0) return hex;
+void Logger::flushBuffer() {
+    if (m_buffer.empty()) return;
 
-    hex.resize(length * 3 - 1);  // Точно рассчитанный размер
-    char* dest = hex.data();
+    QSqlQuery sqlQuery(m_db);
+    sqlQuery.prepare("BEGIN;");
+    for (const auto& query : m_buffer) {
 
-    for(size_t i = 0; i < length; ++i) {
-        const uint8_t c = static_cast<uint8_t>(data[i]);
-        dest[0] = HEX_TABLE[c >> 4];
-        dest[1] = HEX_TABLE[c & 0x0F];
-        dest += 2;
+        #ifdef QT_DEBUG
+            qDebug()<<"\n"<<query;
+        #endif
 
-        if(i != length - 1) {
-            *dest++ = ' ';
+        if (!sqlQuery.exec(query)) {
+            #ifdef QT_DEBUG
+                qCritical() << "\n\n=========    !!!НЕ ВЫПОЛНЕН ЗАПРОС!!!    =========\n" << sqlQuery.lastError().text()<<"\n==================================================\n\n";
+            #endif
         }
     }
-    return hex;
+    sqlQuery.prepare("COMMIT;");
+    sqlQuery.exec();
+
+    m_buffer.clear();
 }
 
-// Явное инстанцирование для поддерживаемых типов:
-template QByteArray Logger::binaryToHex<uint8_t>(const uint8_t*, size_t);
-template QByteArray Logger::binaryToHex<char>(const char*, size_t);
-
-// Преобразование QByteArray в Hex-формат
-// для корректного отображения в файле:
-QByteArray Logger::binaryToHex(const QByteArray& data) {
-    if(data.isEmpty()) return QByteArray();
-    return binaryToHex(reinterpret_cast<const uint8_t*>(data.constData()), data.size());
-}
-
-// Поместить сообщение в очередь на запись в лог-файл:
-void Logger::enqueueMessage(QByteArray msg) {
-    QMutexLocker lock(&m_mutex);
-//    qDebug() << "[Log] Enqueuing message, size:" << msg.size();
-    m_queue.enqueue(std::move(msg));
+void Logger::enqueueMessage(const QString& query) {
+    QMutexLocker locker(&m_mutex);
+    m_queryQueue.enqueue(query);
     m_condition.wakeOne();
 }
 
-const char* const Logger::HEX_TABLE = "0123456789ABCDEF";
+// КОНЕЦ управление очередями и отправка
+
+
+
+
+
+
+
+
+
+

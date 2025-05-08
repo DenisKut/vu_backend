@@ -1,8 +1,7 @@
 QT += core network sql websockets
 
-TARGET = lun_vu
+TARGET = lun
 CONFIG += c++11 cmdline
-
 # -------------------------------
 # 0. Пути сборки проекта
 # -------------------------------
@@ -13,12 +12,23 @@ OBJECTS_DIR = $$PWD/objects
 # QMAKE_CXXFLAGS += -fsanitize=thread
 # QMAKE_LFLAGS += -fsanitize=thread
 
-# Настройка выходных директорий
-CONFIG(debug, debug|release) {
-    DESTDIR = $$BIN_DIR/debug
-} else {
+# QMAKE_CXXFLAGS += -fsanitize=thread
+# QMAKE_LFLAGS += -fsanitize=thread
+
+# Цель сборки {debug, release}
+CONFIG(release, debug|release) {
+    message("Release build!")
+    CONFIG -= debug
     DESTDIR = $$BIN_DIR/release
 }
+else {
+    message("Debug build!")
+    CONFIG -= release
+    CONFIG += debug
+    DESTDIR = $$BIN_DIR/debug
+}
+
+
 
 MOC_DIR = $$OBJECTS_DIR
 UI_DIR = $$OBJECTS_DIR/ui
@@ -33,17 +43,19 @@ QMAKE_DISTCLEAN += $$QMAKE_CLEAN
 
 # Общие для всех платформ настройки
 SOURCES += \
+    main.cpp \
+    pch.cpp \
     core/CoreManager.cpp \
     core/calculator/calculator.cpp \
     core/logger/Logger.cpp \
-    main.cpp \
     network/NetworkManager.cpp \
     network/handlers/EthHandler.cpp \
     network/handlers/TcpConnectionHandler.cpp \
     network/handlers/TcpHandler.cpp \
     network/handlers/UdpHandler.cpp \
     utils/time_provider/TimeProvider.cpp \
-    utils/env_loader/EnvLoader.cpp
+    utils/env_loader/EnvLoader.cpp \
+    utils/env_loader/Settings.cpp 
 
 HEADERS += \
     core/CoreManager.h \
@@ -60,7 +72,13 @@ HEADERS += \
     network/messages/TcpMessage.h \
     utils/AppConfig.h \
     utils/time_provider/TimeProvider.h \
-    utils/env_loader/EnvLoader.h
+    utils/env_loader/EnvLoader.h \
+    utils/env_loader/Settings.h 
+
+#глобальное включение
+PRECOMPILED_HEADER = pch.h
+CONFIG+=precompile_header
+INCLUDEPATH += $$PWD/core/logger
 
 # Windows (WinPcap)
 win32 {
@@ -107,6 +125,8 @@ TRANSLATIONS +=
 CONFIG += lrelease embed_translations
 
 DISTFILES += \
+    docs/db_info.md \
+    docs/dev_info.md \
     docs/git_guide.md \
     docs/doxygen_guide.md \
     libs/wpdpack/Lib/Packet.lib \
@@ -123,18 +143,17 @@ DISTFILES += \
 # 5. Копирование .env в выходную директорию
 #-------------------------------
 
-# Определение DESTDIR в зависимости от конфигурации
-CONFIG(debug, debug|release) {
-    DESTDIR = $$OUT_PWD/bin/debug
-} else {
-    DESTDIR = $$OUT_PWD/bin/release
-}
-
-# Копирование .env
+# Копирование .env, config.ini, database/init_db.sql
 win32 {
-    QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR & copy /Y $$shell_path($$PWD/.env) $$shell_path($$DESTDIR))
+    QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR \
+        & copy /Y $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) \
+        & copy /Y $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) \
+        & copy /Y $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
 } else {
-    QMAKE_POST_LINK += $$quote(mkdir -p $$DESTDIR && cp -f $$shell_path($$PWD/.env) $$shell_path($$DESTDIR))
+    QMAKE_POST_LINK += $$quote(mkdir -p $$DESTDIR && \
+        cp -f $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) && \
+        cp -f $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) && \
+        cp -f $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
 }
 
 # ===================================

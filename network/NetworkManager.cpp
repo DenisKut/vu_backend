@@ -80,26 +80,36 @@ NetworkManager::~NetworkManager() {
     if(!m_udpThread->isFinished()) delete m_udpThread;
     if(!m_ethThread->isFinished()) delete m_ethThread;
 }
-
 void NetworkManager::start() {
-    QMetaObject::invokeMethod(m_tcpHandler, [this]() {
-        m_tcpHandler->connectToHost(
-            to_qstring(AppConfig::instance().TCP_HOST_IP()),
-            AppConfig::instance().TCP_HOST_PORT());        
-    });
+    switch (currentMode())
+    {
+    case AppMode::VU_LOCALHOST:
+            QMetaObject::invokeMethod(m_tcpHandler, [this]() {
+                m_tcpHandler->connectToHost(
+                    appSettings().value("vu_settings/tcp_host_ip").toString(),
+                    appSettings().value("vu_settings/tcp_host_port").toInt());        
+            });
+            QMetaObject::invokeMethod(m_udpHandler, [this]() {
+                m_udpHandler->start(appSettings().value("vu_settings/udp_port").toInt());
+            });
+        break;
+    case AppMode::VU_REMOTE_ALMAZ:
+        QMetaObject::invokeMethod(m_tcpHandler, [this]() {
+            m_tcpHandler->connectToHost(
+                appSettings().value("vu_settings_almaz/tcp_host_ip").toString(),
+                appSettings().value("vu_settings_almaz/tcp_host_port").toInt());        
+        });
+        QMetaObject::invokeMethod(m_udpHandler, [this]() {
+            m_udpHandler->start(appSettings().value("vu_settings_almaz/udp_port").toInt());
+        });
+        break;
+    }
+
     QMetaObject::invokeMethod(m_tcpHandler, [this]() {
         m_tcpHandler->startTimers();
     });
-    QMetaObject::invokeMethod(m_udpHandler, [this]() {
-        m_udpHandler->start(AppConfig::instance().UDP_PORT());
-    });
-    // QMetaObject::invokeMethod(m_tcpHandler, "connectToHost",
-    //     Q_ARG(QString, to_qstring(AppConfig::instance().TCP_HOST_IP())),
-    //     Q_ARG(quint16, AppConfig::instance().TCP_HOST_PORT()));
-    // QMetaObject::invokeMethod(m_tcpHandler, "startTimers");
-    // QMetaObject::invokeMethod(m_udpHandler, "start",
-    //     Q_ARG(int, AppConfig::instance().UDP_PORT()));
-    // QMetaObject::invokeMethod(m_ethHandler, "start");
+
+    LOG_INIT(CLASS_NAME, StatusInit::LOADED);
 #ifdef _WIN32
     m_ethTimer.start(1);
 #endif
@@ -107,9 +117,16 @@ void NetworkManager::start() {
 
 void NetworkManager::stop() {
     m_ethTimer.stop();
-    QMetaObject::invokeMethod(m_tcpHandler, "disconnect");
-    QMetaObject::invokeMethod(m_udpHandler, "stopListening");
-    QMetaObject::invokeMethod(m_ethHandler, "disconnectAdapter");
+    QMetaObject::invokeMethod(m_tcpHandler, [this]() {
+        m_tcpHandler->disconnect();
+    });
+    QMetaObject::invokeMethod(m_udpHandler, [this]() { 
+        m_udpHandler->stopListening(); 
+    });
+    QMetaObject::invokeMethod(m_ethHandler, [this]() { 
+        m_ethHandler->disconnectAdapter();
+    });
+    LOG_INTERNAL(CLASS_NAME, "NetworkManager. останов.", "");
 }
 
 // ППУ:
@@ -182,14 +199,22 @@ T clamp(T value, T min_val, T max_val) {
     return (value < min_val) ? min_val : (value > max_val) ? max_val : value;
 }
 
-
-
 void NetworkManager::onTcpReceived(const TcpHeader& msg) {
+#ifdef QT_DEBUG
     qDebug() << "TCP Message:" << msg.checkSum;
+#endif
 }
 
 void NetworkManager::onUdpReceived(const Message& msg) {
+#ifdef QT_DEBUG
     qDebug() << "UDP Message:" << msg.payload;
+#endif
+}
+
+void NetworkManager::onUdpReceivedDebug(const Message& msg) {
+#ifdef QT_DEBUG
+    qDebug() << "UDP Message debug:" << msg.payload;
+#endif
 }
 
 void NetworkManager::onUdpReceivedDebug(const Message& msg) {
@@ -217,12 +242,13 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
     auto parsed = EthMessageFactory::parse(msg);
     if (parsed)
     {
-//        // Отладочный вывод тела Ethernet пакета целиком
-//        qDebug() << Qt::endl << "ETH Message:" << msg.toHex(' ').toUpper();
+#ifdef QT_DEBUG
+        // Отладочный вывод тела Ethernet пакета целиком
+        qDebug() << Qt::endl << "ETH Message:" << msg.toHex(' ').toUpper();
 
-//        // Отладочный вывод номера принятого сообщения
-//        qDebug() << "parsed->mesNumber =" << TO_HEX_STR(&parsed->mesNumber, 2);
-
+        // Отладочный вывод номера принятого сообщения
+        qDebug() << "parsed->mesNumber =" << TO_HEX_STR(&parsed->mesNumber, 2);
+#endif
         // Проверяем приход сообщений:
         //-----------------------------------------------------------------------------------
         // Сообщение синхронизации БС (2.5)
@@ -237,17 +263,19 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 TimeProvider::instance().setBsPeriodNumber(msgBS_SYNC->periodNumber);
                 TimeProvider::instance().setBsPeriodTime(msgBS_SYNC->periodTime);
                 TimeProvider::instance().setBsPeriodWidth(msgBS_SYNC->periodWidth);
-                TimeProvider::instance().syncTimeBS();
-
-//                // Отладочный вывод параметров сообщения 2.5
-//                qDebug() << "2.5 RECEIVED";
-//                qDebug() << "--------------------------------------------";
-//                qDebug() << "timeReceive =" << TO_HEX_STR(msgBS_SYNC->timeReceive, 5);              // Время приёма
-//                qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgBS_SYNC->timeBeginTrans, 5);        // Время начала передачи
-//                qDebug() << "periodNumber =" << TO_HEX_STR(&msgBS_SYNC->periodNumber, 4);           // Порядковый номер нового периода
-//                qDebug() << "periodTime =" << TO_HEX_STR(msgBS_SYNC->periodTime, 5);               // Время начала нового периода
-//                qDebug() << "periodWidth =" << TO_HEX_STR(&msgBS_SYNC->periodWidth, 4);             // Значение периода синхронизации
-//                qDebug() << "--------------------------------------------";
+#ifdef QT_DEBUG
+                // Отладочный вывод параметров сообщения 2.5
+                qDebug() << "2.5 RECEIVED";
+                qDebug() << "--------------------------------------------";
+                qDebug() << "timeReceive =" << TO_HEX_STR(msgBS_SYNC->timeReceive, 5);              // Время приёма
+                qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgBS_SYNC->timeBeginTrans, 5);        // Время начала передачи
+                qDebug() << "periodNumber =" << TO_HEX_STR(&msgBS_SYNC->periodNumber, 4);           // Порядковый номер нового периода
+                qDebug() << "periodTime =" << TO_HEX_STR(msgBS_SYNC->periodTime, 5);               // Время начала нового периода
+                qDebug() << "periodWidth =" << TO_HEX_STR(&msgBS_SYNC->periodWidth, 4);             // Значение периода синхронизации
+                qDebug() << "--------------------------------------------";
+#endif
+                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,Protocol::RAW_MAC, msg, 
+                Logger::jobj_toString(msgBS_SYNC->to_json())));
             }
         }
         // Информация ориентации ППУ (11.1)
@@ -310,75 +338,78 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             AppConfig::instance().ModulePPU_num_RLMN_1,
                             msgPPU_POSITION->waitTarget);
                 //-------------------------------------------------------------
-
-//                // Отладочный вывод параметров сообщения 11.1
-//                qDebug() << "11.1 RECEIVED";
-//                qDebug() << "--------------------------------------------";
-//                qDebug() << "timeReceive =" << TO_HEX_STR(msgPPU_POSITION->timeReceive, 5);         // Время приёма
-//                qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgPPU_POSITION->timeBeginTrans, 5);   // Время начала передачи
-//                qDebug() << "lastCommand =" << TO_HEX_STR(&msgPPU_POSITION->lastCommand, 1);        // Код последней полученной команды
-//                qDebug() << "state =" << TO_HEX_STR(&msgPPU_POSITION->state, 1);                    // Состояние
-//                qDebug() << "ispr =" << TO_HEX_STR(&msgPPU_POSITION->ispr, 1);                      // Исправность оборудования
-//                qDebug() << "az =" << TO_HEX_STR(msgPPU_POSITION->az, 3);                           // Текущая координата по азимуту, град
-//                qDebug() << "azDelay =" << TO_HEX_STR(&msgPPU_POSITION->azDelay, 1);                // Задержка измерения координаты по азимуту, мс
-//                qDebug() << "an =" << TO_HEX_STR(msgPPU_POSITION->an, 3);                           // Текущая координата по углу места, град
-//                qDebug() << "anDelay =" << TO_HEX_STR(&msgPPU_POSITION->anDelay, 1);                // Задержка измерения координаты по углу места, мс
-//                qDebug() << "borders =" << TO_HEX_STR(&msgPPU_POSITION->borders, 1);                // Состояние границ
-//                qDebug() << "waitCommands =" << TO_HEX_STR(&msgPPU_POSITION->waitCommands, 1);      // Время ожидания команд, мс
-//                qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);          // Время ожидания целеуказаний, мс
-//                qDebug() << "--------------------------------------------";
-
-//                // Отладочный вывод параметров ППУ
-//                qDebug() << "PPU";
-//                qDebug() << "--------------------------------------------";
-//                qDebug() << "lastCommand =" <<
-//                            AppConfig::instance().getModulePPU_lastCommand(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Код последней полученной команды
-//                qDebug() << "state =" <<
-//                            AppConfig::instance().getModulePPU_state(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Состояние
-//                qDebug() << "ispr =" <<
-//                            AppConfig::instance().getModulePPU_ispr(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Исправность оборудования
-//                qDebug() << "az =" <<
-//                            AppConfig::instance().getModulePPU_az(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Текущая координата по азимуту, град
-//                qDebug() << "azDelay =" <<
-//                            AppConfig::instance().getModulePPU_azDelay(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Задержка измерения координаты по азимуту, мс
-//                qDebug() << "an =" <<
-//                            AppConfig::instance().getModulePPU_an(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Текущая координата по углу места, град
-//                qDebug() << "anDelay =" <<
-//                            AppConfig::instance().getModulePPU_anDelay(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Задержка измерения координаты по углу места, мс
-//                qDebug() << "borders =" <<
-//                            AppConfig::instance().getModulePPU_borders(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Состояние границ
-//                qDebug() << "waitCommands =" <<
-//                            AppConfig::instance().getModulePPU_waitCommands(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Время ожидания команд, мс
-//                qDebug() << "waitTarget =" <<
-//                            AppConfig::instance().getModulePPU_waitTarget(
-//                                AppConfig::instance().ModulePPU_num_RLMN_1); // Время ожидания целеуказаний, мс
-//                qDebug() << "--------------------------------------------";
+#ifdef QT_DEBUG
+                // Отладочный вывод параметров сообщения 11.1
+                qDebug() << "11.1 RECEIVED";
+                qDebug() << "--------------------------------------------";
+                qDebug() << "timeReceive =" << TO_HEX_STR(msgPPU_POSITION->timeReceive, 5);         // Время приёма
+                qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgPPU_POSITION->timeBeginTrans, 5);   // Время начала передачи
+                qDebug() << "lastCommand =" << TO_HEX_STR(&msgPPU_POSITION->lastCommand, 1);        // Код последней полученной команды
+                qDebug() << "state =" << TO_HEX_STR(&msgPPU_POSITION->state, 1);                    // Состояние
+                qDebug() << "ispr =" << TO_HEX_STR(&msgPPU_POSITION->ispr, 1);                      // Исправность оборудования
+                qDebug() << "az =" << TO_HEX_STR(msgPPU_POSITION->az, 3);                           // Текущая координата по азимуту, град
+                qDebug() << "azDelay =" << TO_HEX_STR(&msgPPU_POSITION->azDelay, 1);                // Задержка измерения координаты по азимуту, мс
+                qDebug() << "an =" << TO_HEX_STR(msgPPU_POSITION->an, 3);                           // Текущая координата по углу места, град
+                qDebug() << "anDelay =" << TO_HEX_STR(&msgPPU_POSITION->anDelay, 1);                // Задержка измерения координаты по углу места, мс
+                qDebug() << "borders =" << TO_HEX_STR(&msgPPU_POSITION->borders, 1);                // Состояние границ
+                qDebug() << "waitCommands =" << TO_HEX_STR(&msgPPU_POSITION->waitCommands, 1);      // Время ожидания команд, мс
+                qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);          // Время ожидания целеуказаний, мс
+                qDebug() << "--------------------------------------------";
+#endif
+                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC,
+                    msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
+                // Отладочный вывод параметров ППУ
+#ifdef QT_DEBUG
+                qDebug() << "PPU";
+                qDebug() << "--------------------------------------------";
+                qDebug() << "lastCommand =" <<
+                            AppConfig::instance().getModulePPU_lastCommand(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Код последней полученной команды
+                qDebug() << "state =" <<
+                            AppConfig::instance().getModulePPU_state(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Состояние
+                qDebug() << "ispr =" <<
+                            AppConfig::instance().getModulePPU_ispr(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Исправность оборудования
+                qDebug() << "az =" <<
+                            AppConfig::instance().getModulePPU_az(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Текущая координата по азимуту, град
+                qDebug() << "azDelay =" <<
+                            AppConfig::instance().getModulePPU_azDelay(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Задержка измерения координаты по азимуту, мс
+                qDebug() << "an =" <<
+                            AppConfig::instance().getModulePPU_an(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Текущая координата по углу места, град
+                qDebug() << "anDelay =" <<
+                            AppConfig::instance().getModulePPU_anDelay(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Задержка измерения координаты по углу места, мс
+                qDebug() << "borders =" <<
+                            AppConfig::instance().getModulePPU_borders(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Состояние границ
+                qDebug() << "waitCommands =" <<
+                            AppConfig::instance().getModulePPU_waitCommands(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Время ожидания команд, мс
+                qDebug() << "waitTarget =" <<
+                            AppConfig::instance().getModulePPU_waitTarget(
+                                AppConfig::instance().ModulePPU_num_RLMN_1); // Время ожидания целеуказаний, мс
+                qDebug() << "--------------------------------------------";
 
                 // Отладочное чтение параметров времени - проверка
                 // на то, что значения записались корректно:
-//                qDebug() << "getBsPeriodNumber =" << TimeProvider::instance().getBsPeriodNumber();
-//                qDebug() << "getBsPeriodTime =" << TimeProvider::instance().getBsPeriodTime();
-//                qDebug() << "getBsPeriodWidth =" << TimeProvider::instance().getBsPeriodWidth();
-
+                qDebug() << "getBsPeriodNumber =" << TimeProvider::instance().getBsPeriodNumber();
+                qDebug() << "getBsPeriodTime =" << TimeProvider::instance().getBsPeriodTime();
+                qDebug() << "getBsPeriodWidth =" << TimeProvider::instance().getBsPeriodWidth();
+#endif
                 // Если ППУ выключено, то отправить сообщение о включении:
                 uint8_t state = AppConfig::instance().getModulePPU_state(
                     AppConfig::instance().ModulePPU_num_RLMN_1); // Состояние ППУ
                 if (state & AppConfig::instance().ModulePPU_state_TurnedOn)
                 {
-//                    qDebug() << "PPU is turned On" << Qt::endl;
-
+#ifdef QT_DEBUG
+                    qDebug() << "PPU is turned On" << Qt::endl;
+#endif
                     static double azC0 = 0, anC0 = 0, azC1 = 0, anC1 = 0, azC2 = 0, anC2 = 0;
                     static uint16_t azC1u = 0, azC2u = 0, anC1u = 0, anC2u = 0;
-
                     // Если ППУ включено, то подвинуть его в координаты 10, 10:
                     static int mode = 0;
                     //if (mode == 0)
@@ -411,11 +442,13 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                                             reinterpret_cast<const char*>(buf),
                                             sizeof(buf)
                                             );
+#ifdef QT_DEBUG
                                 qDebug() << "Sending message to change period "
                                             "of messages on imitator:";
                                 qDebug() << "ETH Message from VU to BS:"
                                          << Qt::endl
                                          << data.toHex(' ').toUpper();
+#endif
 
                                 isChangedImitPeriod = QMetaObject::invokeMethod(
                                     m_ethHandler, [this, data]() {
@@ -486,14 +519,22 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             azC2u = azC2 * 65535.0 / 360.0;
                             anC1u = anC1 * 65535.0 / 360.0;
                             anC2u = anC2 * 65535.0 / 360.0;
+#ifdef QT_DEBUG
+                            qDebug() << "azCur =" << azC0;
+                            qDebug() << "azVel =" << azC1 << "=" << azC1u;
+                            qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
+                            qDebug() << "anCur =" << anC0;
+                            qDebug() << "anVel =" << anC1 << "=" << anC1u;
+                            qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
 
-//                            qDebug() << "azCur =" << azC0;
-//                            qDebug() << "azVel =" << azC1 << "=" << azC1u;
-//                            qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
-//                            qDebug() << "anCur =" << anC0;
-//                            qDebug() << "anVel =" << anC1 << "=" << anC1u;
-//                            qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
+//                            qDebug() << "azC0 =" << azC0;
+//                            qDebug() << "azC1 =" << azC1 << "=" << azC1u;
+//                            qDebug() << "azC2 =" << azC2 << "=" << azC2u;
 
+//                            qDebug() << "anC0 =" << anC0;
+//                            qDebug() << "anC1 =" << anC1 << "=" << anC1u;
+//                            qDebug() << "anC2 =" << anC2 << "=" << anC2u;
+#endif
                             msg.azC0[0] = 0;
                             msg.azC0[1] = 0;
                             msg.azC0[2] = 0;
@@ -508,14 +549,16 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 
                             msg.azSector = 0;
                             msg.anSector = 0;
-
-                            QByteArray data = msg.serializeFull();
-//                            qDebug() << "Sending message to move the PPU:";
-//                            qDebug() << "Time BS:" << TimeProvider::instance().getTimeForRequestBS();
-//                            qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
-                            m_ethHandler->sendMessage(data);
                         }
-                        else if (mode == 4) {
+                        QByteArray data = msg.serializeFull();
+#ifdef QT_DEBUG
+                        qDebug() << "Sending message to move the PPU:";
+                        qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+#endif
+                        m_ethHandler->sendMessage(data);
+                        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, 
+                            data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
+                        if (mode == 4) {
                             mode = 5;
                         }
                         else if (mode == 5) {
@@ -539,45 +582,76 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                         else if (mode == 11) {
                             mode = 12;
                         }
-                        else if (mode == 12) {
-                            mode = 3;
-                        }
-                    }
+                    m_ethHandler->sendMessage(data);
+                }
+                else if (mode == 4) {
+                    mode = 5;
+                }
+                else if (mode == 5) {
+                    mode = 6;
+                }
+                else if (mode == 6) {
+                    mode = 7;
+                }
+                else if (mode == 7) {
+                    mode = 8;
+                }
+                else if (mode == 8) {
+                    mode = 9;
+                }
+                else if (mode == 9) {
+                    mode = 10;
+                }
+                else if (mode == 10) {
+                    mode = 11;
+                }
+                else if (mode == 11) {
+                    mode = 12;
+                }
+                else if (mode == 12) {
+                    mode = 3;
+                }
+            }
 
-                    // Отправка отладочных данных на форму для отображения:
-                    //-------------------------------------------------------------
-                    // Теперь сообщение передаём через структуру
-                    // Номер сообщения будет заболняться в зависимости от названия по соответствию
-                    RmoMessage_TargetPPU msg;
-                    msg.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msg.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msg.azC0 = azC0;
-                    msg.azC1 = azC1;
-                    msg.azC2 = azC2;
-                    msg.anC0 = anC0;
-                    msg.anC1 = anC1;
-                    msg.anC2 = anC2;
-                    msg.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msg.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msg.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msg.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msg.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
+            // Отправка отладочных данных на форму для отображения:
+            //-------------------------------------------------------------
+            // Теперь сообщение передаём через структуру
+            // Номер сообщения будет заболняться в зависимости от названия по соответствию
+            RmoMessage_TargetPPU msg;
+            msg.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
+            msg.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
+            msg.azC0 = azC0;
+            msg.azC1 = azC1;
+            msg.azC2 = azC2;
+            msg.anC0 = anC0;
+            msg.anC1 = anC1;
+            msg.anC2 = anC2;
+            msg.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
+            msg.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
+            msg.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+            msg.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+            msg.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
 
-                    // Отправить всем TCP-RMO клиентам
-                    QMetaObject::invokeMethod(m_tcpHandler, [this, msg]() {
-                        m_tcpHandler->sendRmoMessageToAll(msg);
-                    }, Qt::QueuedConnection);
-                    //-------------------------------------------------------------
+            // Отправить всем TCP-RMO клиентам
+            QMetaObject::invokeMethod(m_tcpHandler, [this, msg]() {
+                m_tcpHandler->sendRmoMessageToAll(msg);
+            }, Qt::QueuedConnection);
+            //-------------------------------------------------------------
                 }
                 else
                 {
+#ifdef QT_DEBUG
                     qDebug() << "PPU is turned Off" << Qt::endl;
+#endif
                     auto msg = EthMessageFactory::create<EthMessage_PPU_ENABLE>();
                     msg.state = 1; // Включить ППУ
                     QByteArray data = msg.serializeFull();
+#ifdef QT_DEBUG
                     qDebug() << "Sending message to turn on the PPU:";
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
                     m_ethHandler->sendMessage(data);
+                    LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, 
+                        data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
                 }
             }
         }

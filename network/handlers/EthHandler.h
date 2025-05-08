@@ -4,7 +4,11 @@
 #include <QObject>
 #include <QCoreApplication>
 #include <QByteArray>
+#include <QDebug>
+#include <QDataStream>
 #include "utils/time_provider/TimeProvider.h"
+
+#include <chrono>
 
 #ifdef _WIN32
 #include <pcap.h>

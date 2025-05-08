@@ -8,6 +8,11 @@ _Описание Doxygen-комментариев [здесь](./docs/doxygen_g
 
 > Для понимания и ориентации в проекте ознакомьтесь со **структурой исполняемых файлов** проекта
 
+
+<details>
+<summary>Общий вид проекта</summary>
+
+*требуется обновление*
 ```
 /*Корень проекта*
   ├── build/.................. # Директория сборки проекта
@@ -47,3 +52,32 @@ _Описание Doxygen-комментариев [здесь](./docs/doxygen_g
   │
   └── main.cpp ............... # Главная точка запуска
 ```
+</details>
+<details>
+<summary>Docker контейнеры и развётрка</summary>
+
+Описание контейнеров... скоро
+</details>
+
+<details>
+<summary>Логгер и его функциональность</summary>
+
+Описание логгера тут: [тык](docs/logger_man.md)
+</details>
+
+<spoiler>
+<summary>В помощь начинающему бумагомарателю (markdown)</summary>
+
+[общая сводка по markdown](https://github.com/sandino/Markdown-Cheatsheet)
+</spoiler>
+
+
+<spoiler>
+<summary>Подключение к удалённому стенду (durabook, astra)</summary>
+
+1) Убедиться, что ваша сеть поддерживает ipv6, ссылки для проверки: [1](https://test-ipv6.com), [2](https://ipv6-test.com)
+2) Сгенерировать rsa ssh ключ (если ключей в .ssh нету)
+   `ssh-keygen -t ed25519 -C "your_email@example.com"`, 
+   следовать инструкции (указать имя файла-ключа, задать пароль, ексли есть желание (доп. мера защиты)). В домашней директории найти каталог .ssh, передать .pub на nikitoniy2468@gmail.com
+3) после выполнения шагов 1,2, подключиться, `ssh -Xv6 user@nikitonz-astra.ddns.net`
+</spoiler>

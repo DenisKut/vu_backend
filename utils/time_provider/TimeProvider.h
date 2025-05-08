@@ -1,9 +1,6 @@
 #ifndef TIMEPROVIDER_H
 #define TIMEPROVIDER_H
 // Класс единого времени для всех компонентов с точностью до миллисекунд (Windows/Linux)
-#pragma once
-
-#include "qdebug.h"
 #include <QObject>
 
 // Для кроссплатформенности (Windows/Linux) используется библиотека <chrono>:
@@ -107,7 +104,26 @@ public:
     uint64_t getTimeForRequestBS();
     //----------------------------------------------------------------------
 
-private:
+
+    /**
+     * @brief структуры, содержащая разбор временно отметки
+     * , в human-readable формат
+     */
+    struct HumanReadableTimestamp{
+        QString data;    ///< дата в формате ГГГГ-ММ-ДД
+        u_char hrs;      ///< час(ы) (0-23)
+        u_char minutes;  ///< минута(ы) (0-59)
+        u_char sec;      ///< секунда(ы) (0-59)
+        u_short m_sec;    ///< только миллисекунды (10^-3) (0-999)
+        uint mk_sec;   ///< только микросекунды (10^-6) (0-999999)
+    };
+
+    /// @brief конвертация временной отметки в структуру
+    /// @param timestamp 
+    /// @return структура с подробным разбором временной отметки 
+    HumanReadableTimestamp to_HR_Fmt(uint64_t timestamp);
+
+    private :
     // Приватный конструктор:
     TimeProvider() = default;
 
