@@ -10,7 +10,9 @@ UdpHandler::~UdpHandler() { stop(); }
 void UdpHandler::start(int port) {
     if (m_socket) return;
     m_port = port;
-    m_socket = new QUdpSocket(this);
+    m_socket = new QUdpSocket();
+    m_socket->moveToThread(thread()); // явно переместить в нужный поток
+    m_socket->setParent(this);        // теперь можно назначить родителя
     m_socket->bind(QHostAddress::Any, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     connect(m_socket, &QUdpSocket::readyRead, this, &UdpHandler::onReadyRead);
 }

@@ -2,105 +2,91 @@
 
 NetworkManager::NetworkManager(QObject* parent)
     : QObject(parent),
-    m_tcpHandler(new TcpHandler()),
-    m_udpHandler(new UdpHandler()),
-    m_ethHandler(new EthHandler()),
-    m_tcpThread(new QThread(this)),
-    m_udpThread(new QThread(this)),
-    m_ethThread(new QThread(this))
-{
+      m_tcpHandler(new TcpHandler()),
+      m_udpHandler(new UdpHandler()),
+      m_ethHandler(new EthHandler()),
+      m_tcpThread(new QThread(this)),
+      m_udpThread(new QThread(this)),
+      m_ethThread(new QThread(this)) {
+
+    // Перемещение обработчиков в потоки
     m_tcpHandler->moveToThread(m_tcpThread);
     m_udpHandler->moveToThread(m_udpThread);
     m_ethHandler->moveToThread(m_ethThread);
 
-    QObject::connect(m_tcpThread, &QThread::started, m_tcpHandler, &TcpHandler::initialize, Qt::QueuedConnection);
-    // QMetaObject::invokeMethod(m_tcpHandler, "initialize", Qt::QueuedConnection);
-    // QMetaObject::invokeMethod(m_udpHandler, "initialize", Qt::QueuedConnection);
-    QMetaObject::invokeMethod(m_ethHandler, "initialize", Qt::QueuedConnection);
-
-
-    QMetaObject::invokeMethod(m_tcpHandler, [this]() {
-        connect(m_tcpHandler, &TcpHandler::messageReceived,
-                this, &NetworkManager::onTcpReceived, Qt::QueuedConnection);
-    });
-
+    // Подключение сигналов и слотов для потоков
+    connect(m_tcpThread, &QThread::started, m_tcpHandler, &TcpHandler::initialize);
     QMetaObject::invokeMethod(m_udpHandler, [this]() {
-        connect(m_udpHandler, &UdpHandler::packetReceived, this,
-                [this](const QByteArray& data,
-                        const QHostAddress& sender,
-                        quint16 senderPort) {
-            // Быстрая обработка пакета
-            Message msg;
-            msg.payload = data;
-            onUdpReceived(msg);
+        m_udpHandler->start(12345);
+    }, Qt::QueuedConnection);
+    connect(m_ethThread, &QThread::started, m_ethHandler, &EthHandler::initialize);
 
-            // Сформировать ответ (пример)
-            // QMetaObject::invokeMethod(m_udpHandler, "sendResponse",
-            //     Qt::QueuedConnection,
-            //     Q_ARG(QByteArray, data),
-            //     Q_ARG(QHostAddress, addr),
-            //     Q_ARG(quint16, port));
-        }, Qt::QueuedConnection);
-    });
+    // Подключение сигналов и слотов для обработчиков
+    connect(m_tcpHandler, &TcpHandler::messageReceived, this, &NetworkManager::onTcpReceived, Qt::QueuedConnection);
+    connect(m_udpHandler, &UdpHandler::packetReceived, this, [this](const QByteArray& data, const QHostAddress& sender, quint16 senderPort) {
+        Message msg;
+        msg.payload = data;
+        this->onUdpReceived(msg);
+    }, Qt::QueuedConnection);
+    connect(m_ethHandler, &EthHandler::messageReceived, this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
 
-    QMetaObject::invokeMethod(m_ethHandler, [this]() {
-#ifdef _WIN32
-        // В Windows - таймер опроса EthHandler::checkReceived
-        connect(&m_ethTimer, &QTimer::timeout, m_ethHandler,
-            &EthHandler::checkReceived);
-        connect(m_ethHandler, SIGNAL(ethTimerReceiveRestart()),
-            &m_ethTimer, SLOT(start()));
-#endif
-        // Подключение разборщика пакетов Ethernet:
-        connect(m_ethHandler, &EthHandler::messageReceived,
-                this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
-    });
-
+    // Запуск потоков
     m_tcpThread->start();
     m_udpThread->start();
     m_ethThread->start();
-
-    if(m_tcpThread->isRunning())
-        m_tcpThread->setPriority(QThread::HighPriority);
-    if(m_ethThread->isRunning())
-        m_ethThread->setPriority(QThread::TimeCriticalPriority);
-    if(m_udpThread->isRunning())
-        m_udpThread->setPriority(QThread::HighPriority);
 }
 
 NetworkManager::~NetworkManager() {
     stop();
+
+    // Завершение потоков
     m_tcpThread->quit();
     m_udpThread->quit();
     m_ethThread->quit();
-    m_tcpThread->wait(1000);
-    m_udpThread->wait(1000);
-    m_ethThread->wait(1000);
-    if(!m_tcpThread->isFinished()) delete m_tcpThread;
-    if(!m_udpThread->isFinished()) delete m_udpThread;
-    if(!m_ethThread->isFinished()) delete m_ethThread;
+
+    m_tcpThread->wait();
+    m_udpThread->wait();
+    m_ethThread->wait();
+
+    // Удаление обработчиков
+    m_tcpHandler->deleteLater();
+    m_udpHandler->deleteLater();
+    m_ethHandler->deleteLater();
+
+    // Удаление потоков
+    m_tcpThread->deleteLater();
+    m_udpThread->deleteLater();
+    m_ethThread->deleteLater();
 }
+
 void NetworkManager::start() {
     switch (currentMode())
     {
     case AppMode::VU_LOCALHOST:
             QMetaObject::invokeMethod(m_tcpHandler, [this]() {
                 m_tcpHandler->connectToHost(
-                    appSettings().value("vu_settings/tcp_host_ip").toString(),
-                    appSettings().value("vu_settings/tcp_host_port").toInt());        
+                    appSettings()
+                            .value("vu_settings/tcp_host_ip").toString(),
+                    appSettings()
+                            .value("vu_settings/tcp_host_port").toInt());
             });
             QMetaObject::invokeMethod(m_udpHandler, [this]() {
-                m_udpHandler->start(appSettings().value("vu_settings/udp_port").toInt());
+                m_udpHandler->start(
+                    appSettings().value("vu_settings/udp_port").toInt());
             });
         break;
     case AppMode::VU_REMOTE_ALMAZ:
         QMetaObject::invokeMethod(m_tcpHandler, [this]() {
             m_tcpHandler->connectToHost(
-                appSettings().value("vu_settings_almaz/tcp_host_ip").toString(),
-                appSettings().value("vu_settings_almaz/tcp_host_port").toInt());        
+                appSettings()
+                        .value("vu_settings_almaz/tcp_host_ip").toString(),
+                appSettings()
+                        .value("vu_settings_almaz/tcp_host_port").toInt());
         });
         QMetaObject::invokeMethod(m_udpHandler, [this]() {
-            m_udpHandler->start(appSettings().value("vu_settings_almaz/udp_port").toInt());
+            m_udpHandler->start(
+                appSettings()
+                        .value("vu_settings_almaz/udp_port").toInt());
         });
         break;
     }
@@ -116,16 +102,10 @@ void NetworkManager::start() {
 }
 
 void NetworkManager::stop() {
+    // Остановка таймера
     m_ethTimer.stop();
-    QMetaObject::invokeMethod(m_tcpHandler, [this]() {
-        m_tcpHandler->disconnect();
-    });
-    QMetaObject::invokeMethod(m_udpHandler, [this]() { 
-        m_udpHandler->stopListening(); 
-    });
-    QMetaObject::invokeMethod(m_ethHandler, [this]() { 
-        m_ethHandler->disconnectAdapter();
-    });
+    QMetaObject::invokeMethod(m_tcpHandler, &TcpHandler::disconnect);
+    QMetaObject::invokeMethod(m_ethHandler, &EthHandler::disconnectAdapter);
     LOG_INTERNAL(CLASS_NAME, "NetworkManager. останов.", "");
 }
 
@@ -215,10 +195,6 @@ void NetworkManager::onUdpReceivedDebug(const Message& msg) {
 #ifdef QT_DEBUG
     qDebug() << "UDP Message debug:" << msg.payload;
 #endif
-}
-
-void NetworkManager::onUdpReceivedDebug(const Message& msg) {
-    qDebug() << "UDP Message debug:" << msg.payload;
 
 //    // Задать ЦУ для ППУ
 //    if (msg.payload.size() < 16) return;
@@ -450,14 +426,14 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                                          << data.toHex(' ').toUpper();
 #endif
 
-                                isChangedImitPeriod = QMetaObject::invokeMethod(
-                                    m_ethHandler, [this, data]() {
-                                        m_ethHandler->sendMessage(data);
-                                    },
-                                    Qt::QueuedConnection);
-                                // isChangedImitPeriod = QMetaObject::invokeMethod(m_ethHandler, "sendMessage",
-                                //     Qt::QueuedConnection,
-                                //     Q_ARG(QByteArray, data));
+                                // isChangedImitPeriod = QMetaObject::invokeMethod(
+                                //     m_ethHandler, [this, data]() {
+                                //         m_ethHandler->sendMessage(data);
+                                //     },
+                                //     Qt::QueuedConnection);
+                                isChangedImitPeriod = QMetaObject::invokeMethod(m_ethHandler, "sendMessage",
+                                    Qt::QueuedConnection,
+                                    Q_ARG(QByteArray, data));
                                 if (isChangedImitPeriod) {
                                     mode = 1;
                                 }
@@ -549,16 +525,17 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 
                             msg.azSector = 0;
                             msg.anSector = 0;
-                        }
-                        QByteArray data = msg.serializeFull();
+                            QByteArray data = msg.serializeFull();
 #ifdef QT_DEBUG
-                        qDebug() << "Sending message to move the PPU:";
-                        qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+                            qDebug() << "Sending message to move the PPU:";
+                            qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
-                        m_ethHandler->sendMessage(data);
-                        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, 
-                            data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
-                        if (mode == 4) {
+                            m_ethHandler->sendMessage(data);
+                            LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC,
+                                data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
+
+                        }
+                        else if (mode == 4) {
                             mode = 5;
                         }
                         else if (mode == 5) {
@@ -582,61 +559,35 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                         else if (mode == 11) {
                             mode = 12;
                         }
-                    m_ethHandler->sendMessage(data);
-                }
-                else if (mode == 4) {
-                    mode = 5;
-                }
-                else if (mode == 5) {
-                    mode = 6;
-                }
-                else if (mode == 6) {
-                    mode = 7;
-                }
-                else if (mode == 7) {
-                    mode = 8;
-                }
-                else if (mode == 8) {
-                    mode = 9;
-                }
-                else if (mode == 9) {
-                    mode = 10;
-                }
-                else if (mode == 10) {
-                    mode = 11;
-                }
-                else if (mode == 11) {
-                    mode = 12;
-                }
-                else if (mode == 12) {
-                    mode = 3;
-                }
-            }
+                        else if (mode == 12) {
+                            mode = 3;
+                        }
+                    }
 
-            // Отправка отладочных данных на форму для отображения:
-            //-------------------------------------------------------------
-            // Теперь сообщение передаём через структуру
-            // Номер сообщения будет заболняться в зависимости от названия по соответствию
-            RmoMessage_TargetPPU msg;
-            msg.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
-            msg.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
-            msg.azC0 = azC0;
-            msg.azC1 = azC1;
-            msg.azC2 = azC2;
-            msg.anC0 = anC0;
-            msg.anC1 = anC1;
-            msg.anC2 = anC2;
-            msg.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-            msg.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-            msg.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-            msg.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-            msg.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
+                    // Отправка отладочных данных на форму для отображения:
+                    //-------------------------------------------------------------
+                    // Теперь сообщение передаём через структуру
+                    // Номер сообщения будет заболняться в зависимости от названия по соответствию
+                    RmoMessage_TargetPPU msg;
+                    msg.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.azC0 = azC0;
+                    msg.azC1 = azC1;
+                    msg.azC2 = azC2;
+                    msg.anC0 = anC0;
+                    msg.anC1 = anC1;
+                    msg.anC2 = anC2;
+                    msg.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msg.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
 
-            // Отправить всем TCP-RMO клиентам
-            QMetaObject::invokeMethod(m_tcpHandler, [this, msg]() {
-                m_tcpHandler->sendRmoMessageToAll(msg);
-            }, Qt::QueuedConnection);
-            //-------------------------------------------------------------
+                    // Отправить всем TCP-RMO клиентам
+                    QMetaObject::invokeMethod(m_tcpHandler, [this, msg]() {
+                        m_tcpHandler->sendRmoMessageToAll(msg);
+                    }, Qt::QueuedConnection);
+                    //-------------------------------------------------------------
                 }
                 else
                 {
@@ -649,6 +600,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 #ifdef QT_DEBUG
                     qDebug() << "Sending message to turn on the PPU:";
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+#endif
                     m_ethHandler->sendMessage(data);
                     LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, 
                         data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));

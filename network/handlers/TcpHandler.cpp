@@ -8,10 +8,10 @@ void TcpHandler::initialize() {
     m_socket = new QTcpSocket(this);
 
     // --- RMO TCP-сервер и поток ---
-    m_serverRMO = new QTcpServer();
-    // m_rmoThread = new QThread(this);
-    // m_serverRMO->moveToThread(m_rmoThread);
-    // m_rmoThread->start();
+    m_serverRMO = new QTcpServer(this);
+//    m_rmoThread = new QThread(this);
+//    m_serverRMO->moveToThread(m_rmoThread);
+//    m_rmoThread->start();
 
     // --- WebSocket ---
     m_wsServer = new QWebSocketServer(QStringLiteral("RMO WebSocket Server"),
@@ -28,12 +28,10 @@ void TcpHandler::initialize() {
     m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
     // --- TCP сервер ---
-    QMetaObject::invokeMethod(m_serverRMO, [this]() {
-        if (!initServer()) {
-            qFatal("Failed to initialize TCP server");
-        }
-        connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection, Qt::QueuedConnection);
-    }, Qt::QueuedConnection);
+    if (!initServer()) {
+        qFatal("Failed to initialize TCP server");
+    }
+    connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection, Qt::QueuedConnection);
 
     // --- WebSocket сервер ---
     if (!initWebSocketServer()) {
@@ -48,7 +46,9 @@ void TcpHandler::initialize() {
     m_mainConnection = new TcpConnectionHandler(mainSocket);
     mainSocket->moveToThread(m_mainSocketThread);
     m_mainConnection->moveToThread(m_mainSocketThread);
+    connect(m_mainSocketThread, &QThread::finished, mainSocket, &QObject::deleteLater);
     connect(m_mainSocketThread, &QThread::finished, m_mainConnection, &QObject::deleteLater);
+    connect(m_mainSocketThread, &QThread::finished, m_mainSocketThread, &QObject::deleteLater);
     connect(m_mainConnection, &TcpConnectionHandler::finished, m_mainSocketThread, &QThread::quit);
     connect(m_mainConnection, &TcpConnectionHandler::messageReceived, this, [this](const QByteArray& data){
         processIncomingMessage(data);
@@ -130,7 +130,7 @@ void TcpHandler::onConnected() {
     std::cout << "Connected to TCP host" << std::endl;
 #endif
     int timer = 800;
-    m_registrationTimer.start(timer); // Отправка 0x01 
+    m_registrationTimer->start(timer); // Отправка 0x01
     LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", QString("ПОДКЛЮЧЁН, отправка раз в %1 мсек.").arg(timer));
 }
 
@@ -395,7 +395,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                           << msg_0x1023.toString()
                           << std::endl << "\n";
 #endif
-                m_periodicTimer.start(900); // Периодическая отправка сообщений
+                m_periodicTimer->start(900); // Периодическая отправка сообщений
             }
             break;
         }
@@ -407,10 +407,11 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
             LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,
                 Protocol::TCP, data,
                 Logger::jobj_toString(msg_0x04->to_json())));
-            m_timeProvider->syncTime(msg_0x04->timeRequest1,
+                TimeProvider::instance().syncTimePBU(msg_0x04->timeRequest1,
                                      msg_0x04->timeRequest2,
                                      msg_0x04->timeAnswer1,
                                      msg_0x04->timeAnswer2);
+#ifdef QT_DEBUG
             std::cout << "Time synchronized using message 0x04."
                       << std::endl << "\n";
 #endif

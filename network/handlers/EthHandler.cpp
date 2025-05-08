@@ -2,7 +2,6 @@
 #include <QDebug>
 #include "pch.h"
 #include "utils/env_loader/Settings.h"
-#include "utils/AppConfig.h"
 
 EthHandler::EthHandler(QObject* parent)
     : QObject(parent), m_adapterOpened(false)
@@ -189,19 +188,11 @@ void EthHandler::connectAdapter() {
         m_adapterOpened = true;
         return;
     }
-// ETH_P_ALL                - принимать пакеты с любым ether type
-    // ETH_PROTO_ETHER_TYPE()   - принимать пакеты только с ether type = 0x2020
-    uint64_t macDst = AppConfig::instance().ETH_PROTO_MAC_DST();
-    uint64_t macSrc = AppConfig::instance().ETH_PROTO_MAC_SRC();
-    uint16_t etherType = AppConfig::instance().ETH_PROTO_ETHER_TYPE();
-#ifdef QT_DEBUG
-    qDebug() << "macDst =" << macDst;
-    qDebug() << "macSrc =" << macSrc;
-    qDebug() << "etherType =" << etherType;
-#endif
-    if ((ethSocketID = socket(PF_PACKET, SOCK_RAW, htons(0x2020))) == -1) {
+    
+    ethSocketID = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    if (ethSocketID == -1) {
         perror("socket");
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", "ОШИБКА: EthHandler::connectAdapter() - socket"));
+        LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "Ошибка создания raw-сокета");
         return;
     }
     struct ifreq ifopts;

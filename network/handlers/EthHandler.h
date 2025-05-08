@@ -15,6 +15,7 @@
 #else
 #include <QSocketNotifier>
 #include <QNetworkInterface>
+#include <QFile>
 #include <arpa/inet.h>
 #include <linux/if_packet.h>
 #include <sys/ioctl.h>
