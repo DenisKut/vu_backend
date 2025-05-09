@@ -1,41 +1,38 @@
 QT += core network sql websockets
 
-TARGET = lun
+TARGET = vu_backend
 CONFIG += c++11 cmdline
 # -------------------------------
 # 0. Пути сборки проекта
 # -------------------------------
 
-BIN_DIR = $$PWD/bin
-OBJECTS_DIR = $$PWD/objects
-
-# QMAKE_CXXFLAGS += -fsanitize=thread
-# QMAKE_LFLAGS += -fsanitize=thread
-
-# QMAKE_CXXFLAGS += -fsanitize=thread
-# QMAKE_LFLAGS += -fsanitize=thread
-
-# Цель сборки {debug, release}
+# Определяем тип сборки
+BUILD_TYPE = debug
 CONFIG(release, debug|release) {
-    message("Release build!")
-    CONFIG -= debug
-    DESTDIR = $$BIN_DIR/release
-}
-else {
-    message("Debug build!")
-    CONFIG -= release
-    CONFIG += debug
-    DESTDIR = $$BIN_DIR/debug
+    BUILD_TYPE = release
 }
 
+BIN_DIR = $$PWD/bin
+OBJECTS_DIR = $$PWD/objects/$$BUILD_TYPE
 
-
+DESTDIR = $$BIN_DIR/$$BUILD_TYPE
+OBJECTS_DIR = $$PWD/objects/$$BUILD_TYPE
 MOC_DIR = $$OBJECTS_DIR
 UI_DIR = $$OBJECTS_DIR/ui
 RCC_DIR = $$OBJECTS_DIR/rcc
 
-QMAKE_CLEAN += -r $$BIN_DIR $$OBJECTS_DIR
-QMAKE_DISTCLEAN += $$QMAKE_CLEAN
+QMAKE_CLEAN += \
+    object_script.*.Debug \
+    object_script.*.Release \
+    .qmake.stash
+
+QMAKE_DISTCLEAN += \
+    $$BIN_DIR \
+    $$OBJECTS_DIR \
+    $$DESTDIR \
+    $$DESTDIR/.env \
+    $$DESTDIR/settings.ini \
+    $$DESTDIR/init_db.sql
 
 #-------------------------------
 # 1. Платформозависимые настройки
@@ -121,9 +118,6 @@ CONFIG += verbose: DEFINES += VERBOSE_LOGGING=1
 #-------------------------------
 # 4. Дополнительные настройки
 #-------------------------------
-TRANSLATIONS +=
-CONFIG += lrelease embed_translations
-
 DISTFILES += \
     docs/db_info.md \
     docs/dev_info.md \
@@ -155,6 +149,48 @@ win32 {
         cp -f $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) && \
         cp -f $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
 }
+
+win32 {
+    QMAKE_POST_CLEAN += rmdir /S /Q $$shell_path($$BIN_DIR)
+    QMAKE_POST_CLEAN += rmdir /S /Q $$shell_path($$OBJECTS_DIR)
+}
+
+# -------------------------------
+# 6. Полная очистка при distclean
+# --------------------------------
+
+QMAKE_DISTCLEAN += \
+    $$BIN_DIR \
+    $$OBJECTS_DIR \
+    $$DESTDIR \
+    $$DESTDIR/.env \
+    $$DESTDIR/settings.ini \
+    $$DESTDIR/init_db.sql \
+    release \
+    debug \
+    objects \
+    .qmake.stash \
+    Makefile \
+    Makefile.Debug \
+    Makefile.Release \
+    object_script.*.Debug \
+    object_script.*.Release
+
+# Для рекурсивного удаления директорий
+win32 {
+    distclean.commands = \
+        cmd /c "if exist $$shell_path($$BIN_DIR) rmdir /S /Q $$shell_path($$BIN_DIR) & \
+        if exist $$shell_path($$OBJECTS_DIR) rmdir /S /Q $$shell_path($$OBJECTS_DIR) & \
+        if exist release rmdir /S /Q release & \
+        if exist debug rmdir /S /Q debug & \
+        if exist objects rmdir /S /Q objects & \
+        del /F /Q .qmake.stash Makefile* object_script.*.Debug object_script.*.Release"
+} else {
+    distclean.commands = \
+        rm -rf $$BIN_DIR $$OBJECTS_DIR release debug objects .qmake.stash Makefile* object_script.*.Debug object_script.*.Release
+}
+
+QMAKE_EXTRA_TARGETS += distclean
 
 # ===================================
 # !!!!!! Очистка дубликатов !!!!!!
