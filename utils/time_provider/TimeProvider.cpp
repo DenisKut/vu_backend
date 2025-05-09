@@ -260,11 +260,18 @@ TimeProvider::HumanReadableTimestamp TimeProvider::to_HR_Fmt(uint64_t timestamp)
     std::ostringstream oss;
     oss << std::put_time(&tm, "%Y-%m-%d");
     timeInfo.data = QString::fromStdString(oss.str());
-
+#ifdef _WIN32
+    timeInfo.hrs = static_cast<uchar>(tm.tm_hour);
+    timeInfo.minutes = static_cast<uchar>(tm.tm_min);
+    timeInfo.sec = static_cast<uchar>(tm.tm_sec);
+    timeInfo.m_sec = static_cast<ushort>(subseconds.count() / 1000);
+    timeInfo.mk_sec = static_cast<ushort>(subseconds.count());
+#else
     timeInfo.hrs = static_cast<u_char>(tm.tm_hour);
     timeInfo.minutes = static_cast<u_char>(tm.tm_min);
     timeInfo.sec = static_cast<u_char>(tm.tm_sec);
     timeInfo.m_sec = static_cast<u_short>(subseconds.count() / 1000);
     timeInfo.mk_sec = static_cast<u_short>(subseconds.count());
+#endif
     return timeInfo;
 }

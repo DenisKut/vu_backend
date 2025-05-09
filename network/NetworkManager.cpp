@@ -30,6 +30,10 @@ NetworkManager::NetworkManager(QObject* parent)
     }, Qt::QueuedConnection);
     connect(m_ethHandler, &EthHandler::messageReceived, this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
 
+#ifdef _WIN32
+    connect(&m_ethTimer, &QTimer::timeout, m_ethHandler, &EthHandler::checkReceived);
+#endif
+
     // Запуск потоков
     m_tcpThread->start();
     m_udpThread->start();

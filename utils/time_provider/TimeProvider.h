@@ -111,10 +111,17 @@ public:
      */
     struct HumanReadableTimestamp{
         QString data;    ///< дата в формате ГГГГ-ММ-ДД
+#ifdef _WIN32
+        uchar hrs;      ///< час(ы) (0-23)
+        uchar minutes;  ///< минута(ы) (0-59)
+        uchar sec;      ///< секунда(ы) (0-59)
+        ushort m_sec;    ///< только миллисекунды (10^-3) (0-999)
+#else
         u_char hrs;      ///< час(ы) (0-23)
         u_char minutes;  ///< минута(ы) (0-59)
         u_char sec;      ///< секунда(ы) (0-59)
         u_short m_sec;    ///< только миллисекунды (10^-3) (0-999)
+#endif
         uint mk_sec;   ///< только микросекунды (10^-6) (0-999999)
     };
 

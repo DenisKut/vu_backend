@@ -4,7 +4,7 @@
 #include "utils/env_loader/Settings.h"
 
 EthHandler::EthHandler(QObject* parent)
-    : QObject(parent), m_adapterOpened(false)
+    : QObject(parent), m_adapterOpened(false), m_pollThread(nullptr), m_polling(false)
 {
 #ifdef _WIN32
     pcapAllDevs = nullptr;
@@ -113,7 +113,7 @@ void EthHandler::connectAdapter() {
 #ifdef QT_DEBUG
         qDebug() << "Failed to open pcapTx";
 #endif
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
         // Free the device list
         return;
     }
@@ -124,7 +124,7 @@ void EthHandler::connectAdapter() {
 #ifdef QT_DEBUG
         qDebug() << "Open pcapTx";
 #endif
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; pcapTx открыт"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", "WINPCAP; pcapTx открыт"));
     }
 
     pcap_setbuff(pcapTx, 160*1024*1024);
@@ -146,7 +146,7 @@ void EthHandler::connectAdapter() {
 #ifdef QT_DEBUG
         qDebug() << "Failed to open pcapRx";
 #endif
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
         // Free the device list
         return;
     }
@@ -156,12 +156,12 @@ void EthHandler::connectAdapter() {
 #ifdef QT_DEBUG
         qDebug() << "Open pcapRx";
 #endif
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; pcapTx открыт"));
+        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP; pcapTx открыт"));
         // Logger::instance().writeText("EthHandler::connectAdapter() - Успешно открыт pcapTx");
     }
 
     pcap_setbuff(pcapRx, 160*1024*1024);
-    pcap_setnonblock(pcapRx, 0, errbuf);
+    pcap_setnonblock(pcapRx, 1, errbuf); // 1 - неблокирующий режим
     //------------------------------------------------------------------
 
     // Кладём имя адаптера в список подключенных адаптеров:
@@ -180,8 +180,22 @@ void EthHandler::connectAdapter() {
 #ifdef QT_DEBUG
     qDebug() << QString("Opened Ethernet adapter: %1").arg(strAdapterNames.at(0));
 #endif
-    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET"."WINPCAP; " + 
+    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP; " +
     QString("Подключен Ethernet адаптер: %1").arg(strAdapterNames.at(0))));
+
+    m_adapterOpened = true;
+
+    // Запуск отдельного polling-потока
+    if (!m_pollThread) {
+        m_polling = true;
+        m_pollThread = QThread::create([this]() {
+            while (m_polling) {
+                this->checkReceived();
+                QThread::usleep(500); // 0.5 мс, можно уменьшить до 100 для максимума, но CPU будет выше
+            }
+        });
+        m_pollThread->start();
+    }
 #else
     if (ethSocketID != -1) {
         qDebug() << "Ethernet socket already opened";
@@ -222,6 +236,13 @@ void EthHandler::connectAdapter() {
 void EthHandler::disconnectAdapter() {
     if (!m_adapterOpened) return;
 #ifdef _WIN32
+    m_polling = false;
+    if (m_pollThread) {
+        m_pollThread->quit();
+        m_pollThread->wait();
+        delete m_pollThread;
+        m_pollThread = nullptr;
+    }
     if (pcapTx) pcap_close(pcapTx);
     if (pcapRx) pcap_close(pcapRx);
     pcapTx = nullptr;
@@ -288,9 +309,10 @@ void EthHandler::checkReceived() {
     if (pcapRx) {
         while ((res = pcap_next_ex(pcapRx, &header, &data)) == 1) {
             QByteArray msg(reinterpret_cast<const char*>(data), header->len);
-            LOG(ProtocolMessageLog(CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(length)));
+            LOG(ProtocolMessageLog(CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(header->len)));
             emit messageReceived(msg);
-            QCoreApplication::processEvents();
+            // QCoreApplication::processEvents(); 	///< @brief Лучше убрать на Windows
+													///< может быть даже вреден, если EthHandler не находится в основном потоке
         }
     }
 #else
