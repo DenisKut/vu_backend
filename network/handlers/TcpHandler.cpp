@@ -59,6 +59,8 @@ void TcpHandler::initialize() {
     connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
+    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::errorOccurred),
+            this, &TcpHandler::onError);
 
     m_reconnectTimer->setInterval(1000);
     connect(m_reconnectTimer, &QTimer::timeout, this, &TcpHandler::reconnect);
@@ -130,6 +132,7 @@ void TcpHandler::onConnected() {
     std::cout << "Connected to TCP host" << std::endl;
 #endif
     int timer = 800;
+    m_reconnectTimer->stop();
     m_registrationTimer->start(timer); // Отправка 0x01
     LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", QString("ПОДКЛЮЧЁН, отправка раз в %1 мсек.").arg(timer));
 }
@@ -141,22 +144,24 @@ void TcpHandler::onDisconnected() {
     m_isRegistered = false;
     m_registrationTimer->stop();
     m_periodicTimer->stop();
-    m_reconnectTimer->start();
+    if (!m_reconnectTimer->isActive()) { // Защита от повторного запуска
+        m_reconnectTimer->start();
+    }
     LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "ОТКЛЮЧЁН");
 }
 
 void TcpHandler::reconnect() {
-    if (!m_socket) return;
+    if (!m_socket || m_socket->state() == QAbstractSocket::ConnectedState)
+        return;
 
-    // Если сокет не отключён — сбрасываем его
+    // Сбрасываем соединение если не в состоянии Unconnected
     if (m_socket->state() != QAbstractSocket::UnconnectedState) {
-#ifdef QT_DEBUG
-        qInfo() << "Aborting previous connection to" << m_host << ":" << m_port;
-#endif
         m_socket->abort();
     }
 
+#ifdef QT_DEBUG
     qInfo() << "Reconnecting to" << m_host << ":" << m_port;
+#endif
     m_socket->connectToHost(m_host, m_port);
 }
 
