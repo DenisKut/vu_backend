@@ -1,4 +1,4 @@
-﻿#include "TcpHandler.h"
+#include "TcpHandler.h"
 #include <QHostAddress>
 
 
@@ -146,10 +146,18 @@ void TcpHandler::onDisconnected() {
 }
 
 void TcpHandler::reconnect() {
-    if (m_socket->state() == QAbstractSocket::UnconnectedState) {
-        qInfo() << "Reconnecting to" << m_host << ":" << m_port;
-        m_socket->connectToHost(m_host, m_port);
+    if (!m_socket) return;
+
+    // Если сокет не отключён — сбрасываем его
+    if (m_socket->state() != QAbstractSocket::UnconnectedState) {
+#ifdef QT_DEBUG
+        qInfo() << "Aborting previous connection to" << m_host << ":" << m_port;
+#endif
+        m_socket->abort();
     }
+
+    qInfo() << "Reconnecting to" << m_host << ":" << m_port;
+    m_socket->connectToHost(m_host, m_port);
 }
 
 void TcpHandler::onRmoDisconnected(TcpConnectionHandler* handler) {
