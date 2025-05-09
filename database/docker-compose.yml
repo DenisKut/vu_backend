@@ -1,31 +1,33 @@
+version: '3.9'
+
 services:
   postgres:
     image: postgres:latest
     container_name: postgres
     environment:
-      POSTGRES_USER: nikit
-      POSTGRES_PASSWORD: admin000
-      POSTGRES_DB: vu_backend
+      POSTGRES_USER: nikit # Имя пользователя для БД
+      POSTGRES_PASSWORD: admin000 # Пароль пользователя
+      POSTGRES_DB: vu_backend # Имя создаваемой БД
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data # Том для хранения данных БД
     ports:
-      - "5432:5432"
+      - '5432:5432' # Проброс порта PostgreSQL
     networks:
-      - backend_network
+      - backend_network # Внутренняя сеть для сервисов
 
   adminer:
     image: adminer:latest
     container_name: adminer
     ports:
-      - "5431:8080"
+      - '5431:8080' # Проброс порта для веб-интерфейса Adminer
     depends_on:
-      - postgres
+      - postgres # Запускать после postgres
     networks:
       - backend_network
 
 volumes:
-  pgdata:
+  pgdata: # Определение тома для БД
 
 networks:
-  backend_network:
+  backend_network: # Определение внутренней сети
     driver: bridge

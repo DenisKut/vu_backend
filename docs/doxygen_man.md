@@ -13,7 +13,7 @@ Qt Creator имеет встроенную поддержку подсветки
 3. Нажмите **OK**.
 
 Теперь комментарии с Doxygen-тегами будут подсвечиваться, как на скриншоте ниже:  
-![Doxygen Highlighting](https://i.imgur.com/9GzQ2bC.png)
+![Doxygen Highlighting](./img/doxygen_man/code_highlight.png)
 
 ---
 
