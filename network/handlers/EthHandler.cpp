@@ -4,11 +4,13 @@
 #include "utils/env_loader/Settings.h"
 
 EthHandler::EthHandler(QObject* parent)
-    : QObject(parent), m_adapterOpened(false), m_pollThread(nullptr), m_polling(false)
+    : QObject(parent), m_adapterOpened(false)
 {
 #ifdef _WIN32
     pcapAllDevs = nullptr;
     pcapTx = pcapRx = nullptr;
+	m_pollThread = nullptr; 
+	m_polling = false;
 #else
     QString interfaceName = findWiredInterface();
     if (!interfaceName.isEmpty()) {
