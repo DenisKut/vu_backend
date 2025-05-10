@@ -15,13 +15,25 @@ CONFIG(release, debug|release) {
 message(Build type: $$BUILD_TYPE)
 
 BIN_DIR = $$OUT_PWD/bin
-DESTDIR = $$BIN_DIR/$$BUILD_TYPE
 
-OBJECTS_DIR = $$OUT_PWD/objects
-OBJECTS_DIR_SPECIFIED = $$OUT_PWD/objects/$$BUILD_TYPE
-MOC_DIR = $$OBJECTS_DIR_SPECIFIED/moc
-UI_DIR = $$OBJECTS_DIR_SPECIFIED/ui
-RCC_DIR = $$OBJECTS_DIR_SPECIFIED/rcc
+DESTDIR = $$BIN_DIR/$$BUILD_TYPE
+OBJECTS_DIR = $$PWD/objects/$$BUILD_TYPE
+MOC_DIR = $$OBJECTS_DIR
+UI_DIR = $$OBJECTS_DIR/ui
+RCC_DIR = $$OBJECTS_DIR/rcc
+
+QMAKE_CLEAN += \
+    object_script.*.Debug \
+    object_script.*.Release \
+    .qmake.stash
+
+QMAKE_DISTCLEAN += \
+    $$BIN_DIR \
+    $$OBJECTS_DIR \
+    $$DESTDIR \
+    $$DESTDIR/.env \
+    $$DESTDIR/settings.ini \
+    $$DESTDIR/init_db.sql
 
 #-------------------------------
 # 1. Платформозависимые настройки
@@ -64,10 +76,11 @@ HEADERS += \
 #глобальное включение
 PRECOMPILED_HEADER = pch.h
 CONFIG+=precompile_header
+INCLUDEPATH += $$PWD/core/logger
 
 # Windows (WinPcap)
 win32 {
-    INCLUDEPATH += $$OUT_PWD/libs/wpdpack/Include
+    INCLUDEPATH += $$PWD/libs/wpdpack/Include
 
     # Определяем архитектуру
     contains(QMAKE_HOST.arch, x86_64) {
@@ -138,10 +151,33 @@ win32 {
         cp -f $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
 }
 
+win32 {
+    QMAKE_POST_CLEAN += rmdir /S /Q $$shell_path($$BIN_DIR)
+    QMAKE_POST_CLEAN += rmdir /S /Q $$shell_path($$OBJECTS_DIR)
+}
+
 # -------------------------------
-# 6. Полная очистка при distclean, объектники при clean
+# 6. Полная очистка при distclean
 # --------------------------------
 
+QMAKE_DISTCLEAN += \
+    $$BIN_DIR \
+    $$OBJECTS_DIR \
+    $$DESTDIR \
+    $$DESTDIR/.env \
+    $$DESTDIR/settings.ini \
+    $$DESTDIR/init_db.sql \
+    release \
+    debug \
+    objects \
+    .qmake.stash \
+    Makefile \
+    Makefile.Debug \
+    Makefile.Release \
+    object_script.*.Debug \
+    object_script.*.Release
+
+# Для рекурсивного удаления директорий
 win32 {
     distclean.commands = \
         cmd /c "if exist $$shell_path($$BIN_DIR) rmdir /S /Q $$shell_path($$BIN_DIR) & \
@@ -150,15 +186,12 @@ win32 {
         if exist debug rmdir /S /Q debug & \
         if exist objects rmdir /S /Q objects & \
         del /F /Q .qmake.stash Makefile* object_script.*.Debug object_script.*.Release"
-} 
-unix {
-    QMAKE_CLEAN += \
-        $$BIN_DIR/* \
-        $$OBJECTS_DIR/* \
-        $$OBJECTS_DIR
-
-     QMAKE_CLEAN += rm -rf Makefile Makefile.* $$BIN_DIR $$OBJECTS_DIR 2>/dev/null || true
+} else {
+    distclean.commands = \
+        rm -rf $$BIN_DIR $$OBJECTS_DIR release debug objects .qmake.stash Makefile* object_script.*.Debug object_script.*.Release
 }
+
+QMAKE_EXTRA_TARGETS += distclean
 
 # ===================================
 # !!!!!! Очистка дубликатов !!!!!!
