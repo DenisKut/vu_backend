@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QCoreApplication>
 #include <QByteArray>
-#include <QDebug>
 #include <QDataStream>
 #include "utils/time_provider/TimeProvider.h"
 

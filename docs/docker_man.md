@@ -69,7 +69,22 @@ docker run hello-world
    ```
 4. Перезапустите систему ещё раз.
 
----
+## Альтернативный вариант для Astra Linux 1.7
+
+- установить docker через apt
+    ```bash
+    sudo apt update && sudo apt install docker.io
+    ```
+- если нужно развернуть всю архитектуру единой командой, установить docker-compose
+    ```bash
+    sudo apt install docker-compose
+    ```
+- добавить пользователя в группу docker
+  ```bash
+  sudo usermod -aG docker $USER
+  ```
+- Перелогиниться из сессии/ssh-подключения
+
 
 <a id="1.2"></a>
 ## 1.2 Windows

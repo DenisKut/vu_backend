@@ -1,5 +1,4 @@
 #include "EthHandler.h"
-#include <QDebug>
 #include "pch.h"
 #include "utils/env_loader/Settings.h"
 

@@ -1,7 +1,6 @@
 #include <QCoreApplication>
 #include <QTextCodec>
 #include <QDir>
-#include <QDebug>
 #include <QFileInfo>
 
 #ifdef Q_OS_WIN
@@ -9,7 +8,7 @@
 #endif
 
 #include "utils/env_loader/EnvLoader.h"
-#include "core/CoreManager.h"
+#include "common/CoreManager.h"
 #include "utils/env_loader/Settings.h"
 
 int main(int argc, char* argv[]) {

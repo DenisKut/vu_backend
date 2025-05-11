@@ -1,5 +1,4 @@
 #include "TcpConnectionHandler.h"
-#include <QDebug>
 
 TcpConnectionHandler::TcpConnectionHandler(QTcpSocket* socket, QObject* parent)
     : QObject(parent), m_socket(socket)

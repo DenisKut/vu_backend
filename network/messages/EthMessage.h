@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cstring>
 #include <QByteArray>
-#include <QDebug>
 #include <type_traits>
 #include <QJsonObject>
 #include <QJsonArray>

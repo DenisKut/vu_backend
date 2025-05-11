@@ -1,6 +1,5 @@
 #include "Logger.h"
 #include <QSqlError>
-#include <QDebug>
 #include <QFile>
 #include <qcoreapplication.h>
 

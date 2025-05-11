@@ -12,10 +12,10 @@
 // защитник от множественногот включения
 #ifndef PCH_H
 #define PCH_H
-#include <utils/time_provider/TimeProvider.h>
+#include "utils/time_provider/TimeProvider.h"
 #include "utils/AppConfig.h"
-#include "core/logger/Logger.h"
-
+#include "common/logger/Logger.h"
+#include <QDebug>
 /*
 Если хочется без указания типа класса, где был вызов, передавать *this в typeid
 */

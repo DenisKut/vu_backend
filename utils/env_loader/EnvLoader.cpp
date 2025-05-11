@@ -1,7 +1,6 @@
 #include "EnvLoader.h"
 #include <QFile>
 #include <QTextStream>
-#include <QDebug>
 #include <QRegularExpression>
 
 EnvLoader::EnvLoader(const QString& path) : _path(path) {}
