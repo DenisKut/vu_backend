@@ -125,8 +125,6 @@ struct LogHeader {
     {}
 };
 
-
-
 /**
  * @struct InitLog
  * @brief Лог инициализации приложения/компонентов
@@ -254,7 +252,7 @@ public:
                         "INSERT INTO init_logs (header_id, status) "
                         "SELECT id, '%2' FROM header;")
              .arg(bakeQuery(static_cast<const LogHeader&>(logData)),
-                  statusInitToString(logData.status));
+                  escapeSql(statusInitToString(logData.status)));
      }
 
      QString bakeQuery(const InternalMessageLog& logData) {
@@ -262,18 +260,19 @@ public:
                         "INSERT INTO internal_messages (header_id, message_type, message_content) "
                         "SELECT id, '%2', '%3' FROM header;")
              .arg(bakeQuery(static_cast<const LogHeader&>(logData)),
-                  logData.messageType,
-                  logData.parsedData);
+                  escapeSql(logData.messageType),
+                  escapeSql(logData.parsedData));
      }
 
      QString bakeQuery(const ProtocolMessageLog& logData) {
+         QString hexData = QString::fromLatin1(logData.rawData.toHex());
          return QString("WITH header AS (%1) "
                         "INSERT INTO protocol_messages (header_id, protocol_type, raw_data, parsed_data) "
-                        "SELECT id, '%2', '%3', '%4' FROM header;")
+                        "SELECT id, '%2', '\\\\x%3', '%4' FROM header;")
              .arg(bakeQuery(static_cast<const LogHeader&>(logData)),
-                  protocolToString(logData.protocol),
-                  logData.rawData,
-                  logData.parsedData);
+                  escapeSql(protocolToString(logData.protocol)),
+                  hexData,
+                  escapeSql(logData.parsedData));
      }
 
      // CONVERTERS --------------------------------------------------------------------------
@@ -375,6 +374,10 @@ private:
             .arg(ts.m_sec)
             .arg(ts.mk_sec)
             .arg(logLevelToString(logHead.level).toUpper());
+    }
+
+    QString escapeSql(const QString& input) const {
+        return QString(input).replace("'", "''");
     }
 
     QSqlDatabase m_db; ///< Подключение к базе данных.

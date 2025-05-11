@@ -74,57 +74,162 @@ Logger& Logger::instance() {
 }
 
 void Logger::initialize(const QString& connectionString) {
+    qDebug() << "Available SQL drivers:" << QSqlDatabase::drivers();
 
+    QSqlDatabase db;
+    QString driver;
+    QString errorPrefix;
+    bool isWindows = false;
 
-    qDebug() << "Драйвера:" << QSqlDatabase::drivers();
+#ifdef Q_OS_WINDOWS
+    isWindows = true;
+    driver = "QODBC";
+    errorPrefix = "[Windows/ODBC]";
+#else
+    driver = "QPSQL";
+    errorPrefix = "[Linux/PSQL]";
+#endif
 
-    if (!QSqlDatabase::isDriverAvailable("QPSQL")) {
-        qCritical() << "QPSQL недоступен/не найден!";
+    // Проверка доступности драйвера
+    if (!QSqlDatabase::isDriverAvailable(driver)) {
+        qCritical() << errorPrefix << "Driver" << driver << "not available!";
         return;
     }
-    m_db = QSqlDatabase::database();
-    if (!m_db.isValid()) {
-        m_db = QSqlDatabase::addDatabase("QPSQL", "postgres");
-        m_db.setConnectOptions(connectionString+" connect_timeout=5");
+
+    // Парсинг параметров подключения
+    QMap<QString, QString> connParams;
+    QStringList paramPairs;
+
+#ifdef Q_OS_WINDOWS
+    paramPairs = connectionString.split(';', Qt::SkipEmptyParts);
+#else
+    paramPairs = connectionString.split(' ', Qt::SkipEmptyParts);
+#endif
+
+    for (const QString& pair : paramPairs) {
+        QStringList keyVal = pair.split('=', Qt::KeepEmptyParts);
+        if (keyVal.size() == 2) {
+            QString key = keyVal[0].trimmed().toLower();
+            QString value = keyVal[1].trimmed();
+            connParams[key] = value;
+        }
     }
 
+    // Валидация обязательных параметров
+    const QStringList requiredParams = {"host", "dbname", "user", "password"};
+    for (const QString& param : requiredParams) {
+        if (!connParams.contains(param)) {
+            qCritical() << errorPrefix << "Missing required parameter:" << param;
+            return;
+        }
+    }
+
+    // Формирование строки подключения
+    QString connection;
+    if (isWindows) {
+        connection = QString("DRIVER=%6;"
+                             "SERVER=%1;"
+                             "DATABASE=%2;"
+                             "UID=%3;"
+                             "PWD=%4;"
+                             "PORT=%5;"
+                             "sslmode=disable;")
+                         .arg(connParams["host"],
+                              connParams["dbname"],
+                              connParams["user"],
+                              connParams["password"],
+                              connParams.value("port", "5432"),
+                              connParams["driver"]);
+    } else {
+        db = QSqlDatabase::addDatabase(driver);
+        db.setHostName(connParams["host"]);
+        db.setDatabaseName(connParams["dbname"]);
+        db.setUserName(connParams["user"]);
+        db.setPassword(connParams["password"]);
+        db.setPort(connParams.value("port", "5432").toInt());
+        db.setConnectOptions("connect_timeout=5");
+    }
+
+    // Для Windows: Настройка ODBC подключения
+    if (isWindows) {
+        db = QSqlDatabase::addDatabase(driver, "main_connection");
+        db.setDatabaseName(connection);
+    }
+
+    qDebug() << "Connection string:" << connection;
+
+    // Сохраняем подключение как член класса
+    m_db = db;
+
+    // Открытие подключения
     if (!m_db.open()) {
-        qCritical() << "Не смог подключиться к PostgreSQL:\n" << m_db.lastError().text()<<"\n\n";
+        qCritical() << errorPrefix << "Connection error:" << m_db.lastError().text();
         return;
     }
 
-    // создать структуру БД если это еще не было сделано ранее
-    //
+    // Убедимся, что подключение остается открытым
+    m_db.setConnectOptions(""); // Убираем авто-закрытие
 
-    QFile sqlFile(QCoreApplication::applicationDirPath()+"/init_db.sql");
-    if (!sqlFile.open(QIODevice::ReadOnly)) {
-        qCritical() << "\n\n=========    !!!НЕ НАЙДЕН ФАЙЛ SQL!!!    =========\n" << sqlFile.errorString() <<"\n==================================================\n\n";
+    // Проверка версии PostgreSQL
+    QSqlQuery versionQuery(m_db);
+    if (versionQuery.exec("SELECT version()") && versionQuery.next()) {
+        qDebug() << "Connected to PostgreSQL:" << versionQuery.value(0).toString();
     }
-    QStringList queries = QString(sqlFile.readAll()).split(';', Qt::SkipEmptyParts);
+
+    // Выполнение SQL-скрипта
+    QFile sqlFile(QCoreApplication::applicationDirPath() + "/init_db.sql");
+    if (!sqlFile.open(QIODevice::ReadOnly)) {
+        qCritical() << errorPrefix << "Failed to open SQL file:" << sqlFile.errorString();
+        return;
+    }
+
+    QStringList queries = QString(sqlFile.readAll())
+                              .split(';', Qt::SkipEmptyParts);
     sqlFile.close();
 
     QSqlQuery query(m_db);
-    bool statusQueryExecution = false;
+    bool allQueriesOK = true;
+
+    m_db.transaction();
     for (const QString& q : queries) {
         QString trimmed = q.trimmed();
-        if (!trimmed.isEmpty() && !query.exec(trimmed)) {
-            qCritical() << "\n\n=========    !!!НЕ ВЫПОЛНЕН ЗАПРОС!!!    =========\n" << query.lastError().text()<<"\n==================================================\n\n";
-            qCritical() << "Провальный запрос:" << trimmed;
-            statusQueryExecution = false;
+        if (trimmed.isEmpty()) continue;
+
+        if (!query.exec(trimmed)) {
+            qCritical() << errorPrefix << "Query failed:"
+                        << query.lastError().text()
+                        << "\nFailed query:" << trimmed;
+            allQueriesOK = false;
             break;
         }
-        statusQueryExecution = true;
     }
 
+    if (allQueriesOK) {
+        if (!m_db.commit()) {
+            qCritical() << errorPrefix << "Commit error:" << m_db.lastError().text();
+            allQueriesOK = false;
+        }
+    } else {
+        m_db.rollback();
+    }
 
-    if (statusQueryExecution){
+    if (allQueriesOK) {
         LOG_INIT(CLASS_NAME, StatusInit::LOADED);
-    }else
-        qCritical()<< "CRITICAL!!! ONE OR MORE TABLES NOT CREATED";
+        qDebug() << "Database initialized successfully";
+    } else {
+        qCritical() << errorPrefix << "Failed to initialize database";
+    }
+
     start();
+
+    // Тестовый запрос
+    QSqlQuery testQuery(m_db);
+    if (testQuery.exec("SELECT COUNT(*) FROM log_headers")) {
+        if (testQuery.next()) {
+            qDebug() << "Records in log_headers:" << testQuery.value(0).toInt();
+        }
+    }
 }
-
-
 
 // управление очередями запросов и их отправка
 void Logger::run() {
@@ -160,24 +265,29 @@ void Logger::stop() {
 
 
 void Logger::flushBuffer() {
-    if (m_buffer.empty()) return;
+    QMutexLocker locker(&m_mutex);
+    if (m_buffer.empty() || !m_db.isOpen()) return;
 
-    QSqlQuery sqlQuery(m_db);
-    sqlQuery.prepare("BEGIN;");
-    for (const auto& query : m_buffer) {
+    QSqlQuery query(m_db);
+    m_db.transaction();
 
-        #ifdef QT_DEBUG
-            qDebug()<<"\n"<<query;
-        #endif
-
-        if (!sqlQuery.exec(query)) {
-            #ifdef QT_DEBUG
-                qCritical() << "\n\n=========    !!!НЕ ВЫПОЛНЕН ЗАПРОС!!!    =========\n" << sqlQuery.lastError().text()<<"\n==================================================\n\n";
-            #endif
+    bool success = true;
+    for (const auto& q : m_buffer) {
+        if (!query.exec(q)) {
+            qCritical() << "Query failed:" << query.lastError().text()
+            << "\nQuery:" << q;
+            success = false;
+            break;
         }
     }
-    sqlQuery.prepare("COMMIT;");
-    sqlQuery.exec();
+
+    if (success) {
+        if (!m_db.commit()) {
+            qCritical() << "Commit failed:" << m_db.lastError().text();
+        }
+    } else {
+        m_db.rollback();
+    }
 
     m_buffer.clear();
 }
@@ -187,15 +297,3 @@ void Logger::enqueueMessage(const QString& query) {
     m_queryQueue.enqueue(query);
     m_condition.wakeOne();
 }
-
-// КОНЕЦ управление очередями и отправка
-
-
-
-
-
-
-
-
-
-

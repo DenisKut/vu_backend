@@ -30,3 +30,23 @@ CREATE TABLE IF NOT EXISTS protocol_messages (
     raw_data BYTEA,
     parsed_data TEXT
 );
+
+CREATE OR REPLACE VIEW log_headers_x_init_logs
+AS
+SELECT * FROM log_headers INNER JOIN init_logs ON log_headers.id = init_logs.header_id
+;
+
+CREATE OR REPLACE VIEW log_headers_x_internal_messages
+AS
+SELECT * FROM log_headers INNER JOIN internal_messages ON log_headers.id = internal_messages.header_id
+;
+
+CREATE OR REPLACE VIEW log_headers_x_protocol_messages
+AS
+SELECT * FROM log_headers INNER JOIN protocol_messages ON log_headers.id = protocol_messages.header_id
+;
+
+CREATE OR REPLACE VIEW all_tables
+AS SELECT * FROM (log_headers INNER JOIN init_logs ON log_headers.id = init_logs.header_id)
+                              NATURAL JOIN internal_messages
+                              NATURAL JOIN protocol_messages

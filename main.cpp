@@ -33,12 +33,18 @@ int main(int argc, char* argv[]) {
     QCoreApplication a(argc, argv);
 
     // Инициализация Логгера (обязательно, иначе Логгер не запустится)
-    QString connectionString = QString("host=%1 port=%2 dbname=%3 user=%4 password=%5")
-                                   .arg(appSettings().value("database/host").toString())
-                                   .arg(appSettings().value("database/port").toString())
-                                   .arg(appSettings().value("database/db_name").toString())
-                                   .arg(appSettings().value("database/user").toString())
-                                   .arg(appSettings().value("database/password").toString());
+    QString connectionString =
+#ifdef Q_OS_WINDOWS
+        QString("host=%1;port=%2;dbname=%3;user=%4;password=%5;driver=%6")
+#else
+        QString("host=%1 port=%2 dbname=%3 user=%4 password=%5 driver=%6")
+#endif
+            .arg(appSettings().value("database/host").toString(),
+                 appSettings().value("database/port").toString(),
+                 appSettings().value("database/db_name").toString(),
+                 appSettings().value("database/user").toString(),
+                 appSettings().value("database/password").toString(),
+                 appSettings().value("database/driver").toString());
 
     Logger::instance().initialize(connectionString);
 
