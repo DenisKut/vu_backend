@@ -98,7 +98,8 @@ docker compose up -d
 
 ## 💡 Полезные ссылки и советы
 
-- [Markdown-шпаргалка](https://github.com/sandino/Markdown-Cheatsheet)
+- [Markdown-шпаргалка(Базисы RU)](https://github.com/sandino/Markdown-Cheatsheet)
+- [Markdown-шпаргалка(Официальная EN)](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
 - [Подключение к удалённому стенду (durabook, astra)](#remote-stand)
 
 <details>
@@ -114,6 +115,21 @@ docker compose up -d
    ```powershell
    ssh -Xv6 user@nikitonz-astra.ddns.net
    ```
+</details>
+
+---
+
+<details>
+<summary id="remote-stand-vnc">Удалённый рабочий стол</summary>
+
+1. Логин через ssh из пункта [выше](#remote-stand)
+2. Запустить службу vnc: `sudo systemctl start x11vnc`
+3. На клиенте: 
+   - Для Windows: `real vnc view`
+      - логин: `[nikitonz-astra.ddns.net]:5900`
+      - пароль: `bleh`
+4. По окончанию работ убить vnc: `sudo systemctl stop x11vnc`
+
 </details>
 
 ---
