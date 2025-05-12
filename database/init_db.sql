@@ -50,3 +50,19 @@ CREATE OR REPLACE VIEW all_tables
 AS SELECT * FROM (log_headers INNER JOIN init_logs ON log_headers.id = init_logs.header_id)
                               NATURAL JOIN internal_messages
                               NATURAL JOIN protocol_messages
+
+CREATE OR REPLACE VIEW full_view AS
+SELECT LogHeaders.*, 
+       InitLogs.header_id as init_logs_header_id,
+       InitLogs.status,
+       InternalMessages.header_id as internal_messages_header_id,
+       InternalMessages.message_type,
+       InternalMessages.message_content,
+       ProtocolMessages.header_id as protocol_messages_header_id,
+       ProtocolMessages.protocol_type,
+       ProtocolMessages.raw_data,
+       ProtocolMessages.parsed_data
+
+FROM  log_headers LogHeaders CROSS JOIN init_logs InitLogs
+                          CROSS JOIN internal_messages InternalMessages
+                          CROSS JOIN protocol_messages ProtocolMessages
