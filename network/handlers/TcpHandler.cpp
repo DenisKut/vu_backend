@@ -59,8 +59,16 @@ void TcpHandler::initialize() {
     connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
-    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::errorOccurred),
+    #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    // Для Qt 5.15 и новее используем новый сигнал errorOccurred
+    connect(m_socket, &QAbstractSocket::errorOccurred,
             this, &TcpHandler::onError);
+#else
+    // Для старых версий используем старый сигнал error с приведением типа
+    connect(m_socket, static_cast<void (QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error),
+            this, &TcpHandler::onError);
+#endif
+
 
     m_reconnectTimer->setInterval(1000);
     connect(m_reconnectTimer, &QTimer::timeout, this, &TcpHandler::reconnect);
