@@ -8,8 +8,6 @@ EthHandler::EthHandler(QObject* parent)
 #ifdef _WIN32
     pcapAllDevs = nullptr;
     pcapTx = pcapRx = nullptr;
-	m_pollThread = nullptr; 
-	m_polling = false;
 #else
     QString interfaceName = findWiredInterface();
     if (!interfaceName.isEmpty()) {
@@ -185,18 +183,6 @@ void EthHandler::connectAdapter() {
     QString("Подключен Ethernet адаптер: %1").arg(strAdapterNames.at(0))));
 
     m_adapterOpened = true;
-
-    // Запуск отдельного polling-потока
-    if (!m_pollThread) {
-        m_polling = true;
-        m_pollThread = QThread::create([this]() {
-            while (m_polling) {
-                this->checkReceived();
-                QThread::usleep(500); // 0.5 мс, можно уменьшить до 100 для максимума, но CPU будет выше
-            }
-        });
-        m_pollThread->start();
-    }
 #else
     if (ethSocketID != -1) {
         qDebug() << "Ethernet socket already opened";
@@ -237,13 +223,6 @@ void EthHandler::connectAdapter() {
 void EthHandler::disconnectAdapter() {
     if (!m_adapterOpened) return;
 #ifdef _WIN32
-    m_polling = false;
-    if (m_pollThread) {
-        m_pollThread->quit();
-        m_pollThread->wait();
-        delete m_pollThread;
-        m_pollThread = nullptr;
-    }
     if (pcapTx) pcap_close(pcapTx);
     if (pcapRx) pcap_close(pcapRx);
     pcapTx = nullptr;

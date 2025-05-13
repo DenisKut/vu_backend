@@ -11,8 +11,6 @@
 
 #ifdef _WIN32
 #include <pcap.h>
-#include <atomic>
-#include <QThread>
 #else
 #include <QSocketNotifier>
 #include <QNetworkInterface>
@@ -61,8 +59,6 @@ private:
     pcap_if_t *pcapAllDevs = nullptr;
     pcap_t *pcapTx = nullptr;
     pcap_t *pcapRx = nullptr;
-    QThread* m_pollThread = nullptr;
-    std::atomic<bool> m_polling{false};
 #else
     int ethSocketID = -1;
     char ifName[IFNAMSIZ] = {0};
