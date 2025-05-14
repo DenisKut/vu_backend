@@ -31,7 +31,7 @@ NetworkManager::NetworkManager(QObject* parent)
     connect(m_ethHandler, &EthHandler::messageReceived, this, &NetworkManager::onEthReceived, Qt::QueuedConnection);
 
 #ifdef _WIN32
-    connect(&m_ethTimer, &QTimer::timeout, m_ethHandler, &EthHandler::checkReceived);
+    // connect(&m_ethTimer, &QTimer::timeout, m_ethHandler, &EthHandler::checkReceived);
 #endif
 
     // Запуск потоков
@@ -101,7 +101,7 @@ void NetworkManager::start() {
 
     LOG_INIT(CLASS_NAME, StatusInit::LOADED);
 #ifdef _WIN32
-    m_ethTimer.start(1);
+    // m_ethTimer.start(1);
 #endif
 }
 
