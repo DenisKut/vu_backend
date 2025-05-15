@@ -202,8 +202,8 @@ void TcpHandler::incomingConnection() {
             });
 
             connect(handler, &TcpConnectionHandler::messageReceived, this,
-                [this, handler, client](const QByteArray& data) {
-                    processIncomingMessageRMO(data, client);
+                [this](const QByteArray& data) {
+                    processIncomingMessageRMO(data);
                 });
 
             m_rmoConnections.append(handler);
@@ -574,6 +574,14 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                                    Logger::jobj_toString(msg_0x24_2.to_json())));
             break;
         }
+        case PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU: {
+            auto msg_0x45 = reinterpret_cast<TcpMessage_0x45*>(parsed.get());
+            LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,
+                                   Protocol::TCP, data,
+                                   Logger::jobj_toString(msg_0x45->to_json())));
+            break;
+        }
+
         default:
 #ifdef QT_DEBUG
             qDebug() << "Unknown message type received:"
@@ -606,9 +614,9 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 }
 
 // Универсальная обработка сообщений от РМО (TCP)
-void TcpHandler::processIncomingMessageRMO(const QByteArray &data, QTcpSocket* sender) {
+void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
     qDebug() << Qt::endl << "RMO TCP Message:" << data.toHex(' ').toUpper();
-    if (data.size() < sizeof(int32_t)) return;
+    if (data.size() < static_cast<int>(sizeof(int32_t))) return;
     QDataStream stream(data);
     stream.setByteOrder(QDataStream::LittleEndian);
     int32_t type = 0;

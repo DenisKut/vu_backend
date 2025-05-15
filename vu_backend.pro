@@ -27,14 +27,6 @@ QMAKE_CLEAN += \
     object_script.*.Release \
     .qmake.stash
 
-QMAKE_DISTCLEAN += \
-    $$BIN_DIR \
-    $$OBJECTS_DIR \
-    $$DESTDIR \
-    $$DESTDIR/.env \
-    $$DESTDIR/settings.ini \
-    $$DESTDIR/init_db.sql
-
 #-------------------------------
 # 1. Платформозависимые настройки
 #-------------------------------
@@ -179,7 +171,7 @@ QMAKE_DISTCLEAN += \
 
 # Для рекурсивного удаления директорий
 win32 {
-    distclean.commands = \
+    cleanall.commands = \
         cmd /c "if exist $$shell_path($$BIN_DIR) rmdir /S /Q $$shell_path($$BIN_DIR) & \
         if exist $$shell_path($$OBJECTS_DIR) rmdir /S /Q $$shell_path($$OBJECTS_DIR) & \
         if exist release rmdir /S /Q release & \
@@ -187,11 +179,11 @@ win32 {
         if exist objects rmdir /S /Q objects & \
         del /F /Q .qmake.stash Makefile* object_script.*.Debug object_script.*.Release"
 } else {
-    distclean.commands = \
+    cleanall.commands = \
         rm -rf $$BIN_DIR $$OBJECTS_DIR release debug objects .qmake.stash Makefile* object_script.*.Debug object_script.*.Release
 }
 
-QMAKE_EXTRA_TARGETS += distclean
+QMAKE_EXTRA_TARGETS += cleanall
 
 # ===================================
 # !!!!!! Очистка дубликатов !!!!!!
