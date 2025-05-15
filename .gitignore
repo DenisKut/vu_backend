@@ -166,3 +166,8 @@ patches/
 .qtc_clangd
 moc_predefs.h
 qmake_qmake_qm_files.qrc
+
+
+### excludes
+!database/docker_images/adminer.tar.gz
+!database/docker_images/postgres.tar.gz
