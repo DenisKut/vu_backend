@@ -25,8 +25,8 @@ public:
     void calculateCoefficientsPPU(double angleTarget,  double velocityTarget,
                                   double angleCurrent, double* angleLast,
                                   double* accelerationLast, double accelerationMax,
-                                  double angleMin, double velocityMin,
-                                  double KP, double KD, double dtLast, double dt,
+                                  // double angleMin, double velocityMin,
+                                  double KP, double KD, /*double dtLast,*/ double dt,
                                   double* C0, double* C1, double* C2);
     //----------------------------------------------------------
 

@@ -23,7 +23,7 @@ NetworkManager::NetworkManager(QObject* parent)
 
     // Подключение сигналов и слотов для обработчиков
     connect(m_tcpHandler, &TcpHandler::messageReceived, this, &NetworkManager::onTcpReceived, Qt::QueuedConnection);
-    connect(m_udpHandler, &UdpHandler::packetReceived, this, [this](const QByteArray& data, const QHostAddress& sender, quint16 senderPort) {
+    connect(m_udpHandler, &UdpHandler::packetReceived, this, [this](const QByteArray& data) {
         Message msg;
         msg.payload = data;
         this->onUdpReceived(msg);
@@ -118,8 +118,8 @@ void NetworkManager::stop() {
 void NetworkManager::calculateCoefficientsPPU(double angleTarget,  double velocityTarget,
                               double angleCurrent, double* angleLast,
                               double* accelerationLast, double accelerationMax,
-                              double angleMin, double velocityMin,
-                              double KP, double KD, double dtLast, double dt,
+                              // double angleMin, double velocityMin,
+                              double KP, double KD, /*double dtLast,*/ double dt,
                               double* C0, double* C1, double* C2) {
 
 
@@ -455,7 +455,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                         {
                             mode = 4;
                             double dt = 0.0000001*static_cast<double>(TimeProvider::instance().getBsPeriodWidth());
-                            double dtLast = 0.0000001*static_cast<double>(TimeProvider::instance().getBsDeltaPPU());
+                            // double dtLast = 0.0000001*static_cast<double>(TimeProvider::instance().getBsDeltaPPU());
 
                             double az = AppConfig::instance().getModulePPU_az(
                                 AppConfig::instance().ModulePPU_num_RLMN_1);
@@ -484,12 +484,12 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 
                             calculateCoefficientsPPU(azTarget, azTargetVel,
                                                      az, &azLast, &azAccLast,
-                                                     aMax, 10.0, 10.0, KP, KD, dtLast, dt,
+                                                     aMax,/* 10.0, 10.0,*/ KP, KD, /*dtLast,*/ dt,
                                                      &azC0, &azC1, &azC2);
 
                             calculateCoefficientsPPU(anTarget, anTargetVel,
                                                      an, &anLast, &anAccLast,
-                                                     aMax, 10.0, 10.0, KP, KD, dtLast, dt,
+                                                     aMax, /*10.0, 10.0,*/ KP, KD, /*dtLast,*/ dt,
                                                      &anC0, &anC1, &anC2);
 
                             azC2 *= 2.0;

@@ -82,7 +82,7 @@ private:
     void sendMessage(const QByteArray &data);
     void processIncomingMessage(const QByteArray &data);
 
-    void processIncomingMessageRMO(const QByteArray &data, QTcpSocket* sender);
+    void processIncomingMessageRMO(const QByteArray &data);
 
     template<typename F>
     void processBuffer(QByteArray& buffer, F processFunc);

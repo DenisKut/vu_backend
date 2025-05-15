@@ -2,7 +2,6 @@
 #define TCPMESSAGE_H
 
 #include "qjsonobject.h"
-#include "qjsonobject.h"
 #pragma once
 #include <cstdint>
 #include <cstring>
@@ -14,8 +13,6 @@
 #include <type_traits>
 #include <QJsonArray>
 #include <QJsonArray>
-
-
 
 #include "libs/json/json.hpp"
 
@@ -362,7 +359,8 @@ struct TcpMessage_0x01 : TcpMessage<TcpMessage_0x01,
             << "  Serial Number: " << serialNum << "\n"
             << "  Hardware Version: " << static_cast<int>(versHardMaj) << "."
             << static_cast<int>(versHardMin) << "\n"
-            << "  Software Version: " << static_cast<int>(versProgMaj & 0x7F) << "."
+            << "  Software Version: " << static_cast<int>(versProgMaj & 0x7F)
+            << "."
             << static_cast<int>(versProgMin & 0x7F) << "\n"
             << "  Info Processing: " << (isInfo ? "Yes" : "No") << "\n"
             << "  Control Capability: " << (isControl ? "Yes" : "No");
@@ -387,7 +385,8 @@ struct TcpMessage_0x01 : TcpMessage<TcpMessage_0x01,
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TcpMessage_0x01) == 16 + 8, "Invalid size [TcpMessage_0x01]");
+static_assert(sizeof(TcpMessage_0x01) == 16 + 8,
+                                        "Invalid size [TcpMessage_0x01]");
 
 #pragma pack(push, 1)
 /**
@@ -408,7 +407,8 @@ struct TcpMessage_0x03 : TcpMessage<TcpMessage_0x03,
 
     std::string toString() const {
         std::ostringstream oss;
-        uint64_t time = (static_cast<uint64_t>(timeRequest2) << 32) | timeRequest1;
+        uint64_t time = (static_cast<uint64_t>(timeRequest2) << 32)
+                                                            | timeRequest1;
         oss << TcpHeader::toString() << "\n"
             << "Time Request (0x03):\n"
             << "  Request Time: " << time << " ms since epoch\n"
@@ -426,7 +426,8 @@ struct TcpMessage_0x03 : TcpMessage<TcpMessage_0x03,
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TcpMessage_0x03) == 16 + 8, "Invalid size [TcpMessage_0x03]");
+static_assert(sizeof(TcpMessage_0x03) == 16 + 8,
+                                        "Invalid size [TcpMessage_0x03]");
 
 #pragma pack(push, 1)
 /**
@@ -463,7 +464,8 @@ struct TcpMessage_0x05 : TcpMessage<TcpMessage_0x05,
         std::ostringstream oss;
         oss << TcpHeader::toString() << "\n"
             << "Module Geoposition (0x05):\n"
-            << "  Data Type: " << (typeData == 1 ? "Geographic" : "Coordinates") << "\n"
+            << "  Data Type: " << (typeData == 1 ? "Geographic" : "Coordinates")
+            << "\n"
             << "  Data Valid: " << (isValid ? "Yes" : "No") << "\n";
 
         if (typeData == 1) {
@@ -496,7 +498,8 @@ struct TcpMessage_0x05 : TcpMessage<TcpMessage_0x05,
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TcpMessage_0x05) == 16 + 16, "Invalid size [TcpMessage_0x05]");
+static_assert(sizeof(TcpMessage_0x05) == 16 + 16,
+                                "Invalid size [TcpMessage_0x05]");
 
 #pragma pack(push, 1)
 /**
@@ -833,29 +836,6 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
         updateDataSize();
     }
 
-    // TcpMessage_0x1022(
-    //     float** powData
-    //     /* Если необходимо, доп. параметры */
-    //     ) {
-    //     uint64_t time = to_uint64(TimeProvider::instance().getMs());
-    //     time1 = to_uint32(time & 0xFFFFFFFF);
-    //     time2 = to_uint32(time >> 32);
-
-    //     chanCnt = 1; // Фиксированное значение (У нас один канал - суммарный)
-
-    //     /// @warning !!! Для заполнения требует наличия заведённых структур для
-    //     /// объектов и их траекторий
-
-    //     // Выделение памяти и копирование данных
-    //     if (powData && rangeCnt > 0 && speedCnt > 0) {
-    //         allocatePowRangeVel();
-    //         copyPowData(powData);
-    //     }
-
-    //     // Обновляем размер данных в заголовке
-    //     updateDataSize();
-    // }
-
     /// @brief Деструктор для очистки памяти
     ~TcpMessage_0x1022() {
         freePowRangeVel();
@@ -872,16 +852,6 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
             powRangeVel = new float[rangeCnt * speedCnt]();
         }
     }
-    // void allocatePowRangeVel() {
-    //     freePowRangeVel();
-
-    //     if (rangeCnt > 0 && speedCnt > 0) {
-    //         powRangeVel = new float*[rangeCnt];
-    //         for (uint8_t i = 0; i < rangeCnt; ++i) {
-    //             powRangeVel[i] = new float[speedCnt]{};
-    //         }
-    //     }
-    // }
 
     /**
      * @brief Копирует внешние данные в массив мощностей
@@ -892,13 +862,6 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
 
         std::copy(src, src + rangeCnt * speedCnt, powRangeVel);
     }
-    // void copyPowData(float** src) {
-    //     if (!src || !powRangeVel) return;
-
-    //     for (uint8_t i = 0; i < rangeCnt; ++i) {
-    //         std::copy(src[i], src[i] + speedCnt, powRangeVel[i]);
-    //     }
-    // }
 
     /**
      * @brief Обновляет размер данных в заголовке
@@ -915,13 +878,6 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
         checkSum = calculateChecksum(reinterpret_cast<const uint8_t*>(this),
                                      headerSize);
     }
-    // void updateDataSize() {
-    //     size_t dynamicSize = 0;
-    //     if (powRangeVel && rangeCnt > 0 && speedCnt > 0) {
-    //         dynamicSize = rangeCnt * speedCnt * sizeof(float);
-    //     }
-    //     sizeData = sizeof(TcpMessage_0x1022) - sizeof(TcpHeader) + dynamicSize;
-    // }
 
     /// @brief Полная сериализация сообщения
     /// @warning Переопределяем метод сереализации для этого сообщения, т.к.
@@ -939,21 +895,6 @@ struct TcpMessage_0x1022 : TcpMessage<TcpMessage_0x1022,
 
         return data;
     }
-    // QByteArray serializeFull() const {
-    //     // Фиксированная часть
-    //     QByteArray data(sizeof(TcpMessage_0x1022), 0);
-    //     memcpy(data.data(), this, sizeof(TcpMessage_0x1022));
-
-    //     // Динамическая часть
-    //     if (powRangeVel && rangeCnt > 0 && speedCnt > 0) {
-    //         for (uint8_t i = 0; i < rangeCnt; ++i) {
-    //             data.append(reinterpret_cast<const char*>(powRangeVel[i]),
-    //                         speedCnt * sizeof(float));
-    //         }
-    //     }
-
-    //     return data;
-    // }
 
     std::string toString() const {
         std::ostringstream oss;
@@ -1206,10 +1147,6 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
             cap.maxRange = j.at("MaxRange").get<double>();
             return cap;
         }
-
-
-
-
     };
 
     /**
@@ -1296,7 +1233,8 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
                     QJsonObject capObj;
                     capObj["Number"] = item["Number"].get<int>();
                     capObj["IsRotate"] = item.value("IsRotate", false);
-                    capObj["Name"] = QString::fromStdString(item.value("Name", std::string()));
+                    capObj["Name"] = QString::fromStdString(
+                                    item.value("Name", std::string()));
                     capObj["AzMin"] = item["AzMin"].get<double>();
                     capObj["AzMax"] = item["AzMax"].get<double>();
                     capObj["ElevMin"] = item["ElevMin"].get<double>();
@@ -1799,8 +1737,10 @@ struct TcpMessage_0x04 : TcpMessage<TcpMessage_0x04,
 
     std::string toString() const {
         std::ostringstream oss;
-        uint64_t requestTime = (static_cast<uint64_t>(timeRequest2) << 32) | timeRequest1;
-        uint64_t answerTime = (static_cast<uint64_t>(timeAnswer2) << 32) | timeAnswer1;
+        uint64_t requestTime = (static_cast<uint64_t>(timeRequest2) << 32)
+                                                    | timeRequest1;
+        uint64_t answerTime = (static_cast<uint64_t>(timeAnswer2) << 32)
+                                                    | timeAnswer1;
         oss << TcpHeader::toString() << "\n"
             << "Timestamp (0x04):\n"
             << "  Request Time: " << requestTime << " ms ("
@@ -2621,7 +2561,7 @@ struct TcpMessage_0x20 : TcpMessage<TcpMessage_0x20,
         return buffer;
     }
 
-/// @warning Отключение диагностики комплилятора для метода копирования
+/// @warning Отключение диагностики компилилятора для метода копирования
 /// @note Мы сами перепроверяем строку при её сериализации/десериализации
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
@@ -2880,7 +2820,7 @@ static_assert(sizeof(TcpMessage_0x21_Header) == 16 + 8,
  * @brief Квитанция на получение команды управления
  */
 struct TcpMessage_0x23: TcpMessage<TcpMessage_0x23,
-                                    PBU_MessageNumbers::RECEIPT_CONTROL_COMMAND> {
+                                PBU_MessageNumbers::RECEIPT_CONTROL_COMMAND> {
     /// @name Метка времени
     /// @details В данное поле записывается UTC время ПО модуля на момент
     /// формирования квитанции на команду.
@@ -3240,6 +3180,205 @@ struct TcpMessage_0x24: TcpMessage<TcpMessage_0x24,
 static_assert(sizeof(TcpMessage_0x24) == 16 + 16,
               "TcpMessage_0x24 size mismatch");
 
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x25
+ * @brief Текстовое сообщение в журнал (0x25) с переменным текстом (UTF-8)
+ */
+struct TcpMessage_0x25 : TcpMessage<TcpMessage_0x25,
+                                    PBU_MessageNumbers::TEXT_FOR_MESSAGE_LOG> {
+
+    /// @name Метка времени
+    /// @details В данное поле записывается UTC время ПО модуля на момент
+    /// формирования сообщения.
+    /// @note Передается в виде 64-битного значения кол-ва миллисекунд,
+    /// прошедших с 00:00:00.000 1970 01 01 (Unix Epoch)
+    /// @{
+    uint32_t time1;     ///< @brief Младшие 32 бита временной метки
+
+    uint32_t time2;     ///< @brief Старшие 32 бита временной метки
+    /// @}
+
+    uint16_t IDElem;    ///< @brief Источник сообщения
+                        ///< @details В данном поле передается условный
+                        ///< идентификатор элемента схемы, для которого
+                        ///< сформировано данное сообщение, либо 0xFFFF, если
+                        ///< сообщение сформировано для модуля в целом.
+
+    uint8_t type;       ///< @brief Тип сообщения
+                        ///< @details Данное поле может принимать следующие
+                        ///< значения:
+                        ///< - 0: информационное сообщение;
+                        ///< - 1: предупреждение;
+                        ///< - 2: сообщение об ошибке;
+                        ///< - 3: сообщение для отладки.
+
+    uint8_t reserve;    ///< @brief Резерв (8 бит)
+    QByteArray text;    ///< @brief Текстовое сообщение (UTF-8)
+
+    ///@brief ВРЕМЕННО конструкторы для базового заполнения.
+    /// потом предполагается заполнение из состояний приложения
+    /// @{
+    /// @note Конструктор по-умолчанию
+    TcpMessage_0x25():
+        time1(0), time2(0), IDElem(0), type(0), reserve(0) {}
+
+    /// @note Конструктор с параметрами
+    TcpMessage_0x25(
+        uint64_t timestamp,
+        uint16_t src,
+        uint8_t msgType,
+        const QByteArray& txt
+    )
+        :time1(static_cast<uint32_t>(timestamp & 0xFFFFFFFF)),
+        time2(static_cast<uint32_t>(timestamp >> 32)),
+        IDElem(src), type(msgType), reserve(0), text(txt)
+    {
+        sizeData = 8 + 4 + text.size();
+        const size_t headerSize = sizeof(TcpHeader) - sizeof(checkSum);
+        checkSum = calculateChecksum(reinterpret_cast<const uint8_t*>(this),
+                                                                    headerSize);
+    }
+    ///@}
+
+    QByteArray serializeFull() const {
+        QByteArray arr;
+        arr.append(reinterpret_cast<const char*>(this), sizeof(TcpHeader));
+        arr.append(reinterpret_cast<const char*>(&time1), sizeof(time1));
+        arr.append(reinterpret_cast<const char*>(&time2), sizeof(time2));
+        arr.append(reinterpret_cast<const char*>(&IDElem), sizeof(IDElem));
+        arr.append(reinterpret_cast<const char*>(&type), sizeof(type));
+        arr.append(reinterpret_cast<const char*>(&reserve), sizeof(reserve));
+        arr.append(text);
+        return arr;
+    }
+
+    static TcpMessage_0x25 deserialize(const QByteArray& data) {
+        TcpMessage_0x25 msg;
+        int minSize = sizeof(TcpHeader) + 8 + 4;
+        if (data.size() < minSize) return msg;
+        memcpy(static_cast<TcpHeader*>(&msg), data.constData(),
+               sizeof(TcpHeader));
+        int offset = sizeof(TcpHeader);
+        memcpy(&msg.time1, data.constData() + offset, sizeof(msg.time1));
+        offset += sizeof(msg.time1);
+        memcpy(&msg.time2, data.constData() + offset, sizeof(msg.time2));
+        offset += sizeof(msg.time2);
+        memcpy(&msg.IDElem, data.constData() + offset, sizeof(msg.IDElem));
+        offset += sizeof(msg.IDElem);
+        memcpy(&msg.type, data.constData() + offset, sizeof(msg.type));
+        offset += sizeof(msg.type);
+        memcpy(&msg.reserve, data.constData() + offset, sizeof(msg.reserve));
+        offset += sizeof(msg.reserve);
+        msg.text = data.mid(offset);
+        return msg;
+    }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "Text for Message Log (0x25):\n"
+            << "  Time: " << time << "\n"
+            << "  Source (IDElem): " << IDElem << "\n"
+            << "  Type: " << static_cast<int>(type) << "\n"
+            << "  Text: " << text.toStdString();
+        return oss.str();
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject obj = TcpHeader::to_json();
+        obj["time1"] = static_cast<qint64>(time1);
+        obj["time2"] = static_cast<qint64>(time2);
+        obj["IDElem"] = static_cast<int>(IDElem);
+        obj["type"] = static_cast<int>(type);
+        obj["text"] = QString::fromUtf8(text);
+        return obj;
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(TcpMessage_0x25) == 16 + 20, "Wrong size 0x25");
+
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x26
+ * @brief Текстовое сообщение оператору (0x26) с переменным текстом (UTF-8)
+ */
+struct TcpMessage_0x26 : TcpMessage<TcpMessage_0x26,
+                                    PBU_MessageNumbers::TEXT_FOR_OPERATOR> {
+    /// @name Метка времени
+    /// @details В данное поле записывается UTC время ПО модуля на момент
+    /// формирования сообщения.
+    /// @note Передается в виде 64-битного значения кол-ва миллисекунд,
+    /// прошедших с 00:00:00.000 1970 01 01 (Unix Epoch)
+    /// @{
+    uint32_t time1;     ///< @brief Младшие 32 бита временной метки
+
+    uint32_t time2;     ///< @brief Старшие 32 бита временной метки
+    /// @}
+    QByteArray text;     ///< Текстовое сообщение (UTF-8, переменной длины)
+
+    ///@brief ВРЕМЕННО конструкторы для базового заполнения.
+    /// потом предполагается заполнение из состояний приложения
+    /// @{
+    /// @note Конструктор по-умолчанию
+    TcpMessage_0x26() : TcpMessage(), time1(0), time2(0) {}
+
+    /// @note Конструктор с параметрами
+    TcpMessage_0x26(uint64_t timestamp, const QByteArray& txt)
+        : TcpMessage(), time1(static_cast<uint32_t>(timestamp & 0xFFFFFFFF)),
+        time2(static_cast<uint32_t>(timestamp >> 32)), text(txt)
+    {
+        this->sizeData = 8 + text.size();
+        const size_t headerSize = sizeof(TcpHeader) - sizeof(this->checkSum);
+        this->checkSum = calculateChecksum(
+            reinterpret_cast<const uint8_t*>(this), headerSize);
+    }
+    /// @}
+
+    QByteArray serializeFull() const {
+        QByteArray arr;
+        arr.append(reinterpret_cast<const char*>(this), sizeof(TcpHeader));
+        arr.append(reinterpret_cast<const char*>(&time1), sizeof(time1));
+        arr.append(reinterpret_cast<const char*>(&time2), sizeof(time2));
+        arr.append(text);
+        return arr;
+    }
+
+    static TcpMessage_0x26 deserialize(const QByteArray& data) {
+        TcpMessage_0x26 msg;
+        if (data.size() < static_cast<int>(sizeof(TcpHeader) + 8)) return msg;
+        memcpy(static_cast<TcpHeader*>(&msg), data.constData(),
+                                                            sizeof(TcpHeader));
+        memcpy(&msg.time1, data.constData() + sizeof(TcpHeader),
+                                                            sizeof(msg.time1));
+        memcpy(&msg.time2, data.constData() + sizeof(TcpHeader) + 4,
+                                                            sizeof(msg.time2));
+        msg.text = data.mid(sizeof(TcpHeader) + 8);
+        return msg;
+    }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "Text for Operator (0x26):\n"
+            << "  Time: " << time << "\n"
+            << "  Text: " << text.toStdString();
+        return oss.str();
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject obj = TcpHeader::to_json();
+        obj["time1"] = static_cast<qint64>(time1);
+        obj["time2"] = static_cast<qint64>(time2);
+        obj["text"] = QString::fromUtf8(text);
+        return obj;
+    }
+};
+#pragma pack(pop)
+
 // -----------------------------------------
 // Сообщения от ПБУ на ВУ [КОНТРОЛЯ И УПРАВЛЕНИЯ]
 // -----------------------------------------
@@ -3252,7 +3391,7 @@ static_assert(sizeof(TcpMessage_0x24) == 16 + 16,
 struct TcpMessage_0x40: TcpMessage<TcpMessage_0x40,
                                     PBU_MessageNumbers::COMMAND_SWITCH_ON> {
     uint32_t flags; ///< @brief Флаги включения
-                    ///< @details . Данное поле может принимать следующие
+                    ///< @details Данное поле может принимать следующие
                     ///< значения:
                     ///< - "0": включить оборудование;
                     ///< - "1": включить режим готовности дистанционного
@@ -3441,6 +3580,58 @@ struct TcpMessage_0x42: TcpMessage<TcpMessage_0x42,
 static_assert(sizeof(TcpMessage_0x42) == 16 + 4,
               "TcpMessage_0x42 size mismatch");
 
+#pragma pack(push, 1)
+/**
+ * @struct TcpMessage_0x45
+ * @brief Сообщение оператору от ПБУ (0x45) с переменным текстом (UTF-8)
+ */
+struct TcpMessage_0x45 : TcpMessage<TcpMessage_0x45,
+                                    PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU> {
+    uint32_t time1;      ///< Метка времени (младшие байты)
+    uint32_t time2;      ///< Метка времени (старшие байты)
+    QByteArray text;     ///< Текстовое сообщение (UTF-8, переменной длины)
+
+    QByteArray serializeFull() const {
+        QByteArray arr;
+        arr.append(reinterpret_cast<const char*>(this), sizeof(TcpHeader));
+        arr.append(reinterpret_cast<const char*>(&time1), sizeof(time1));
+        arr.append(reinterpret_cast<const char*>(&time2), sizeof(time2));
+        arr.append(text);
+        return arr;
+    }
+
+    static TcpMessage_0x45 deserialize(const QByteArray& data) {
+        TcpMessage_0x45 msg;
+        if (data.size() < static_cast<int>(sizeof(TcpHeader) + 8)) return msg;
+        memcpy(static_cast<TcpHeader*>(&msg), data.constData(), sizeof(TcpHeader));
+        memcpy(&msg.time1, data.constData() + sizeof(TcpHeader), sizeof(msg.time1));
+        memcpy(&msg.time2, data.constData() + sizeof(TcpHeader) + 4, sizeof(msg.time2));
+        msg.text = data.mid(sizeof(TcpHeader) + 8);
+        return msg;
+    }
+
+    std::string toString() const {
+        std::ostringstream oss;
+        uint64_t time = (static_cast<uint64_t>(time2) << 32) | time1;
+        oss << TcpHeader::toString() << "\n"
+            << "Text for Operator PBU (0x45):\n"
+            << "  Time: " << time << "\n"
+            << "  Text: " << text.toStdString();
+        return oss.str();
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject obj = TcpHeader::to_json();
+        obj["time1"] = static_cast<qint64>(time1);
+        obj["time2"] = static_cast<qint64>(time2);
+        obj["text"] = QString::fromUtf8(text);
+        return obj;
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(TcpMessage_0x45) == 16 + 16, "Wrong size 0x45");
+
 /**
  * @class MessageFactory
  * @brief Фабрика для создания и парсинга сообщений
@@ -3496,6 +3687,9 @@ public:
             }
             case PBU_MessageNumbers::TARGET_DESIGNATION: {
                 return parseMessage<TcpMessage_0x641>(data);
+            }
+            case PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU: {
+                return parseMessage<TcpMessage_0x45>(data);
             }
             // case PBU_MessageNumbers::GEO_COMPLEX: {
             //     return parseMessage<TcpMessage_0x06>(data)
@@ -3577,12 +3771,18 @@ public:
             return reinterpret_cast<TcpMessage_0x23*>(msg.get())->toString();
         case PBU_MessageNumbers::STATUS_MODULE:
             return reinterpret_cast<TcpMessage_0x24*>(msg.get())->toString();
+        case PBU_MessageNumbers::TEXT_FOR_MESSAGE_LOG:
+            return reinterpret_cast<TcpMessage_0x25*>(msg.get())->toString();
+        case PBU_MessageNumbers::TEXT_FOR_OPERATOR:
+            return reinterpret_cast<TcpMessage_0x26*>(msg.get())->toString();
         case PBU_MessageNumbers::COMMAND_SWITCH_ON:
             return reinterpret_cast<TcpMessage_0x40*>(msg.get())->toString();
         case PBU_MessageNumbers::COMMAND_SWITCH_OFF:
             return reinterpret_cast<TcpMessage_0x41*>(msg.get())->toString();
         case PBU_MessageNumbers::COMMAND_RESET_ALARM:
             return reinterpret_cast<TcpMessage_0x42*>(msg.get())->toString();
+        case PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU:
+            return reinterpret_cast<TcpMessage_0x45*>(msg.get())->toString();
         default:
             return "Unsupported message type: 0x" +
                    QString::number(msg->typePack, 16).toStdString();
