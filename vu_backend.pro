@@ -190,3 +190,14 @@ QMAKE_EXTRA_TARGETS += cleanall
 # ===================================
 DISTFILES = $$unique(DISTFILES)
 HEADERS = $$unique(HEADERS)
+
+# -------------------------------
+# 7. Цель trace. Определяет макрос TRACE
+# --------------------------------
+
+
+# Если CONFIG содержит trace, добавим макрос
+contains(CONFIG, trace) {
+    message(Trace mode enabled)
+    DEFINES += TRACE
+}

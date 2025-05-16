@@ -67,6 +67,7 @@ void NetworkManager::start() {
     switch (currentMode())
     {
     case AppMode::VU_LOCALHOST:
+
             QMetaObject::invokeMethod(m_tcpHandler, [this]() {
                 m_tcpHandler->connectToHost(
                     appSettings()
@@ -78,6 +79,7 @@ void NetworkManager::start() {
                 m_udpHandler->start(
                     appSettings().value("vu_settings/udp_port").toInt());
             });
+            qDebug()<<"VU_LOCALHOST selected";
         break;
     case AppMode::VU_REMOTE_ALMAZ:
         QMetaObject::invokeMethod(m_tcpHandler, [this]() {
@@ -92,6 +94,7 @@ void NetworkManager::start() {
                 appSettings()
                         .value("vu_settings_almaz/udp_port").toInt());
         });
+        qDebug()<<"VU_REMOTE_ALMAZ selected";
         break;
     }
 
@@ -222,7 +225,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
     auto parsed = EthMessageFactory::parse(msg);
     if (parsed)
     {
-#ifdef QT_DEBUG
+#ifdef TRACE
         // Отладочный вывод тела Ethernet пакета целиком
         qDebug() << Qt::endl << "ETH Message:" << msg.toHex(' ').toUpper();
 
@@ -244,8 +247,11 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 TimeProvider::instance().setBsPeriodTime(msgBS_SYNC->periodTime);
                 TimeProvider::instance().setBsPeriodWidth(msgBS_SYNC->periodWidth);
 #ifdef QT_DEBUG
-                // Отладочный вывод параметров сообщения 2.5
                 qDebug() << "2.5 RECEIVED";
+#endif
+#ifdef TRACE
+                // Отладочный вывод параметров сообщения 2.5
+
                 qDebug() << "--------------------------------------------";
                 qDebug() << "timeReceive =" << TO_HEX_STR(msgBS_SYNC->timeReceive, 5);              // Время приёма
                 qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgBS_SYNC->timeBeginTrans, 5);        // Время начала передачи
@@ -319,8 +325,12 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             msgPPU_POSITION->waitTarget);
                 //-------------------------------------------------------------
 #ifdef QT_DEBUG
-                // Отладочный вывод параметров сообщения 11.1
                 qDebug() << "11.1 RECEIVED";
+#endif
+
+#ifdef TRACE
+                // Отладочный вывод параметров сообщения 11.1
+
                 qDebug() << "--------------------------------------------";
                 qDebug() << "timeReceive =" << TO_HEX_STR(msgPPU_POSITION->timeReceive, 5);         // Время приёма
                 qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgPPU_POSITION->timeBeginTrans, 5);   // Время начала передачи
@@ -341,6 +351,8 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                 // Отладочный вывод параметров ППУ
 #ifdef QT_DEBUG
                 qDebug() << "PPU";
+#endif
+#ifdef TRACE
                 qDebug() << "--------------------------------------------";
                 qDebug() << "lastCommand =" <<
                             AppConfig::instance().getModulePPU_lastCommand(
@@ -425,6 +437,8 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
 #ifdef QT_DEBUG
                                 qDebug() << "Sending message to change period "
                                             "of messages on imitator:";
+#endif
+#ifdef TRACE
                                 qDebug() << "ETH Message from VU to BS:"
                                          << Qt::endl
                                          << data.toHex(' ').toUpper();
@@ -499,7 +513,7 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             azC2u = azC2 * 65535.0 / 360.0;
                             anC1u = anC1 * 65535.0 / 360.0;
                             anC2u = anC2 * 65535.0 / 360.0;
-#ifdef QT_DEBUG
+#ifdef TRACE
                             qDebug() << "azCur =" << azC0;
                             qDebug() << "azVel =" << azC1 << "=" << azC1u;
                             qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
@@ -532,6 +546,8 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                             QByteArray data = msg.serializeFull();
 #ifdef QT_DEBUG
                             qDebug() << "Sending message to move the PPU:";
+#endif
+#ifdef TRACE
                             qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                             m_ethHandler->sendMessage(data);
@@ -603,6 +619,8 @@ void NetworkManager::onEthReceived(const QByteArray& msg) {
                     QByteArray data = msg.serializeFull();
 #ifdef QT_DEBUG
                     qDebug() << "Sending message to turn on the PPU:";
+#endif
+#ifdef TRACE
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                     m_ethHandler->sendMessage(data);

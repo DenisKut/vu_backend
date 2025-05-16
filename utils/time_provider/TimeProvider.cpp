@@ -212,10 +212,13 @@ void TimeProvider::syncTimePBU(uint32_t timeRequest1,
     int64_t _pbuTimeKorr = sys_time_now - sys_time_req;
     setPbuTimeDelta(_pbuTimeDelta);
     setPbuTimeKorr(_pbuTimeKorr);
+#ifdef TRACE
     qDebug() << "Delta time between VU and PBU ="
              << timePBU - timePBURequest << "ms";
+
 //    qDebug() << "pbuTimeDelta =" << _pbuTimeDelta;
 //    qDebug() << "pbuTimeKorr =" << _pbuTimeKorr;
+#endif
 }
 
 // Запрос времени ПБУ для отправки сообщения на ПБУ
