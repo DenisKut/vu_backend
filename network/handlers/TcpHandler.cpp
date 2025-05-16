@@ -70,7 +70,7 @@ void TcpHandler::initialize() {
 #endif
 
 
-    m_reconnectTimer->setInterval(1000);
+    m_reconnectTimer->setInterval(800);
     connect(m_reconnectTimer, &QTimer::timeout, this, &TcpHandler::reconnect);
 
     connect(m_registrationTimer, &QTimer::timeout, this, &TcpHandler::handleRegistration);

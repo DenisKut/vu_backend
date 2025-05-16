@@ -154,9 +154,13 @@ git format-patch main..feature
 
 - **Из незакоммиченных изменений:**
   ```bash
-  # Создать патч из текущих изменений (включая unstaged)
-git diff > my-changes.patch
+  	# Создать патч из текущих изменений (включая unstaged)
+		git diff > my-changes.patch
   ```
+	```bash
+		# Создать патч из текущих изменений (включая staged)
+		git diff --cached > my-changes.patch
+	```
 
 - **Создание патча между ветками:**
   ```bash
