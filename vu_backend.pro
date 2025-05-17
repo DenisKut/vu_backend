@@ -70,7 +70,7 @@ PRECOMPILED_HEADER = pch.h
 CONFIG+=precompile_header
 INCLUDEPATH += $$PWD/core/logger
 
-# Windows (WinPcap)
+# Windows (NPcap)
 win32 {
     INCLUDEPATH += $$PWD/libs/wpdpack/Include
 

@@ -116,14 +116,29 @@ void EthHandler::startPollingThread() {
 
     m_polling = true;
     m_pollThread = QThread::create([this]() {
-        while (m_polling) {
-            this->checkReceived();
-            QThread::usleep(500); // 0.5 мс
+        while (m_polling && pcapRx) {
+            struct pcap_pkthdr *header = nullptr;
+            const unsigned char *data = nullptr;
+            int res = pcap_next_ex(pcapRx, &header, &data);
+            if (res == 1) {
+                QByteArray msg(reinterpret_cast<const char*>(data), header->len);
+                QMetaObject::invokeMethod(this, [msg, this]() {
+                    processIncomingFrame(msg);
+                }, Qt::QueuedConnection);
+            } else if (res == -1) {
+                qWarning() << "Npcap error (pcap_next_ex):" << pcap_geterr(pcapRx);
+                break;
+            }
+            // Минимальный polling-интервал (1-2 мс)
+            QThread::msleep(2);
         }
+    });
+    connect(m_pollThread, &QThread::finished, this, [this]() {
+        if (pcapRx) { pcap_close(pcapRx); pcapRx = nullptr; }
     });
     m_pollThread->start();
 
-    qDebug() << "Polling thread started";
+    qDebug() << "Npcap polling thread started";
 }
 
 void EthHandler::stopPollingThread() {
@@ -137,7 +152,7 @@ void EthHandler::stopPollingThread() {
     delete m_pollThread;
     m_pollThread = nullptr;
 
-    qDebug() << "Polling thread stopped";
+    qDebug() << "Npcap polling thread stopped";
 }
 //16.05 END
 
