@@ -12,9 +12,18 @@ class UdpHandler : public QObject {
 public:
     explicit UdpHandler(QObject* parent = nullptr);
     ~UdpHandler();
-
-    Q_INVOKABLE void start(int port);
+    Q_INVOKABLE void start(const QString& ip, int port);
     void stop();
+
+    // Метод для разбора входящих пакетов
+    void processIncomingDatagram(const QByteArray& data,
+                                 const QHostAddress& sender,
+                                 quint16 senderPort);
+
+    // Метод для формирования и отправки пакета
+    void sendCustomPacket(const QByteArray& payload,
+                                const QHostAddress& addr,
+                                quint16 port);
 
 signals:
     void packetReceived(const QByteArray& data,
@@ -22,7 +31,7 @@ signals:
                         quint16 senderPort);
 
 public slots:
-    Q_INVOKABLE void sendResponse(const QByteArray& data,
+    Q_INVOKABLE void sendMessage(const QByteArray& data,
                       const QHostAddress& addr,
                       quint16 port);
 

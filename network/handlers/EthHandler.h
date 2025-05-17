@@ -6,9 +6,7 @@
 #include <QByteArray>
 #include <QDataStream>
 #include <QTimer>
-#include "utils/time_provider/TimeProvider.h"
-
-#include <chrono>
+#include "network/messages/RmoMessage.h"
 
 #ifdef _WIN32
 #include <pcap.h>
@@ -38,6 +36,9 @@
 #include <netinet/ether.h>
 #endif
 
+#define TO_HEX(T,len) (QByteArray::fromRawData(reinterpret_cast<const char*>(T),len).toHex(' '))
+#define TO_HEX_STR(T,len) (QString::fromLatin1(QByteArray::fromRawData(reinterpret_cast<const char*>(T), len).toHex(' ').toUpper()))
+
 class EthHandler : public QObject {
     Q_OBJECT
 
@@ -48,10 +49,24 @@ public:
     Q_INVOKABLE void initialize();
     void connectAdapter();
     Q_INVOKABLE void disconnectAdapter();
-    //ADD MY BEG
     Q_INVOKABLE void freeRes();
-    //ADD MY END
     Q_INVOKABLE bool sendMessage(const QByteArray &data);
+
+    // Новый метод для разбора входящих пакетов
+    void processIncomingFrame(const QByteArray& data);
+    // Новый метод для формирования и отправки пакета (пример)
+    void sendCustomFrame(const QByteArray& payload);
+
+
+    // ППУ:
+    //----------------------------------------------------------
+    void calculateCoefficientsPPU(double angleTarget,  double velocityTarget,
+                          double angleCurrent, double* angleLast,
+                          double* accelerationLast, double accelerationMax,
+                          // double angleMin, double velocityMin,
+                          double KP, double KD, /*double dtLast,*/ double dt,
+                          double* C0, double* C1, double* C2);
+    //----------------------------------------------------------
 
 public slots:
     void start();
@@ -59,7 +74,7 @@ public slots:
 
 signals:
     void messageReceived(const QByteArray& msg);
-
+    void rmoTargetPpuReady(const RmoMessage_TargetPPU& msg);
 #ifdef _WIN32
     void ethTimerReceiveRestart();
 #endif

@@ -7,11 +7,8 @@ TcpHandler::TcpHandler(QObject *parent):QObject(parent){}
 void TcpHandler::initialize() {
     m_socket = new QTcpSocket(this);
 
-    // --- RMO TCP-сервер и поток ---
+    // --- RMO TCP-сервер ---
     m_serverRMO = new QTcpServer(this);
-//    m_rmoThread = new QThread(this);
-//    m_serverRMO->moveToThread(m_rmoThread);
-//    m_rmoThread->start();
 
     // --- WebSocket ---
     m_wsServer = new QWebSocketServer(QStringLiteral("RMO WebSocket Server"),
@@ -31,13 +28,16 @@ void TcpHandler::initialize() {
     if (!initServer()) {
         qFatal("Failed to initialize TCP server");
     }
-    connect(m_serverRMO, &QTcpServer::newConnection, this, &TcpHandler::incomingConnection, Qt::QueuedConnection);
+    connect(m_serverRMO, &QTcpServer::newConnection, this,
+                                &TcpHandler::incomingConnection,
+                                Qt::QueuedConnection);
 
     // --- WebSocket сервер ---
     if (!initWebSocketServer()) {
         qWarning() << "WebSocket server not started";
     } else {
-        connect(m_wsServer, &QWebSocketServer::newConnection, this, &TcpHandler::onWebSocketNewConnection);
+        connect(m_wsServer, &QWebSocketServer::newConnection, this,
+                                &TcpHandler::onWebSocketNewConnection);
     }
 
     // --- Основное TCP-подключение ---
@@ -46,35 +46,50 @@ void TcpHandler::initialize() {
     m_mainConnection = new TcpConnectionHandler(mainSocket);
     mainSocket->moveToThread(m_mainSocketThread);
     m_mainConnection->moveToThread(m_mainSocketThread);
-    connect(m_mainSocketThread, &QThread::finished, mainSocket, &QObject::deleteLater);
-    connect(m_mainSocketThread, &QThread::finished, m_mainConnection, &QObject::deleteLater);
-    connect(m_mainSocketThread, &QThread::finished, m_mainSocketThread, &QObject::deleteLater);
-    connect(m_mainConnection, &TcpConnectionHandler::finished, m_mainSocketThread, &QThread::quit);
-    connect(m_mainConnection, &TcpConnectionHandler::messageReceived, this, [this](const QByteArray& data){
+    connect(m_mainSocketThread, &QThread::finished, mainSocket,
+                                                    &QObject::deleteLater);
+    connect(m_mainSocketThread, &QThread::finished, m_mainConnection,
+                                                    &QObject::deleteLater);
+    connect(m_mainSocketThread, &QThread::finished, m_mainSocketThread,
+                                                    &QObject::deleteLater);
+    connect(m_mainConnection, &TcpConnectionHandler::finished,
+                                                    m_mainSocketThread,
+                                                    &QThread::quit);
+    connect(m_mainConnection, &TcpConnectionHandler::messageReceived,
+                                                    this, [this]
+                                                    (const QByteArray& data){
         processIncomingMessage(data);
     });
     m_mainSocketThread->start();
 
     // --- Основной клиентский сокет ---
-    connect(m_socket, &QTcpSocket::connected, this, &TcpHandler::onConnected);
-    connect(m_socket, &QTcpSocket::disconnected, this, &TcpHandler::onDisconnected);
-    connect(m_socket, &QTcpSocket::readyRead, this, &TcpHandler::onReadyRead);
+    connect(m_socket, &QTcpSocket::connected, this,
+                                                &TcpHandler::onConnected);
+    connect(m_socket, &QTcpSocket::disconnected, this,
+                                                &TcpHandler::onDisconnected);
+    connect(m_socket, &QTcpSocket::readyRead, this,
+                                                &TcpHandler::onReadyRead);
     #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     // Для Qt 5.15 и новее используем новый сигнал errorOccurred
     connect(m_socket, &QAbstractSocket::errorOccurred,
             this, &TcpHandler::onError);
 #else
     // Для старых версий используем старый сигнал error с приведением типа
-    connect(m_socket, static_cast<void (QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error),
+    connect(m_socket, static_cast<void (QAbstractSocket::*)
+                                  (QAbstractSocket::SocketError)>
+                                            (&QAbstractSocket::error),
             this, &TcpHandler::onError);
 #endif
 
 
     m_reconnectTimer->setInterval(800);
-    connect(m_reconnectTimer, &QTimer::timeout, this, &TcpHandler::reconnect);
+    connect(m_reconnectTimer, &QTimer::timeout, this,
+                                            &TcpHandler::reconnect);
 
-    connect(m_registrationTimer, &QTimer::timeout, this, &TcpHandler::handleRegistration);
-    connect(m_periodicTimer, &QTimer::timeout, this, &TcpHandler::sendPeriodicMessages);
+    connect(m_registrationTimer, &QTimer::timeout, this,
+                                            &TcpHandler::handleRegistration);
+    connect(m_periodicTimer, &QTimer::timeout, this,
+                                            &TcpHandler::sendPeriodicMessages);
 }
 
 TcpHandler::~TcpHandler() {
@@ -107,7 +122,8 @@ bool TcpHandler::initServer() {
             return true;
         }
     }
-    qCritical() << "Failed to start TCP server after" << maxAttempts << "attempts";
+    qCritical() << "Failed to start TCP server after" << maxAttempts
+                << "attempts";
     return false;
 }
 
@@ -124,7 +140,8 @@ void TcpHandler::connectToHost(const QString& host, quint16 port) {
     m_host = host;
     m_port = port;
     qInfo() << "Connecting to" << host << ":" << port;
-    m_socket->connectToHost(host, port, QIODevice::ReadWrite, QAbstractSocket::AnyIPProtocol);
+    m_socket->connectToHost(host, port, QIODevice::ReadWrite,
+                                                QAbstractSocket::AnyIPProtocol);
 }
 
 void TcpHandler::disconnect() {
@@ -142,7 +159,8 @@ void TcpHandler::onConnected() {
     int timer = 800;
     m_reconnectTimer->stop();
     m_registrationTimer->start(timer); // Отправка 0x01
-    LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", QString("ПОДКЛЮЧЁН, отправка раз в %1 мсек.").arg(timer));
+    LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP",
+                    QString("ПОДКЛЮЧЁН, отправка раз в %1 мсек.").arg(timer));
 }
 
 void TcpHandler::onDisconnected() {
@@ -178,7 +196,8 @@ void TcpHandler::onRmoDisconnected(TcpConnectionHandler* handler) {
     if (idx != -1) {
         QTcpSocket* sock = handler->getSocket();
         if (sock) {
-            qDebug() << "RMO TCP disconnected, descriptor:" << sock->socketDescriptor()
+            qDebug() << "RMO TCP disconnected, descriptor:"
+                     << sock->socketDescriptor()
                      << "total clients:" << m_rmoConnections.size() - 1;
         } else {
             qDebug() << "RMO TCP disconnected (unknown descriptor)";
@@ -195,9 +214,11 @@ void TcpHandler::incomingConnection() {
         if (client) {
             // ВАЖНО: не перемещаем сокет между потоками!
             // Создаём обработчик в этом же потоке:
-            TcpConnectionHandler* handler = new TcpConnectionHandler(client, nullptr);
+            TcpConnectionHandler* handler = new TcpConnectionHandler(client,
+                                                                    nullptr);
 
-            connect(handler, &TcpConnectionHandler::finished, this, [this, handler]() {
+            connect(handler, &TcpConnectionHandler::finished, this, [this,
+                                                                     handler](){
                 onRmoDisconnected(handler);
             });
 
@@ -208,7 +229,8 @@ void TcpHandler::incomingConnection() {
 
             m_rmoConnections.append(handler);
 
-            qDebug() << "RMO TCP connected, descriptor:" << client->socketDescriptor()
+            qDebug() << "RMO TCP connected, descriptor:"
+                     << client->socketDescriptor()
                      << "total clients:" << m_rmoConnections.size();
         }
     }
@@ -218,7 +240,8 @@ void TcpHandler::onError(QAbstractSocket::SocketError error) {
     if(error) {
         emit errorOccurred(m_socket->errorString());
         LOG(InternalMessageLog(CLASS_NAME, LogLevel::Error, "NOTIFY NOT SENDED",
-                               "ERROR OCCURED WHILE SENDING MESSAGE; REASON LISTED BELOW:\n"+m_socket->errorString()));
+        "ERROR OCCURED WHILE SENDING MESSAGE; REASON LISTED BELOW:\n"
+                                   + m_socket->errorString()));
     }
 }
 
@@ -304,8 +327,9 @@ void TcpHandler::handleRegistration() {
         auto msg_0x01 = MessageFactory::create<TcpMessage_0x01>();
         QByteArray data = msg_0x01.serializeFull();
         sendMessage(data);
-        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent ,Protocol::TCP, data,
-            Logger::jobj_toString(msg_0x01.to_json())));
+        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
+                                Protocol::TCP, data,
+                                Logger::jobj_toString(msg_0x01.to_json())));
     }
 }
 
@@ -320,8 +344,9 @@ void TcpHandler::sendPeriodicMessages() {
                   << std::endl << "\n";
 #endif
         sendMessage(msg_0x03.serializeFull());
-        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x03.serializeFull(),
-                               Logger::jobj_toString(msg_0x03.to_json())));
+        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
+                                Protocol::TCP, msg_0x03.serializeFull(),
+                                Logger::jobj_toString(msg_0x03.to_json())));
         // !!!!Отправка 0x24 (Статус модуля)
         auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
@@ -330,8 +355,9 @@ void TcpHandler::sendPeriodicMessages() {
                   << std::endl << "\n";
 #endif
         sendMessage(msg_0x24.serializeFull());
-        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x24.serializeFull(),
-                               Logger::jobj_toString(msg_0x24.to_json())));
+        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
+                                Protocol::TCP, msg_0x24.serializeFull(),
+                                Logger::jobj_toString(msg_0x24.to_json())));
         // TcpHandler::sendModuleStatus();
 
         // Отправка 0x1021 (Текущее состояние РЛС-Н)
@@ -352,12 +378,13 @@ void TcpHandler::sendPeriodicMessages() {
 #endif
         sendMessage(msg_0x1021_1.serializeFull());
         LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, 
-            msg_0x1021_1.serializeFull(), 
-            Logger::jobj_toString(msg_0x1021_1.to_json()));
+                                msg_0x1021_1.serializeFull(),
+                                Logger::jobj_toString(msg_0x1021_1.to_json()));
             
         sendMessage(msg_0x1021_2.serializeFull());
         LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, 
-            msg_0x1021_2.serializeFull(), Logger::jobj_toString(msg_0x1021_2.to_json()));
+                                msg_0x1021_2.serializeFull(),
+                                Logger::jobj_toString(msg_0x1021_2.to_json()));
     }
 }
 
@@ -391,8 +418,8 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 
                 sendMessage(msg_0x05.serializeFull());
                 LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
-                                       Protocol::TCP, msg_0x05.serializeFull(),
-                                       Logger::jobj_toString(msg_0x05.to_json())));
+                                Protocol::TCP, msg_0x05.serializeFull(),
+                                Logger::jobj_toString(msg_0x05.to_json())));
 #ifdef QT_DEBUG
                 std::cout << "Sent message 0x05:\n"
                           << msg_0x05.toString()
@@ -409,8 +436,8 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 
                 sendMessage(msg_0x1023.serializeFull());
                 LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
-                                       Protocol::TCP, msg_0x1023.serializeFull(),
-                                       Logger::jobj_toString(msg_0x1023.to_json())));
+                                Protocol::TCP, msg_0x1023.serializeFull(),
+                                Logger::jobj_toString(msg_0x1023.to_json())));
 #ifdef QT_DEBUG
                 std::cout << "Sent message 0x1023:\n"
                           << msg_0x1023.toString()
@@ -443,8 +470,8 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
         case PBU_MessageNumbers::TARGET_DESIGNATION: {
             auto msg_0x641 = reinterpret_cast<TcpMessage_0x641*>(parsed.get());
             LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,
-                                   Protocol::TCP, data,
-                                   Logger::jobj_toString(msg_0x641->to_json())));
+                                Protocol::TCP, data,
+                                Logger::jobj_toString(msg_0x641->to_json())));
 
             AppConfig::instance().SET_PBU_PROTO_0X24_MODE(1024);
             AppConfig::instance().SET_PBU_PROTO_0X23_ID_COM(
@@ -471,8 +498,8 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 #endif
             sendMessage(msg_0x23.serializeFull());
             LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
-                                   Protocol::TCP, msg_0x23.serializeFull(),
-                                   Logger::jobj_toString(msg_0x23.to_json())));
+                                Protocol::TCP, msg_0x23.serializeFull(),
+                                Logger::jobj_toString(msg_0x23.to_json())));
 
             auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
@@ -536,7 +563,8 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                 msg_0x1022.sigD = msg_0x641->sigRange;
                 msg_0x1022.sigVr = msg_0x641->sigVr;
                 msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
-                msg_0x1022.typeTrack = static_cast<uint8_t>(msg_0x641->typeCeil);
+                msg_0x1022.typeTrack =
+                                static_cast<uint8_t>(msg_0x641->typeCeil);
                 #ifdef QT_DEBUG
                 std::cout << "Sent message 0x1022:\n"
                           << msg_0x1022.toString()
@@ -544,8 +572,8 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
     #endif
                           sendMessage(msg_0x1022.serializeFull());
                 LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
-                                       Protocol::TCP, msg_0x1022.serializeFull(),
-                                       Logger::jobj_toString(msg_0x1022.to_json())));
+                                Protocol::TCP, msg_0x1022.serializeFull(),
+                                Logger::jobj_toString(msg_0x1022.to_json())));
             }
 
             AppConfig::instance().SET_PBU_PROTO_0X24_MODE(0);
@@ -559,8 +587,8 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 #endif
             sendMessage(msg_0x23_2.serializeFull());
             LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
-                                   Protocol::TCP, msg_0x23_2.serializeFull(),
-                                   Logger::jobj_toString(msg_0x23_2.to_json())));
+                                Protocol::TCP, msg_0x23_2.serializeFull(),
+                                Logger::jobj_toString(msg_0x23_2.to_json())));
 
             auto msg_0x24_2 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
@@ -570,15 +598,15 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 #endif
             sendMessage(msg_0x24_2.serializeFull());
             LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
-                                   Protocol::TCP, msg_0x24_2.serializeFull(),
-                                   Logger::jobj_toString(msg_0x24_2.to_json())));
+                                Protocol::TCP, msg_0x24_2.serializeFull(),
+                                Logger::jobj_toString(msg_0x24_2.to_json())));
             break;
         }
         case PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU: {
             auto msg_0x45 = reinterpret_cast<TcpMessage_0x45*>(parsed.get());
             LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,
-                                   Protocol::TCP, data,
-                                   Logger::jobj_toString(msg_0x45->to_json())));
+                                Protocol::TCP, data,
+                                Logger::jobj_toString(msg_0x45->to_json())));
             break;
         }
 
@@ -648,7 +676,8 @@ void TcpHandler::onWebSocketNewConnection() {
     m_wsClients.append(ws);
     qDebug() << "RMO WebSocket connected:" << ws->peerAddress().toString();
 
-    connect(ws, &QWebSocket::textMessageReceived, this, [this, ws](const QString& message) {
+    connect(ws, &QWebSocket::textMessageReceived, this,
+                                    [this, ws](const QString& message) {
         onWebSocketTextMessageReceived(message, ws);
     });
     connect(ws, &QWebSocket::disconnected, this, [this, ws]() {
@@ -658,7 +687,8 @@ void TcpHandler::onWebSocketNewConnection() {
     });
 }
 
-void TcpHandler::onWebSocketTextMessageReceived(const QString& message, QWebSocket* ws) {
+void TcpHandler::onWebSocketTextMessageReceived(const QString& message,
+                                                QWebSocket* ws) {
     // try {
     //     auto obj = nlohmann::json::parse(message.toStdString());
     //     double azTarget = obj.value("azTarget", 0.0);
