@@ -98,6 +98,7 @@ void NetworkManager::start() {
             int port = appSettings().value("vu_settings/udp_port").toInt();
             m_udpHandler->start(ip, port);
         });
+		qDebug()<<"VU_LOCALHOST selected";
         break;
     case AppMode::VU_REMOTE_ALMAZ:
         QMetaObject::invokeMethod(m_tcpHandler, [this]() {
@@ -113,6 +114,7 @@ void NetworkManager::start() {
                                 .value("vu_settings_almaz/udp_port").toInt();
             m_udpHandler->start(ip, port);
         });
+        qDebug()<<"VU_REMOTE_ALMAZ selected";
         break;
     }
 

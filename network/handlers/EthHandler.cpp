@@ -321,9 +321,7 @@ void EthHandler::connectAdapter() {
     {
 //        emit adapterUpdatePM(pcapTx);  // Обновить указатель на адаптер для менеджера пакетов
 //        emit adapterConnected();    // Адаптер подключен
-#ifdef QT_DEBUG
         qDebug() << "Open pcapTx";
-#endif
         LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", "WINPCAP; pcapTx открыт"));
     }
 

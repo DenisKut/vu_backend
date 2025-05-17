@@ -153,9 +153,7 @@ void TcpHandler::disconnect() {
 }
 
 void TcpHandler::onConnected() {
-#ifdef QT_DEBUG
     std::cout << "Connected to TCP host" << std::endl;
-#endif
     int timer = 800;
     m_reconnectTimer->stop();
     m_registrationTimer->start(timer); // Отправка 0x01
@@ -164,9 +162,8 @@ void TcpHandler::onConnected() {
 }
 
 void TcpHandler::onDisconnected() {
-#ifdef QT_DEBUG
+
     std::cout << "Disconnected from TCP host" << std::endl;
-#endif
     m_isRegistered = false;
     m_registrationTimer->stop();
     m_periodicTimer->stop();
@@ -185,9 +182,7 @@ void TcpHandler::reconnect() {
         m_socket->abort();
     }
 
-#ifdef QT_DEBUG
     qInfo() << "Reconnecting to" << m_host << ":" << m_port;
-#endif
     m_socket->connectToHost(m_host, m_port);
 }
 
@@ -338,9 +333,11 @@ void TcpHandler::sendPeriodicMessages() {
         // Отправка 0x03 (Запрос времени)
         auto msg_0x03 = MessageFactory::create<TcpMessage_0x03>();
 #ifdef QT_DEBUG
+        std::cout << "Sent message 0x03:\n";
+#endif
+#ifdef TRACE
         qDebug() << "time_now =" << TimeProvider::instance().getMs();
-        std::cout << "Sent message 0x03:\n"
-                  << msg_0x03.toString()
+        std::cout << msg_0x03.toString()
                   << std::endl << "\n";
 #endif
         sendMessage(msg_0x03.serializeFull());
@@ -350,8 +347,10 @@ void TcpHandler::sendPeriodicMessages() {
         // !!!!Отправка 0x24 (Статус модуля)
         auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
-        std::cout << "Sent message 0x24:\n"
-                  << msg_0x24.toString()
+        std::cout << "Sent message 0x24:\n";
+#endif
+#ifdef TRACE
+        std::cout << msg_0x24.toString()
                   << std::endl << "\n";
 #endif
         sendMessage(msg_0x24.serializeFull());
@@ -368,12 +367,14 @@ void TcpHandler::sendPeriodicMessages() {
                 ::create<TcpMessage_0x1021>(AppConfig::ModulePPU_num
                                                         ::ModulePPU_num_RLMN_2);
 #ifdef QT_DEBUG
-        std::cout << "Sent message 0x1021_1:\n"
-                  << msg_0x1021_1.toString()
+        std::cout << "Sent message 0x1021_1:\n";
+        std::cout << "Sent message 0x1021_2:\n";
+#endif
+#ifdef TRACE
+        std::cout << msg_0x1021_1.toString()
                   << std::endl << "\n";
 
-        std::cout << "Sent message 0x1021_2:\n"
-                  << msg_0x1021_2.toString()
+        std::cout << msg_0x1021_2.toString()
                   << std::endl << "\n";
 #endif
         sendMessage(msg_0x1021_1.serializeFull());
@@ -393,8 +394,10 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
     auto parsed = MessageFactory::parse(data);
     if (parsed) {
 #ifdef QT_DEBUG
-        std::cout << "Received message:\n"
-                  << MessageFactory::messageToString(parsed)
+        std::cout << "Received message.\n";
+#endif
+#ifdef TRACE
+        std::cout << MessageFactory::messageToString(parsed)
                   << "\n" << std::endl << "\n";
 #endif
         switch (static_cast<PBU_MessageNumbers>(parsed->typePack)) {
@@ -421,8 +424,10 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                                 Protocol::TCP, msg_0x05.serializeFull(),
                                 Logger::jobj_toString(msg_0x05.to_json())));
 #ifdef QT_DEBUG
-                std::cout << "Sent message 0x05:\n"
-                          << msg_0x05.toString()
+                std::cout << "Sent message 0x05:\n";
+#endif
+#ifdef TRACE
+                std::cout << msg_0x05.toString()
                           << std::endl << "\n";
 #endif
                 std::vector<TcpMessage_0x1023::ModuleCapability> capabilities {
@@ -439,8 +444,10 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                                 Protocol::TCP, msg_0x1023.serializeFull(),
                                 Logger::jobj_toString(msg_0x1023.to_json())));
 #ifdef QT_DEBUG
-                std::cout << "Sent message 0x1023:\n"
-                          << msg_0x1023.toString()
+                std::cout << "Sent message 0x1023:\n";
+#endif
+#ifdef TRACE
+                std::cout << msg_0x1023.toString()
                           << std::endl << "\n";
 #endif
                 m_periodicTimer->start(900); // Периодическая отправка сообщений
@@ -449,9 +456,6 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
         }
         case PBU_MessageNumbers::TIMESTAMP: {
             auto msg_0x04 = reinterpret_cast<TcpMessage_0x04*>(parsed.get());
-#ifdef QT_DEBUG
-            qDebug() << "time_now =" << TimeProvider::instance().getMs();
-#endif
             LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,
                 Protocol::TCP, data,
                 Logger::jobj_toString(msg_0x04->to_json())));
@@ -462,6 +466,9 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 #ifdef QT_DEBUG
             std::cout << "Time synchronized using message 0x04."
                       << std::endl << "\n";
+#endif
+#ifdef TRACE
+            qDebug() << "0x04. time_now =" << TimeProvider::instance().getMs();
 #endif
             // Инкремент счётчика для отмены признака внешнего уравления
             isRemoteCnt++;
@@ -492,8 +499,10 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 
             auto msg_0x23 = MessageFactory::create<TcpMessage_0x23>();
 #ifdef QT_DEBUG
-            std::cout << "Sent message 0x23:\n"
-                      << msg_0x23.toString()
+            std::cout << "Sent message 0x23:\n";
+#endif
+#ifdef TRACE
+            std::cout << msg_0x23.toString()
                       << std::endl << "\n";
 #endif
             sendMessage(msg_0x23.serializeFull());
@@ -503,8 +512,10 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 
             auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
-            std::cout << "Sent message 0x24:\n"
-                      << msg_0x24.toString()
+            std::cout << "Sent message 0x24:\n";
+#endif
+#ifdef TRACE
+            std::cout << msg_0x24.toString()
                       << std::endl << "\n";
 #endif
             sendMessage(msg_0x24.serializeFull());
@@ -569,7 +580,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                 std::cout << "Sent message 0x1022:\n"
                           << msg_0x1022.toString()
                           << std::endl << "\n";
-    #endif
+#endif
                           sendMessage(msg_0x1022.serializeFull());
                 LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
                                 Protocol::TCP, msg_0x1022.serializeFull(),
@@ -581,8 +592,10 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                 to_underlying(AppConfig::ReceiptCodes::EXECUTED_WITHOUT_ERROR));
             auto msg_0x23_2 = MessageFactory::create<TcpMessage_0x23>();
 #ifdef QT_DEBUG
-            std::cout << "Sent message 0x23:\n"
-                      << msg_0x23_2.toString()
+            std::cout << "Sent message 0x23:\n";
+#endif
+#ifdef TRACE
+            std::cout << msg_0x23_2.toString()
                       << std::endl << "\n";
 #endif
             sendMessage(msg_0x23_2.serializeFull());
@@ -592,8 +605,10 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 
             auto msg_0x24_2 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
-            std::cout << "Sent message 0x24:\n"
-                      << msg_0x24_2.toString()
+            std::cout << "Sent message 0x24:\n";
+#endif
+#ifdef TRACE
+            std::cout << msg_0x24_2.toString()
                       << std::endl << "\n";
 #endif
             sendMessage(msg_0x24_2.serializeFull());
@@ -620,6 +635,8 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
     } else {
 #ifdef QT_DEBUG
         qDebug() << "Invalid or unknown message\n";
+#endif
+#ifdef TRACE
         qDebug() << Qt::endl << "ETH Message:" << data.toHex(' ').toUpper();
 #endif
         LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "НЕИЗВЕСТНОЕ СООБЩЕНИЕ ПОЛУЧЕНО");
@@ -643,7 +660,9 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 
 // Универсальная обработка сообщений от РМО (TCP)
 void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
+#ifdef TRACE
     qDebug() << Qt::endl << "RMO TCP Message:" << data.toHex(' ').toUpper();
+#endif
     if (data.size() < static_cast<int>(sizeof(int32_t))) return;
     QDataStream stream(data);
     stream.setByteOrder(QDataStream::LittleEndian);
