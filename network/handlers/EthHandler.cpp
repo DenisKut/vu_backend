@@ -195,18 +195,14 @@ void EthHandler::attemptReconnect() {
     QThread::msleep(500); // Даем время на корректное закрытие
     connectAdapter();
 }
-//16.05 ADD END
 
 EthHandler::EthHandler(QObject* parent)
     : QObject(parent), m_adapterOpened(false)
 {
-// ADD 16.05 BEG
-//#ifdef _WIN32
     m_reconnectTimer = new QTimer(this);
     m_reconnectTimer->setSingleShot(false);
-    connect(m_reconnectTimer, &QTimer::timeout, this, &EthHandler::attemptReconnect);
-//#endif
-// ADD 16.05 END
+    connect(m_reconnectTimer, &QTimer::timeout, this,
+                                    &EthHandler::attemptReconnect);
 
 #ifndef _WIN32
 
@@ -225,9 +221,9 @@ EthHandler::EthHandler(QObject* parent)
 #ifdef QT_DEBUG
         qDebug() << "Интерфейс не найден";
 #endif
-
         LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "сетевой интерфейс не найден");
-        strcpy(ifName, appSettings().value("iface_info/eth_interface_name").toString().toUtf8().constData());
+        strcpy(ifName, appSettings().value("iface_info/eth_interface_name")
+                                            .toString().toUtf8().constData());
     }
     qDebug() << "interfaceName =" << interfaceName;
 
@@ -281,7 +277,8 @@ void EthHandler::connectAdapter() {
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING), nullptr, &pcapAllDevs, errbuf) == -1)
+    if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING),
+                                    nullptr, &pcapAllDevs, errbuf) == -1)
     {
 
 #ifdef QT_DEBUG
@@ -298,7 +295,8 @@ void EthHandler::connectAdapter() {
     if(d == nullptr)
     {
 #ifdef QT_DEBUG
-        qInfo() << "No suitable adapter found for EtherType 0x" << QString::number(m_customEtherType, 16);
+        qInfo() << "No suitable adapter found for EtherType 0x"
+                << QString::number(m_customEtherType, 16);
 #endif
         freeRes();
         startReconnectTimer();

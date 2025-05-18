@@ -3,9 +3,10 @@
 #include <QDir>
 #include <QFileInfo>
 
-#ifdef Q_OS_WIN
-#include <windows.h>
-#endif
+// !!! Необязательно !!!
+// #ifdef Q_OS_WIN
+// #include <windows.h>
+// #endif
 
 #include "utils/env_loader/EnvLoader.h"
 #include "common/CoreManager.h"

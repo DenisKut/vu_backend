@@ -26,6 +26,14 @@ NetworkManager::NetworkManager(QObject* parent)
                                     &NetworkManager::onTcpReceived,
                                     Qt::QueuedConnection);
 
+    // Подключение EthHandler::rmoTargetPpuReady к TcpHandler::
+	// sendRmoMessageToAll. Таким образом есть возможность описывать обработку
+	// сигналов между потоками...  
+    connect(m_ethHandler, &EthHandler::rmoTargetPpuReady,
+            this, [this](const RmoMessage_TargetPPU& msg) {
+                m_tcpHandler->sendRmoMessageToAll(msg);
+            }, Qt::QueuedConnection);
+
 #ifdef _WIN32
     // connect(&m_ethTimer, &QTimer::timeout, m_ethHandler,
 	//                                            &EthHandler::checkReceived);

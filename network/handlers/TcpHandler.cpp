@@ -708,6 +708,8 @@ void TcpHandler::onWebSocketNewConnection() {
 
 void TcpHandler::onWebSocketTextMessageReceived(const QString& message,
                                                 QWebSocket* ws) {
+    Q_UNUSED(message);
+    Q_UNUSED(ws);
     // try {
     //     auto obj = nlohmann::json::parse(message.toStdString());
     //     double azTarget = obj.value("azTarget", 0.0);

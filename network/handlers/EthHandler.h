@@ -10,6 +10,7 @@
 
 #ifdef _WIN32
 #include <pcap.h>
+#include <windows.h>
 #include <atomic>
 #include <QThread>
 

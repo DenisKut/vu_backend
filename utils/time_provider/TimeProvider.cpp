@@ -197,14 +197,13 @@ void TimeProvider::syncTimePBU(uint32_t timeRequest1,
                                uint32_t timeAnswer2) {
     QMutexLocker lock(&m_mutex);
 
+    Q_UNUSED(timeRequest1);
+    Q_UNUSED(timeRequest2);
+
     // Объединяем два 32-битных значения в 64-битное время
     int64_t timePBU = static_cast<int64_t>(
                 static_cast<uint64_t>(timeAnswer2) << 32)
                                 | timeAnswer1;
-    int64_t timePBURequest = static_cast<int64_t>(
-                static_cast<uint64_t>(timeRequest2) << 32)
-                                | timeRequest1;
-
     // Вычисляем коррекцию времени
     int64_t sys_time_now = getMs();
     int64_t sys_time_req = getSysOnTimeReq();
@@ -213,6 +212,10 @@ void TimeProvider::syncTimePBU(uint32_t timeRequest1,
     setPbuTimeDelta(_pbuTimeDelta);
     setPbuTimeKorr(_pbuTimeKorr);
 #ifdef TRACE
+    int64_t timePBURequest = static_cast<int64_t>(
+                                 static_cast<uint64_t>(timeRequest2) << 32)
+                             | timeRequest1;
+
     qDebug() << "Delta time between VU and PBU ="
              << timePBU - timePBURequest << "ms";
 
