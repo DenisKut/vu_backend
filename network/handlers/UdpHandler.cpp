@@ -38,9 +38,17 @@ void UdpHandler::sendMessage(const QByteArray& data,
                               const QHostAddress& addr,
                               quint16 port) {
     if (m_socket) {
-        qInfo() << "[UDP] Sending datagram to" << addr.toString()
-                << ":" << port
-                << ", size:" << data.size();
+#if defined(QT_DEBUG) || defined(TRACE)
+    QStringList traceParts;
+#ifdef QT_DEBUG
+    traceParts << "[UDP] Sending datagram";
+#endif
+#ifdef TRACE
+    traceParts << "to" << addr.toString() + ":" + QString::number(port)
+               << ", size:" + QString::number(data.size());
+#endif
+    qInfo().noquote() << traceParts.join(" ");
+#endif
         m_socket->writeDatagram(data, addr, port);
     }
 }
@@ -53,9 +61,18 @@ void UdpHandler::onReadyRead() {
         quint16 senderPort;
         m_socket->readDatagram(datagram.data(), datagram.size(),
                                                         &sender, &senderPort);
-        qInfo() << "[UDP] Received datagram from" << sender.toString()
-                << ":" << senderPort
-                << ", size:" << datagram.size();
+#if defined(QT_DEBUG) || defined(TRACE)
+    QString logLine;
+#ifdef QT_DEBUG
+    logLine += "[UDP] Received datagram ";
+#endif
+#ifdef TRACE
+    logLine += "from " + sender.toString()
+            + ":" + QString::number(senderPort)
+            + ", size:" + QString::number(datagram.size());
+#endif
+    qInfo().noquote() << logLine;
+#endif
         processIncomingDatagram(datagram, sender, senderPort); // Вызов разбора
         emit packetReceived(datagram, sender, senderPort);
     }
@@ -66,10 +83,19 @@ void UdpHandler::processIncomingDatagram(const QByteArray& data,
                                     quint16 senderPort) {
     // Здесь разбор пакета, логика обработки, парсинг и т.д.
     // Пример: просто hex :)
-    qDebug() << "[UDP] Parsed datagram from" << sender.toString()
-             << ":" << senderPort
-             << ":" << data.toHex(' ').toUpper();
+#if defined(QT_DEBUG) || defined(TRACE)
+    QStringList traceParts;
+#ifdef QT_DEBUG
+    traceParts << "[UDP] Parsed datagram";
+#endif
+#ifdef TRACE
+    traceParts << "from" << sender.toString() + ":" + QString::number(senderPort)
+               << ":" + data.toHex(' ').toUpper();
+#endif
+    qDebug().noquote() << traceParts.join(" ");
+#endif
     // TODO: добавить реальный разбор
+
 }
 
 void UdpHandler::sendCustomPacket(const QByteArray& payload,
@@ -78,7 +104,16 @@ void UdpHandler::sendCustomPacket(const QByteArray& payload,
     // Здесь формирование пакета (например, добавление заголовка НА БУДУЩЕЕ)
     QByteArray packet = payload; // Пример: без изменений
     sendMessage(packet, addr, port);
-    qDebug() << "[UDP] Custom packet sent to" << addr.toString()
-             << ":" << port
-             << ", size:" << packet.size();
+#if defined(QT_DEBUG) || defined(TRACE)
+    QStringList traceParts;
+#ifdef QT_DEBUG
+    traceParts << "[UDP] Custom packet sent";
+#endif
+#ifdef TRACE
+    traceParts << "to" << addr.toString() + ":" + QString::number(port)
+               << ", size:" + QString::number(packet.size());
+#endif
+    qDebug().noquote() << traceParts.join(" ");
+#endif
+
 }

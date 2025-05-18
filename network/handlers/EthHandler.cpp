@@ -690,6 +690,9 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
     if (parsed)
     {
 #ifdef QT_DEBUG
+        qDebug() << "Captured ETH Message" << Qt::endl;
+#endif
+#ifdef TRACE
         qDebug() << Qt::endl << "ETH Message:" << msg.toHex(' ').toUpper();
         qDebug() << "parsed->mesNumber =" << TO_HEX_STR(&parsed->mesNumber, 2);
 #endif
@@ -703,6 +706,8 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 TimeProvider::instance().setBsPeriodWidth(msgBS_SYNC->periodWidth);
 #ifdef QT_DEBUG
                 qDebug() << "2.5 RECEIVED";
+#endif
+#ifdef TRACE
                 qDebug() << "--------------------------------------------";
                 qDebug() << "timeReceive =" << TO_HEX_STR(msgBS_SYNC->timeReceive, 5);
                 qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgBS_SYNC->timeBeginTrans, 5);
@@ -737,6 +742,8 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 AppConfig::instance().setModulePPU_waitTarget(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->waitTarget);
 #ifdef QT_DEBUG
                 qDebug() << "11.1 RECEIVED";
+#endif
+#ifdef TRACE
                 qDebug() << "--------------------------------------------";
                 qDebug() << "timeReceive =" << TO_HEX_STR(msgPPU_POSITION->timeReceive, 5);
                 qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgPPU_POSITION->timeBeginTrans, 5);
@@ -755,6 +762,8 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
 #ifdef QT_DEBUG
                 qDebug() << "PPU";
+#endif 
+#ifdef TRACE
                 qDebug() << "--------------------------------------------";
                 qDebug() << "lastCommand =" << AppConfig::instance().getModulePPU_lastCommand(AppConfig::instance().ModulePPU_num_RLMN_1);
                 qDebug() << "state =" << AppConfig::instance().getModulePPU_state(AppConfig::instance().ModulePPU_num_RLMN_1);
@@ -789,6 +798,8 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                             QByteArray data = QByteArray(reinterpret_cast<const char*>(buf), sizeof(buf));
 #ifdef QT_DEBUG
                             qDebug() << "Sending message to change period of messages on imitator:";
+#endif 
+#ifdef TRACE
                             qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                             QMetaObject::invokeMethod(this, "sendMessage", Qt::QueuedConnection, Q_ARG(QByteArray, data));
@@ -817,7 +828,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         azC2u = azC2 * 65535.0 / 360.0;
                         anC1u = anC1 * 65535.0 / 360.0;
                         anC2u = anC2 * 65535.0 / 360.0;
-#ifdef QT_DEBUG
+#ifdef TRACE
                         qDebug() << "azCur =" << azC0;
                         qDebug() << "azVel =" << azC1 << "=" << azC1u;
                         qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
@@ -832,7 +843,9 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         msg.azSector = 0; msg.anSector = 0;
                         QByteArray data = msg.serializeFull();
 #ifdef QT_DEBUG
-                        qDebug() << "Sending message to move the PPU:";
+                        qDebug() << "Sending message to move the PPU";
+#endif 
+#ifdef TRACE
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                         sendMessage(data);
@@ -869,7 +882,9 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     msgEnable.state = 1; // Включить ППУ
                     QByteArray data = msgEnable.serializeFull();
 #ifdef QT_DEBUG
-                    qDebug() << "Sending message to turn on the PPU:";
+                    qDebug() << "Sending message to turn on the PPU";
+#endif
+#ifdef TRACE
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                     sendMessage(data);

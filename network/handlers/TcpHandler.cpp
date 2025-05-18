@@ -576,12 +576,13 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                 msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
                 msg_0x1022.typeTrack =
                                 static_cast<uint8_t>(msg_0x641->typeCeil);
-                #ifdef QT_DEBUG
-                std::cout << "Sent message 0x1022:\n"
-                          << msg_0x1022.toString()
-                          << std::endl << "\n";
+#ifdef QT_DEBUG
+                std::cout << "Sent message 0x1022:";
 #endif
-                          sendMessage(msg_0x1022.serializeFull());
+#ifdef TRACE
+                std::cout << " " << msg_0x1022.toString() << std::endl;
+#endif
+                sendMessage(msg_0x1022.serializeFull());
                 LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent,
                                 Protocol::TCP, msg_0x1022.serializeFull(),
                                 Logger::jobj_toString(msg_0x1022.to_json())));

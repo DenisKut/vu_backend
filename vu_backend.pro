@@ -194,10 +194,12 @@ HEADERS = $$unique(HEADERS)
 # -------------------------------
 # 7. Цель trace. Определяет макрос TRACE
 # --------------------------------
-
-
 # Если CONFIG содержит trace, добавим макрос
 contains(CONFIG, trace) {
     message(Trace mode enabled)
     DEFINES += TRACE
+}
+
+contains(CONFIG, release):contains(DEFINES, TRACE) {
+    error("TRACE не может использоваться в $$BUILD_TYPE")
 }
