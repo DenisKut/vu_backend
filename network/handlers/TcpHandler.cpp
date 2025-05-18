@@ -1,22 +1,22 @@
 #include "TcpHandler.h"
 #include <QHostAddress>
+#include <QDebug>
 
 
-TcpHandler::TcpHandler(QObject *parent):QObject(parent){}
+TcpHandler::TcpHandler(QObject *parent)
+    : QObject(parent)
+{
+    // ...инициализация в initialize()...
+}
 
-void TcpHandler::initialize() {
+void TcpHandler::initialize()
+{
     m_socket = new QTcpSocket(this);
-
-    // --- RMO TCP-сервер ---
     m_serverRMO = new QTcpServer(this);
-
-    // --- WebSocket ---
-    m_wsServer = new QWebSocketServer(QStringLiteral("RMO WebSocket Server"),
-                                      QWebSocketServer::NonSecureMode, this);
-
-    m_registrationTimer = new QTimer();
-    m_periodicTimer = new QTimer();
-    m_reconnectTimer = new QTimer();
+    m_wsServer = new QWebSocketServer(QStringLiteral("RMO WebSocket Server"), QWebSocketServer::NonSecureMode, this);
+    m_registrationTimer = new QTimer(this);
+    m_periodicTimer = new QTimer(this);
+    m_reconnectTimer = new QTimer(this);
 
     Q_ASSERT_X(m_socket, "TcpHandler", "Failed to create TCP socket");
     Q_ASSERT_X(m_serverRMO, "TcpHandler", "Failed to create TCP server");

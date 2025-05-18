@@ -4,26 +4,46 @@
 #include <QTcpSocket>
 #include <QThread>
 #include <QByteArray>
+#include <QPointer>
 
 class TcpConnectionHandler : public QObject {
     Q_OBJECT
+    Q_DISABLE_COPY(TcpConnectionHandler)
 public:
+    /**
+     * @brief Создаёт обработчик TCP-соединения
+     * @param socket Владеемый QTcpSocket (не nullptr)
+     * @param parent Родительский QObject
+     */
     explicit TcpConnectionHandler(QTcpSocket* socket, QObject* parent = nullptr);
-    ~TcpConnectionHandler();
+    ~TcpConnectionHandler() override;
 
+    /**
+     * @brief Отправить данные по TCP
+     * @param data Бинарные данные
+     */
     void sendData(const QByteArray& data);
-    QTcpSocket* getSocket() const;
+
+    /**
+     * @brief Получить указатель на сокет (не nullptr)
+     */
+    QTcpSocket* getSocket() const noexcept;
 
 signals:
+    /**
+     * @brief Сигнал о завершении работы соединения
+     */
     void finished();
+    /**
+     * @brief Сигнал о получении данных (полный буфер)
+     */
     void messageReceived(const QByteArray& data);
 
 public slots:
-    void start();
     void onReadyRead();
     void onDisconnected();
 
 private:
-    QTcpSocket* m_socket;
+    QPointer<QTcpSocket> m_socket;
     QByteArray m_buffer;
 };

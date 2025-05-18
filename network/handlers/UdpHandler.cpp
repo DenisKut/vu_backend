@@ -1,22 +1,28 @@
 #include "UdpHandler.h"
-#include "utils/AppConfig.h"
 #include <QNetworkDatagram>
 #include <QMetaType>
+#include <QDebug>
 
 UdpHandler::UdpHandler(QObject* parent)
-    : QObject(parent), m_socket(nullptr) {
+    : QObject(parent), m_socket(nullptr)
+{
     // Регистрация QHostAddress для queued connections
     qRegisterMetaType<QHostAddress>("QHostAddress");
 }
 
-UdpHandler::~UdpHandler() { stop(); }
+UdpHandler::~UdpHandler()
+{
+    stop();
+}
 
-void UdpHandler::start(const QString& ip, int port) {
+void UdpHandler::start(const QString& ip, int port)
+{
     if (m_socket) return;
     m_port = port;
-    m_socket = new QUdpSocket();
-    m_socket->setParent(this);        // теперь можно назначить родителя
-    bool bindResult = m_socket->bind(QHostAddress(ip), m_port,
+    m_targetAddr = QHostAddress(ip);
+    m_targetPort = port;
+    m_socket = new QUdpSocket(this);
+    bool bindResult = m_socket->bind(m_targetAddr, m_port,
                    QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     connect(m_socket, &QUdpSocket::readyRead, this, &UdpHandler::onReadyRead);
     if (bindResult) {
@@ -26,7 +32,8 @@ void UdpHandler::start(const QString& ip, int port) {
     }
 }
 
-void UdpHandler::stop() {
+void UdpHandler::stop()
+{
     if (m_socket) {
         m_socket->close();
         m_socket->deleteLater();
@@ -34,26 +41,31 @@ void UdpHandler::stop() {
     }
 }
 
-void UdpHandler::sendMessage(const QByteArray& data,
-                              const QHostAddress& addr,
-                              quint16 port) {
-    if (m_socket) {
+void UdpHandler::sendMessage(const QByteArray& data)
+{
+    if (!m_socket) {
+        qWarning("[UdpHandler] sendMessage: m_socket is nullptr");
+        return;
+    }
 #if defined(QT_DEBUG) || defined(TRACE)
     QStringList traceParts;
 #ifdef QT_DEBUG
     traceParts << "[UDP] Sending datagram";
 #endif
 #ifdef TRACE
-    traceParts << "to" << addr.toString() + ":" + QString::number(port)
+    traceParts << "to" << m_targetAddr.toString() + ":" + QString::number(m_targetPort)
                << ", size:" + QString::number(data.size());
 #endif
     qInfo().noquote() << traceParts.join(" ");
 #endif
-        m_socket->writeDatagram(data, addr, port);
+    qint64 written = m_socket->writeDatagram(data, m_targetAddr, m_targetPort);
+    if (written != data.size()) {
+        qWarning("[UdpHandler] sendMessage: not all data written (%lld/%d)", written, data.size());
     }
 }
 
-void UdpHandler::onReadyRead() {
+void UdpHandler::onReadyRead()
+{
     while (m_socket && m_socket->hasPendingDatagrams()) {
         QByteArray datagram;
         datagram.resize(int(m_socket->pendingDatagramSize()));
@@ -62,16 +74,16 @@ void UdpHandler::onReadyRead() {
         m_socket->readDatagram(datagram.data(), datagram.size(),
                                                         &sender, &senderPort);
 #if defined(QT_DEBUG) || defined(TRACE)
-    QString logLine;
+        QString logLine;
 #ifdef QT_DEBUG
-    logLine += "[UDP] Received datagram ";
+        logLine += "[UDP] Received datagram ";
 #endif
 #ifdef TRACE
-    logLine += "from " + sender.toString()
-            + ":" + QString::number(senderPort)
-            + ", size:" + QString::number(datagram.size());
+        logLine += "from " + sender.toString()
+                + ":" + QString::number(senderPort)
+                + ", size:" + QString::number(datagram.size());
 #endif
-    qInfo().noquote() << logLine;
+        qInfo().noquote() << logLine;
 #endif
         processIncomingDatagram(datagram, sender, senderPort); // Вызов разбора
         emit packetReceived(datagram, sender, senderPort);
@@ -80,7 +92,11 @@ void UdpHandler::onReadyRead() {
 
 void UdpHandler::processIncomingDatagram(const QByteArray& data,
                                     const QHostAddress& sender,
-                                    quint16 senderPort) {
+                                    quint16 senderPort)
+{
+    Q_UNUSED(data);
+    Q_UNUSED(sender);
+    Q_UNUSED(senderPort);
     // Здесь разбор пакета, логика обработки, парсинг и т.д.
     // Пример: просто hex :)
 #if defined(QT_DEBUG) || defined(TRACE)
@@ -95,15 +111,17 @@ void UdpHandler::processIncomingDatagram(const QByteArray& data,
     qDebug().noquote() << traceParts.join(" ");
 #endif
     // TODO: добавить реальный разбор
-
 }
 
 void UdpHandler::sendCustomPacket(const QByteArray& payload,
                                   const QHostAddress& addr,
-                                  quint16 port) {
+                                  quint16 port)
+{
+    Q_UNUSED(addr);
+    Q_UNUSED(port);
     // Здесь формирование пакета (например, добавление заголовка НА БУДУЩЕЕ)
     QByteArray packet = payload; // Пример: без изменений
-    sendMessage(packet, addr, port);
+    sendMessage(packet);
 #if defined(QT_DEBUG) || defined(TRACE)
     QStringList traceParts;
 #ifdef QT_DEBUG
@@ -115,5 +133,4 @@ void UdpHandler::sendCustomPacket(const QByteArray& payload,
 #endif
     qDebug().noquote() << traceParts.join(" ");
 #endif
-
 }

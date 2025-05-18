@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "utils/time_provider/TimeProvider.h"
 #include "network/messages/EthMessage.h"
+#include <QDebug>
 
 //DS ADD BEG
 #ifdef _WIN32
@@ -201,13 +202,9 @@ EthHandler::EthHandler(QObject* parent)
 {
     m_reconnectTimer = new QTimer(this);
     m_reconnectTimer->setSingleShot(false);
-    connect(m_reconnectTimer, &QTimer::timeout, this,
-                                    &EthHandler::attemptReconnect);
-
+    connect(m_reconnectTimer, &QTimer::timeout, this, &EthHandler::attemptReconnect);
 #ifndef _WIN32
-
     QString interfaceName = findWiredInterface();
-
     if (!interfaceName.isEmpty()) {
 
 #ifdef QT_DEBUG
@@ -226,55 +223,44 @@ EthHandler::EthHandler(QObject* parent)
                                             .toString().toUtf8().constData());
     }
     qDebug() << "interfaceName =" << interfaceName;
-
 #endif
 }
 
-EthHandler::~EthHandler() {
-
+EthHandler::~EthHandler()
+{
     disconnectAdapter();
-
 #ifdef _WIN32
-    if (pcapAllDevs) pcap_freealldevs(pcapAllDevs);
+    if (pcapAllDevs) {
+        pcap_freealldevs(pcapAllDevs);
+    }
 #endif
 }
 
-void EthHandler::freeRes() {
-
+void EthHandler::freeRes()
+{
 #ifdef _WIN32
-    if (pcapAllDevs) pcap_freealldevs(pcapAllDevs);
+    if (pcapAllDevs) {
+        pcap_freealldevs(pcapAllDevs);
+    }
 #endif
-
     disconnectAdapter();
-
 }
 
-void EthHandler::initialize() {
-    //connectAdapter();
-        connectAdapter();
-
-}
-
-void EthHandler::start() {
+void EthHandler::initialize()
+{
     connectAdapter();
 }
 
-void EthHandler::connectAdapter() {
+void EthHandler::start()
+{
+    connectAdapter();
+}
 
-    if (m_adapterOpened) {
-
-#ifdef QT_DEBUG
-        qInfo() << "Ethernet adapter already opened";
-#endif
-        return;
-    }
-//ADD 16.05
+void EthHandler::connectAdapter()
+{
+    if (m_adapterOpened) return;
     stopReconnectTimer();
-//END 16.05
 #ifdef _WIN32
-    // Остановка таймера переподключения при успешном подключении
-    //stopReconnectTimer();
-
     char errbuf[PCAP_ERRBUF_SIZE];
 
     if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING),
@@ -871,7 +857,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     msgRmo.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
                     msgRmo.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
                     msgRmo.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
-                    Q_EMIT rmoTargetPpuReady(msgRmo); // You may need to define this signal
+                    Q_EMIT rmoTargetPpuReady(msgRmo);
                 }
                 else
                 {

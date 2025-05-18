@@ -25,10 +25,13 @@ NetworkManager::NetworkManager(QObject* parent)
     connect(m_tcpHandler, &TcpHandler::messageReceived, this,
                                     &NetworkManager::onTcpReceived,
                                     Qt::QueuedConnection);
-
-    // Подключение EthHandler::rmoTargetPpuReady к TcpHandler::
-	// sendRmoMessageToAll. Таким образом есть возможность описывать обработку
-	// сигналов между потоками...  
+    connect(m_udpHandler, &UdpHandler::packetReceived, this,
+                                    &NetworkManager::onUdpReceived,
+                                    Qt::QueuedConnection);
+    connect(m_ethHandler, &EthHandler::messageReceived, this,
+                                    &NetworkManager::onEthReceived,
+                                    Qt::QueuedConnection);
+    // Подключение EthHandler::rmoTargetPpuReady к TcpHandler::sendRmoMessageToAll через лямбду
     connect(m_ethHandler, &EthHandler::rmoTargetPpuReady,
             this, [this](const RmoMessage_TargetPPU& msg) {
                 m_tcpHandler->sendRmoMessageToAll(msg);
@@ -38,34 +41,10 @@ NetworkManager::NetworkManager(QObject* parent)
     // connect(&m_ethTimer, &QTimer::timeout, m_ethHandler,
 	//                                            &EthHandler::checkReceived);
 #endif
-
     // Запуск потоков
     m_tcpThread->start();
     m_udpThread->start();
     m_ethThread->start();
-
-    // Отправка тестового сообщения на МЦФОС - РАБОТАЕТ
-    // Порядок данных - старшим байтом вперёд!!!
-    //------------------------------------------------------------------------
-    QByteArray dataTemp;
-    uint32_t value = 64;
-    dataTemp.append(value >> 0);
-    dataTemp.append(value >> 8);
-    dataTemp.append(value >> 16);
-    dataTemp.append(value >> 24);
-    for (int i = 0; i < 7; ++i) {
-        value = 0;
-        dataTemp.append(value >> 0);
-        dataTemp.append(value >> 8);
-        dataTemp.append(value >> 16);
-        dataTemp.append(value >> 24);
-    }
-    QHostAddress addr = QHostAddress("192.168.2.10");
-    int port = 49498;
-    QMetaObject::invokeMethod(m_udpHandler, [this, dataTemp, addr, port]() {
-        m_udpHandler->sendMessage(dataTemp, addr, port);
-    }, Qt::QueuedConnection);
-    //------------------------------------------------------------------------
 }
 
 NetworkManager::~NetworkManager() {
@@ -170,4 +149,31 @@ void NetworkManager::onUdpReceivedDebug(const Message& msg) {
 void NetworkManager::onEthReceived(const QByteArray& msg) {
     // All ETH parsing and business logic is now handled in EthHandler::processIncomingFrame.
     Q_UNUSED(msg);
+}
+
+// --- Потокобезопасная отправка UDP ---
+void NetworkManager::sendUdp(const QByteArray& data) {
+    if (m_udpHandler) {
+        QMetaObject::invokeMethod(m_udpHandler, [this, data]() {
+            m_udpHandler->sendMessage(data);
+        }, Qt::QueuedConnection);
+    }
+}
+
+// --- Потокобезопасная отправка ETH ---
+void NetworkManager::sendEth(const QByteArray& data) {
+    if (m_ethHandler) {
+        QMetaObject::invokeMethod(m_ethHandler, [this, data]() {
+            m_ethHandler->sendMessage(data);
+        }, Qt::QueuedConnection);
+    }
+}
+
+// --- Потокобезопасная отправка TCP (для RMO) ---
+void NetworkManager::sendTcpRmo(std::shared_ptr<const RmoBaseMessage> msg) {
+    if (m_tcpHandler && msg) {
+        QMetaObject::invokeMethod(m_tcpHandler, [this, msg]() {
+            m_tcpHandler->sendRmoMessageToAll(*msg);
+        }, Qt::QueuedConnection);
+    }
 }

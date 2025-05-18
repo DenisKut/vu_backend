@@ -23,6 +23,12 @@ public:
     void onUdpReceived(const QByteArray& msg);
     void onUdpReceivedDebug(const Message& msg);
     void onEthReceived(const QByteArray &msg);
+    // Потокобезопасная отправка UDP
+    void sendUdp(const QByteArray& data);
+    // Потокобезопасная отправка ETH
+    void sendEth(const QByteArray& data);
+    // Потокобезопасная отправка TCP (для RMO)
+    void sendTcpRmo(std::shared_ptr<const RmoBaseMessage> msg);
 
 private:
     QTimer m_ethTimer;

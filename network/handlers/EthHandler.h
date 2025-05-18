@@ -6,6 +6,7 @@
 #include <QByteArray>
 #include <QDataStream>
 #include <QTimer>
+#include <QPointer>
 #include "network/messages/RmoMessage.h"
 
 #ifdef _WIN32
@@ -16,6 +17,10 @@
 
 #ifndef PCAP_NETMASK_UNKNOWN
 #define PCAP_NETMASK_UNKNOWN 0xFFFFFFFF
+#endif
+
+#ifndef ETH_TYPE
+#define ETH_TYPE 0x2020
 #endif
 
 #else
@@ -42,10 +47,13 @@
 
 class EthHandler : public QObject {
     Q_OBJECT
-
+    Q_DISABLE_COPY(EthHandler)
 public:
+    /**
+     * @brief Конструктор обработчика Ethernet
+     */
     explicit EthHandler(QObject* parent = nullptr);
-    ~EthHandler();
+    ~EthHandler() override;
 
     Q_INVOKABLE void initialize();
     void connectAdapter();
@@ -53,95 +61,67 @@ public:
     Q_INVOKABLE void freeRes();
     Q_INVOKABLE bool sendMessage(const QByteArray &data);
 
-    // Новый метод для разбора входящих пакетов
+    /**
+     * @brief Разобрать входящий Ethernet-фрейм
+     */
     void processIncomingFrame(const QByteArray& data);
-    // Новый метод для формирования и отправки пакета (пример)
+    /**
+     * @brief Сформировать и отправить кастомный Ethernet-фрейм
+     */
     void sendCustomFrame(const QByteArray& payload);
 
-
     // ППУ:
-    //----------------------------------------------------------
-    void calculateCoefficientsPPU(double angleTarget,  double velocityTarget,
-                          double angleCurrent, double* angleLast,
-                          double* accelerationLast, double accelerationMax,
-                          // double angleMin, double velocityMin,
-                          double KP, double KD, /*double dtLast,*/ double dt,
-                          double* C0, double* C1, double* C2);
-    //----------------------------------------------------------
+    void calculateCoefficientsPPU(double angleTarget, double velocityTarget,
+                                  double angleCurrent, double* angleLast,
+                                  double* accelerationLast, double accelerationMax,
+                                  double KP, double KD, double dt,
+                                  double* C0, double* C1, double* C2);
 
 public slots:
     void start();
     void checkReceived();
 
 signals:
+    /**
+     * @brief Сигнал о приёме Ethernet-фрейма
+     */
     void messageReceived(const QByteArray& msg);
+    /**
+     * @brief Сигнал о готовности сообщения RMO TargetPPU
+     */
     void rmoTargetPpuReady(const RmoMessage_TargetPPU& msg);
 #ifdef _WIN32
     void ethTimerReceiveRestart();
 #endif
 
 private:
-    bool m_adapterOpened = false; // Новый флаг
-
-//add 16.05 BEG
+    bool m_adapterOpened = false;
     void startReconnectTimer();
     void stopReconnectTimer();
     void attemptReconnect();
-    QTimer* m_reconnectTimer = nullptr;
+    QPointer<QTimer> m_reconnectTimer;
     int m_reconnectAttempts = 0;
     const int MAX_RECONNECT_ATTEMPTS = 5;
-    const int RECONNECT_INTERVAL_MS = 800; // 3 секунды
+    const int RECONNECT_INTERVAL_MS = 800;
     QDateTime m_lastPacketTime;
-    const int PACKET_TIMEOUT_MS = 2000; // 10 секунд без пакетов
-// add 16.05 END
-
+    const int PACKET_TIMEOUT_MS = 2000;
 #ifdef _WIN32
     pcap_if_t *pcapAllDevs = nullptr;
     pcap_t *pcapTx = nullptr;
     pcap_t *pcapRx = nullptr;
-	QThread* m_pollThread = nullptr;
+    QPointer<QThread> m_pollThread;
     std::atomic<bool> m_polling{false};
-
-//DS ADD BEG
-
-
-#ifndef ETH_TYPE
-#define ETH_TYPE 0x2020
-#endif
     bool setupCustomProtocolFilter(pcap_t* handle, u_int customEtherType);
     u_int m_customEtherType = ETH_TYPE;
-
-    //MY ADD BEG
     bool isReceivedPacket(pcap_t *testHandle);
     bool adapterCheckTypeReceived(pcap_if_t *d);
     pcap_if_t* findAdapters(pcap_if_t *pcapAllDevs);
-
-
-
-    //MY ADD END
-//DS ADD END
-
-//ADD 16.05 BEG
-/*
-    void startReconnectTimer();
-    void stopReconnectTimer();
-    void attemptReconnect();
-    QTimer* m_reconnectTimer = nullptr;
-    int m_reconnectAttempts = 0;
-    const int MAX_RECONNECT_ATTEMPTS = 5;
-    const int RECONNECT_INTERVAL_MS = 800; // 3 секунды
-    QDateTime m_lastPacketTime;
-    const int PACKET_TIMEOUT_MS = 2000; // 10 секунд без пакетов
-*/
-
     void startPollingThread();
     void stopPollingThread();
-
-//ADD 16.05 END
 #else
     int ethSocketID = -1;
     char ifName[IFNAMSIZ] = {0};
-    QSocketNotifier* m_notifier = nullptr;
+    QPointer<QSocketNotifier> m_notifier;
     bool isEthernetInterface(const QNetworkInterface &interface);
     QString findWiredInterface();
 #endif
