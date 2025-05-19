@@ -129,18 +129,21 @@ T clamp(T value, T min_val, T max_val) {
 }
 
 void NetworkManager::onTcpReceived(const TcpHeader& msg) {
+    Q_UNUSED(msg);
 #ifdef QT_DEBUG
     qDebug() << "TCP Message:" << msg.checkSum;
 #endif
 }
 
 void NetworkManager::onUdpReceived(const QByteArray& msg) {
+    Q_UNUSED(msg);
 #ifdef QT_DEBUG
     qDebug() << Qt::endl << "UDP Message:" << msg.toHex(' ').toUpper();
 #endif
 }
 
 void NetworkManager::onUdpReceivedDebug(const Message& msg) {
+    Q_UNUSED(msg);
 #ifdef QT_DEBUG
     qDebug() << "UDP Message debug:" << msg.payload;
 #endif

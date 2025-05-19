@@ -1,7 +1,9 @@
-#include "EthHandler.h"
 #include "pch.h"
+#include "EthHandler.h"
 #include "utils/time_provider/TimeProvider.h"
 #include "network/messages/EthMessage.h"
+#include "utils/AppConfig.h"
+#include "utils/env_loader/Settings.h"
 #include <QDebug>
 
 //DS ADD BEG
@@ -156,9 +158,36 @@ void EthHandler::stopPollingThread() {
     qDebug() << "Npcap polling thread stopped";
 }
 //16.05 END
+#else
+
+bool EthHandler::attachBpfFilter(int sockfd, uint16_t etherType) {
+    // Фильтр BPF для указанного EtherType
+    struct sock_filter bpf_code[] = {
+                                     // Загружаем EtherType (2 байта по смещению 12)
+                                     { 0x28, 0, 0, 0x0000000c },
+                                     // Сравниваем с заданным EtherType (network byte order)
+                                     { 0x15, 0, 1, static_cast<uint32_t>(htons(etherType)) },
+                                     // Возвращаем весь пакет (если совпало)
+                                     { 0x06, 0, 0, 0x0000ffff },
+                                     // Иначе отбрасываем
+                                     { 0x06, 0, 0, 0x00000000 },
+                                     };
+
+    struct sock_fprog bpf_prog = {
+        .len = sizeof(bpf_code) / sizeof(bpf_code[0]),
+        .filter = bpf_code,
+    };
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_ATTACH_FILTER, &bpf_prog, sizeof(bpf_prog)) == -1) {
+        perror("setsockopt(SO_ATTACH_FILTER)");
+        return false;
+    }
+
+    return true;
+}
 
 #endif
-//DS ADD END
+
 
 
 //16.05 ADD BEG
@@ -407,6 +436,13 @@ void EthHandler::connectAdapter()
         return;
     }
 
+    if (!attachBpfFilter(ethSocketID, ETH_TYPE)) {
+        close(ethSocketID);
+        ethSocketID = -1;
+        startReconnectTimer();
+        return;
+    }
+
     struct ifreq ifopts;
     /*
     strncpy(ifopts.ifr_name, ifName, IFNAMSIZ-1);
@@ -535,10 +571,11 @@ bool EthHandler::sendMessage(const QByteArray &data) {
 }
 
 void EthHandler::checkReceived() {
-    //add 16.05 BEG
     bool errorOccurred = false;
     bool timeoutOccurred = false;
-    //add 16.05 END
+    Q_UNUSED(errorOccurred);
+    Q_UNUSED(timeoutOccurred);
+
 #ifdef _WIN32
     struct pcap_pkthdr *header;
     const unsigned char *data;

@@ -9,6 +9,12 @@
 #include <QPointer>
 #include "network/messages/RmoMessage.h"
 
+
+
+#ifndef ETH_TYPE
+#define ETH_TYPE 0x2020
+#endif
+
 #ifdef _WIN32
 #include <pcap.h>
 #include <windows.h>
@@ -19,9 +25,6 @@
 #define PCAP_NETMASK_UNKNOWN 0xFFFFFFFF
 #endif
 
-#ifndef ETH_TYPE
-#define ETH_TYPE 0x2020
-#endif
 
 #else
 
@@ -40,6 +43,9 @@
 #include <stdlib.h>
 
 #include <netinet/ether.h>
+
+#include <linux/filter.h>
+#include <linux/if_ether.h>
 #endif
 
 #define TO_HEX(T,len) (QByteArray::fromRawData(reinterpret_cast<const char*>(T),len).toHex(' '))
@@ -124,6 +130,8 @@ private:
     QPointer<QSocketNotifier> m_notifier;
     bool isEthernetInterface(const QNetworkInterface &interface);
     QString findWiredInterface();
+
+    bool attachBpfFilter(int sockfd, uint16_t etherType);
 #endif
 };
 
