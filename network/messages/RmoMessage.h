@@ -41,6 +41,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
     double azTarget = 0.0, anTarget = 0.0;
     double azTargetVel = 0.0, anTargetVel = 0.0;
     uint8_t isRemote = 0;
+    uint32_t counter = 0;
 
     int type() const override { return typeField; }
 
@@ -55,7 +56,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
                << anC0 << anC1 << anC2
                << azTarget << anTarget
                << azTargetVel << anTargetVel
-               << isRemote;
+               << isRemote << counter;
         return data;
     }
 
@@ -63,13 +64,9 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         auto msg = std::make_unique<RmoMessage_TargetPPU>();
         QDataStream stream(data);
         stream.setByteOrder(QDataStream::LittleEndian);
-        stream >> msg->typeField 
-               >> msg->azPPU >> msg->anPPU
-               >> msg->azC0 >> msg->azC1 >> msg->azC2
-               >> msg->anC0 >> msg->anC1 >> msg->anC2
+        stream >> msg->typeField
                >> msg->azTarget >> msg->anTarget
-               >> msg->azTargetVel >> msg->anTargetVel
-               >> msg->isRemote;
+               >> msg->azTargetVel >> msg->anTargetVel;
         return msg;
     }
 
@@ -81,7 +78,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
             {"anC0", anC0}, {"anC1", anC1}, {"anC2", anC2},
             {"azTarget", azTarget}, {"anTarget", anTarget},
             {"azTargetVel", azTargetVel}, {"anTargetVel", anTargetVel},
-            {"isRemote", isRemote}
+            {"isRemote", isRemote}, {"counter", counter}
         };
     }
 
@@ -100,6 +97,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         msg->azTargetVel = j.value("azTargetVel", 0.0);
         msg->anTargetVel = j.value("anTargetVel", 0.0);
         msg->isRemote = j.value("isRemote", 0);
+        msg->counter = j.value("counter", 0);
         return msg;
     }
 };

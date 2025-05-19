@@ -811,7 +811,8 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
 #endif
                     static double azC0 = 0, anC0 = 0, azC1 = 0, anC1 = 0, azC2 = 0, anC2 = 0;
                     static uint16_t azC1u = 0, azC2u = 0, anC1u = 0, anC2u = 0;
-                    static int mode = 0;
+                    static uint32_t azC0u = 0, anC0u = 0;
+                    static int mode = 3;
                     auto msg = EthMessageFactory::create<EthMessage_PPU_MOVE>();
                     if (mode == 0)
                     {
@@ -834,24 +835,36 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     else if (mode == 2) { mode = 3; }
                     else if (mode == 3) {
                         mode = 4;
-                        double dt = 0.0000001*static_cast<double>(TimeProvider::instance().getBsPeriodWidth());
-                        double az = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
-                        double an = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
-                        static double azLast = 0, azAccLast = 0, anLast = 0, anAccLast = 0;
-                        double aMax = 30.0, KP = 3.0, KD = 6.0;
-                        dt *= 10.0;
+//                        double dt = 0.0000001*static_cast<double>(TimeProvider::instance().getBsPeriodWidth());
+                        // double dt = 0.1;
+                        // double az = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
+                        // double an = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
+                        // static double azLast = 0, azAccLast = 0, anLast = 0, anAccLast = 0;
+                        // double aMax = 30.0, KP = 3.0, KD = 6.0;
+                        // dt *= 3.0;
                         double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
                         double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-                        double azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-                        double anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-                        calculateCoefficientsPPU(azTarget, azTargetVel, az, &azLast, &azAccLast, aMax, KP, KD, dt, &azC0, &azC1, &azC2);
-                        calculateCoefficientsPPU(anTarget, anTargetVel, an, &anLast, &anAccLast, aMax, KP, KD, dt, &anC0, &anC1, &anC2);
-                        azC2 *= 2.0; anC2 *= 2.0;
-                        azC1u = azC1 * 65535.0 / 360.0;
-                        azC2u = azC2 * 65535.0 / 360.0;
-                        anC1u = anC1 * 65535.0 / 360.0;
-                        anC2u = anC2 * 65535.0 / 360.0;
-#ifdef TRACE
+                        // double azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+                        // double anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+//                        calculateCoefficientsPPU(azTarget, azTargetVel, az, &azLast, &azAccLast, aMax, KP, KD, dt, &azC0, &azC1, &azC2);
+//                        calculateCoefficientsPPU(anTarget, anTargetVel, an, &anLast, &anAccLast, aMax, KP, KD, dt, &anC0, &anC1, &anC2);
+//                        azC2 *= 2.0; anC2 *= 2.0;
+
+                        // Vremenno peredaiom fiksirovannie koordinaty
+                        //------------------------------------------------------
+                        azC0 = azTarget;
+                        anC0 = anTarget;
+                        if (anC0 < 0.01) anC0 = 0.01;
+                        //------------------------------------------------------
+
+                        static constexpr double INV_SCALE = 65536.0 / 360.0;
+                        azC0u = static_cast<uint32_t>(azC0 * INV_SCALE);
+                        azC1u = static_cast<uint16_t>(azC1 * INV_SCALE);
+                        azC2u = static_cast<uint16_t>(azC2 * INV_SCALE);
+                        anC0u = static_cast<uint32_t>(anC0 * INV_SCALE);
+                        anC1u = static_cast<uint16_t>(anC1 * INV_SCALE);
+                        anC2u = static_cast<uint16_t>(anC2 * INV_SCALE);
+#ifdef QT_DEBUG
                         qDebug() << "azCur =" << azC0;
                         qDebug() << "azVel =" << azC1 << "=" << azC1u;
                         qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
@@ -859,11 +872,21 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         qDebug() << "anVel =" << anC1 << "=" << anC1u;
                         qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
 #endif
-                        msg.azC0[0] = 0; msg.azC0[1] = 0; msg.azC0[2] = 0;
-                        msg.azC1 = azC1u; msg.azC2 = azC2u;
-                        msg.anC0[0] = 0; msg.anC0[1] = 0; msg.anC0[2] = 0;
-                        msg.anC1 = anC1u; msg.anC2 = anC2u;
-                        msg.azSector = 0; msg.anSector = 0;
+                        msg.azC0[0] = static_cast<uint8_t>(azC0u);
+                        msg.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
+                        msg.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
+                        msg.azC1 = azC1u;
+                        msg.azC2 = azC2u;
+
+                        msg.anC0[0] = static_cast<uint8_t>(anC0u);
+                        msg.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
+                        msg.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
+                        msg.anC1 = anC1u;
+                        msg.anC2 = anC2u;
+
+                        msg.azSector = 0;
+                        msg.anSector = 0;
+
                         QByteArray data = msg.serializeFull();
 #ifdef QT_DEBUG
                         qDebug() << "Sending message to move the PPU";
@@ -875,14 +898,18 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
                     }
                     else if (mode == 4) { mode = 5; }
-                    else if (mode == 5) { mode = 6; }
-                    else if (mode == 6) { mode = 7; }
-                    else if (mode == 7) { mode = 8; }
-                    else if (mode == 8) { mode = 9; }
-                    else if (mode == 9) { mode = 10; }
-                    else if (mode == 10) { mode = 11; }
-                    else if (mode == 11) { mode = 12; }
-                    else if (mode == 12) { mode = 3; }
+                    else if (mode == 5) { mode = 3; }
+//                    else if (mode == 6) { mode = 7; }
+//                    else if (mode == 7) { mode = 8; }
+//                    else if (mode == 8) { mode = 9; }
+//                    else if (mode == 9) { mode = 10; }
+//                    else if (mode == 10) { mode = 11; }
+//                    else if (mode == 11) { mode = 12; }
+//                    else if (mode == 12) { mode = 3; }
+
+                    // Счётчик сообщений на РМО (для отладки):
+                    static uint32_t rmoCounter = 0;
+
                     // Отправка отладочных данных на форму для отображения:
                     RmoMessage_TargetPPU msgRmo;
                     msgRmo.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
@@ -894,7 +921,8 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     msgRmo.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
                     msgRmo.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
                     msgRmo.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
-                    Q_EMIT rmoTargetPpuReady(msgRmo);
+                    msgRmo.counter = rmoCounter++;
+                    Q_EMIT rmoTargetPpuReady(msgRmo); // You may need to define this signal
                 }
                 else
                 {
