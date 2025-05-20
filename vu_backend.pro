@@ -10,6 +10,9 @@ CONFIG += c++11 cmdline
 BUILD_TYPE = debug
 CONFIG(release, debug|release) {
     BUILD_TYPE = release
+}else {
+    BUILD_TYPE = debug
+    CONFIG -= release
 }
 
 message(Build type: $$BUILD_TYPE)
@@ -195,11 +198,18 @@ HEADERS = $$unique(HEADERS)
 # 7. Цель trace. Определяет макрос TRACE
 # --------------------------------
 # Если CONFIG содержит trace, добавим макрос
+
 contains(CONFIG, trace) {
     message(Trace mode enabled)
     DEFINES += TRACE
 }
 
-contains(CONFIG, release):contains(DEFINES, TRACE) {
-    error("TRACE не может использоваться в $$BUILD_TYPE")
+contains(CONFIG, dbprint) {
+    message(proga now prints everything that pushes to database)
+    DEFINES += DP_PRINT
 }
+
+contains(CONFIG, release):contains(DEFINES, DP_PRINT) {
+    error("DP_PRINT не может использоваться в $$BUILD_TYPE")
+}
+

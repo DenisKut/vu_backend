@@ -2,7 +2,7 @@
 #include <QSqlError>
 #include <QFile>
 #include <qcoreapplication.h>
-
+#include "utils/env_loader/Settings.h"
 // РЕАЛИЗАЦИИ конструкторов, преобразований перед отправкой
 InitLog::InitLog(
     const QString& source,
@@ -61,7 +61,10 @@ ProtocolMessageLog::ProtocolMessageLog(
 
 // КЛАСС ЛОГГЕРА ----------------------------------------------
 // Приватный конструктор
-Logger::Logger() {}
+Logger::Logger() {
+
+
+}
 
 // Приватный деструктор:
 Logger::~Logger() {
@@ -73,16 +76,14 @@ Logger& Logger::instance() {
     return logger;
 }
 
-void Logger::initialize(const QString& connectionString) {
+void Logger::initialize(const int64_t& startTime) {
     qDebug() << "Available SQL drivers:" << QSqlDatabase::drivers();
 
     QSqlDatabase db;
     QString driver;
     QString errorPrefix;
-    bool isWindows = false;
 
 #ifdef Q_OS_WINDOWS
-    isWindows = true;
     driver = "QODBC";
     errorPrefix = "[Windows/ODBC]";
 #else
@@ -96,75 +97,58 @@ void Logger::initialize(const QString& connectionString) {
         return;
     }
 
-    // Парсинг параметров подключения
-    QMap<QString, QString> connParams;
-    QStringList paramPairs;
 
-#ifdef Q_OS_WINDOWS
-    paramPairs = connectionString.split(';', Qt::SkipEmptyParts);
-#else
-    paramPairs = connectionString.split(' ', Qt::SkipEmptyParts);
-#endif
+    db = QSqlDatabase::addDatabase(driver);
+    {
+        QVariantMap connParams = getGroupSettings("database");
+        QString host           = connParams.value("host").toString().trimmed();
+        QString dbname         = connParams.value("dbname").toString().trimmed();
+        QString user           = connParams.value("user").toString().trimmed();
+        QString password       = connParams.value("password").toString().trimmed();
+        int port               = connParams.value("port").toString().trimmed().toInt();
 
-    for (const QString& pair : paramPairs) {
-        QStringList keyVal = pair.split('=', Qt::KeepEmptyParts);
-        if (keyVal.size() == 2) {
-            QString key = keyVal[0].trimmed().toLower();
-            QString value = keyVal[1].trimmed();
-            connParams[key] = value;
-        }
-    }
-
-    // Валидация обязательных параметров
-    const QStringList requiredParams = {"host", "dbname", "user", "password"};
-    for (const QString& param : requiredParams) {
-        if (!connParams.contains(param)) {
-            qCritical() << errorPrefix << "Missing required parameter:" << param;
-            return;
-        }
-    }
-
-    // Формирование строки подключения
-    QString connection;
-    if (isWindows) {
+        if (host.isEmpty())      host     = "127.0.0.1";
+        if (dbname.isEmpty())    dbname   = "vu_backend";
+        if (user.isEmpty())      user     = "postgres";
+        if (password.isEmpty())  password = "password";
+        if (port == 0)           port     = 5432;
+//строки подключения
+#ifdef Q_OS_WINDOWS 
+        QString connection;
+        if (!connParams.value("driver").toString().trimmed().isEmpty())
+            driver = connParams.value("driver").toString().trimmed();
         connection = QString("DRIVER=%6;"
-                             "SERVER=%1;"
-                             "DATABASE=%2;"
-                             "UID=%3;"
-                             "PWD=%4;"
-                             "PORT=%5;"
-                             "sslmode=disable;")
-                         .arg(connParams["host"],
-                              connParams["dbname"],
-                              connParams["user"],
-                              connParams["password"],
-                              connParams.value("port", "5432"),
-                              connParams["driver"]);
-    } else {
-        db = QSqlDatabase::addDatabase(driver);
-        db.setHostName(connParams["host"]);
-        db.setDatabaseName(connParams["dbname"]);
-        db.setUserName(connParams["user"]);
-        db.setPassword(connParams["password"]);
-        db.setPort(connParams.value("port", "5432").toInt());
-        db.setConnectOptions("connect_timeout=5");
-    }
-
-    // Для Windows: Настройка ODBC подключения
-    if (isWindows) {
-        db = QSqlDatabase::addDatabase(driver, "main_connection");
+                        "SERVER=%1;"
+                        "DATABASE=%3;"
+                        "UID=%4;"
+                        "PWD=%5;"
+                        "PORT=%2;"
+                        "sslmode=disable;")
+                    .arg(host, port, dbname, user, password, driver);
+#ifdef QT_DEBUG
+        qDebug() << "Connection string:" << connection;
+#endif
         db.setDatabaseName(connection);
+#else
+
+        db.setHostName(host);
+        db.setDatabaseName(dbname);
+        db.setUserName(user);
+        db.setPassword(password);
+        db.setPort(port);
+        db.setConnectOptions("connect_timeout=5");
+#endif
     }
-
-    qDebug() << "Connection string:" << connection;
-
     // Сохраняем подключение как член класса
     m_db = db;
 
     // Открытие подключения
     if (!m_db.open()) {
-        qCritical() << errorPrefix << "Connection error:" << m_db.lastError().text();
-        return;
+        qCritical() << "\n\n" << errorPrefix << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+                    << "!  Connection error:\n" << m_db.lastError().text() << "\n"
+                    << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n";
+        throw std::runtime_error("Не смог подключиться. Не могу работать с БД\n\n");
+        
     }
 
     // Убедимся, что подключение остается открытым
@@ -173,7 +157,7 @@ void Logger::initialize(const QString& connectionString) {
     // Проверка версии PostgreSQL
     QSqlQuery versionQuery(m_db);
     if (versionQuery.exec("SELECT version()") && versionQuery.next()) {
-        qDebug() << "Connected to PostgreSQL:" << versionQuery.value(0).toString();
+        qDebug() << "Connected to " << versionQuery.value(0).toString()<<"\n";
     }
 
     // Выполнение SQL-скрипта
@@ -183,8 +167,32 @@ void Logger::initialize(const QString& connectionString) {
         return;
     }
 
-    QStringList queries = QString(sqlFile.readAll())
-                              .split(';', Qt::SkipEmptyParts);
+    QString sql = sqlFile.readAll();
+    QStringList queries;
+    {
+        bool inBlock = false;
+        QString buffer;
+
+        for (int i = 0; i < sql.size(); ++i) {
+            if (sql.mid(i, 2) == "$$") {      // Обнаружение границ $$
+                inBlock = !inBlock;
+                buffer += sql[i++];           // Добавить оба символа $$
+                buffer += sql[i];
+                continue;
+            }
+            if (sql[i] == ';' && !inBlock) {  // Разделяет только вне блока $$
+                if (!buffer.trimmed().isEmpty()) 
+                    queries << buffer.trimmed();
+                buffer.clear();
+            } else {
+                buffer += sql[i];
+            }
+        }
+        if (!buffer.trimmed().isEmpty()) 
+            queries << buffer.trimmed();      // Добавляет последний запрос
+    }
+
+
     sqlFile.close();
 
     QSqlQuery query(m_db);
@@ -196,9 +204,9 @@ void Logger::initialize(const QString& connectionString) {
         if (trimmed.isEmpty()) continue;
 
         if (!query.exec(trimmed)) {
-            qCritical() << errorPrefix << "Query failed:"
+            qCritical() << errorPrefix << "ERROR occured:\n\t"
                         << query.lastError().text()
-                        << "\nFailed query:" << trimmed;
+                        << "\nwhile processing query:\n\t" << trimmed;
             allQueriesOK = false;
             break;
         }
@@ -212,23 +220,41 @@ void Logger::initialize(const QString& connectionString) {
     } else {
         m_db.rollback();
     }
-
     if (allQueriesOK) {
-        LOG_INIT(CLASS_NAME, StatusInit::LOADED);
         qDebug() << "Database initialized successfully";
     } else {
-        qCritical() << errorPrefix << "Failed to initialize database";
+        qCritical() <<"\n\n"<< errorPrefix 
+        << "\n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+        <<"!\tFailed to initialize database\n"
+        << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+        throw std::runtime_error("Один или несколько запросов не сработал(и). Не могу работать с БД\n\n");
     }
 
+    //регистрация новой сессии. Без id сессии логирование запрещено
+    QDateTime dt = QDateTime::fromMSecsSinceEpoch(startTime, Qt::UTC);
+    QString dtStr = dt.toString(Qt::ISODate);
+    query.exec(QString("SELECT create_session('%1')").arg(dtStr));
+
+    if (query.next()) {
+        sessionID = query.value(0).toInt();
+    qInfo().noquote() << 
+    "╔══════════════════════════════════════════════════════╗\n"
+    + QString("║ Создана сессия № %1").arg(sessionID).leftJustified(55) + "║\n"
+    "╚══════════════════════════════════════════════════════╝";
+
+    }
+
+    if (!sessionID){
+        throw std::runtime_error("Сессия не создана. Не могу работать с БД\n\n");
+    }
+
+    if (allQueriesOK)
+        LOG_INIT(CLASS_NAME, StatusInit::LOADED);
+    else
+        LOG_INIT(CLASS_NAME, StatusInit::NOT_LOADED__ERROR_CRITICAL);  //всё равно попытаться
     start();
 
-    // Тестовый запрос
-    QSqlQuery testQuery(m_db);
-    if (testQuery.exec("SELECT COUNT(*) FROM log_headers")) {
-        if (testQuery.next()) {
-            qDebug() << "Records in log_headers:" << testQuery.value(0).toInt();
-        }
-    }
+
 }
 
 // управление очередями запросов и их отправка
@@ -238,29 +264,41 @@ void Logger::run() {
         if (m_queryQueue.isEmpty() && !m_stop) {
             m_condition.wait(&m_mutex);
         }
-        QString query = m_queryQueue.dequeue();
+
+        if (!m_queryQueue.isEmpty()) {
+            QString query = m_queryQueue.dequeue();
+            m_buffer.push_back(query);
+        }
         m_mutex.unlock();
 
-        m_buffer.push_back(query);
         if (m_buffer.size() >= static_cast<std::vector<QString>::size_type>(m_bufferSize)) {
             flushBuffer();
         }
 
-        #ifdef QT_DEBUG
+        #if defined(DB_PRINT)
             flushBuffer();
         #endif
     }
 
     flushBuffer();
+    QSqlQuery query(m_db);
+    query.prepare("UPDATE sessions SET end_time = NOW() WHERE id = :id");
+    query.bindValue(":id", sessionID);
+    if (!query.exec()) {
+        qWarning() << "Failed to update session end_time:" << query.lastError().text();
+    }
 }
 
 void Logger::stop() {
     m_stop = true;
     m_condition.wakeAll();
+   
     wait();
+    
     if (m_db.isOpen()) {
         m_db.close();
     }
+   
 }
 
 
@@ -274,8 +312,10 @@ void Logger::flushBuffer() {
     bool success = true;
     for (const auto& q : m_buffer) {
         if (!query.exec(q)) {
-            qCritical() << "Query failed:" << query.lastError().text()
-            << "\nQuery:" << q;
+            qCritical() << "Query failed:" << query.lastError().text();
+#ifdef DB_PRINT
+            qCritical() << "\nQuery:" << q;
+#endif
             success = false;
             break;
         }

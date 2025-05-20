@@ -2,7 +2,7 @@
 #include <QTextCodec>
 #include <QDir>
 #include <QFileInfo>
-
+#include <csignal>
 // !!! Необязательно !!!
 // #ifdef Q_OS_WIN
 // #include <windows.h>
@@ -11,6 +11,13 @@
 #include "utils/env_loader/EnvLoader.h"
 #include "common/CoreManager.h"
 #include "utils/env_loader/Settings.h"
+
+
+void performShuttingDown(int sig){
+    Q_UNUSED(sig);
+    Logger::instance().stop();
+    exit(1);
+}
 
 int main(int argc, char* argv[]) {
 #ifdef Q_OS_WIN
@@ -34,21 +41,13 @@ int main(int argc, char* argv[]) {
     QCoreApplication a(argc, argv);
 
     // Инициализация Логгера (обязательно, иначе Логгер не запустится)
-    QString connectionString =
-#ifdef Q_OS_WINDOWS
-        QString("host=%1;port=%2;dbname=%3;user=%4;password=%5;driver=%6")
-#else
-        QString("host=%1 port=%2 dbname=%3 user=%4 password=%5 driver=%6")
-#endif
-            .arg(appSettings().value("database/host").toString(),
-                 appSettings().value("database/port").toString(),
-                 appSettings().value("database/db_name").toString(),
-                 appSettings().value("database/user").toString(),
-                 appSettings().value("database/password").toString(),
-                 appSettings().value("database/driver").toString());
-
-    Logger::instance().initialize(connectionString);
-
+    try{
+        Logger::instance().initialize(TimeProvider::instance().getMs());
+    } catch (const std::exception& e) {
+        qCritical() << "Не могу связаться с БД. Нет логирования!." << e.what();
+    } catch (...) {
+        qCritical() << "Не могу связаться с БД. Неизвестная ошибка.";
+    }
 
     // Путь к .env
     QString envPath = QCoreApplication::applicationDirPath() + "/.env";
@@ -91,5 +90,9 @@ int main(int argc, char* argv[]) {
     CoreManager core;
     core.initialize();
 
+    //отлов ошибок и сигналов завершения работы программы, чтобы дописать данные в логгер
+    for (int sig : {SIGINT, SIGSEGV, SIGTERM}) {
+        signal(sig, performShuttingDown);
+    }
     return a.exec();
 }

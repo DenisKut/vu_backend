@@ -1,5 +1,12 @@
+CREATE TABLE IF NOT EXISTS sessions (
+    id SERIAL NOT NULL PRIMARY KEY,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS log_headers (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
+    id_session INTEGER REFERENCES sessions(id) ON DELETE SET NULL,
     src TEXT NOT NULL,
     timestamp_micro BIGINT NOT NULL,
     date DATE NOT NULL,
@@ -68,3 +75,13 @@ FROM  log_headers LogHeaders CROSS JOIN init_logs InitLogs
                           CROSS JOIN internal_messages InternalMessages
                           CROSS JOIN protocol_messages ProtocolMessages
 ;
+
+CREATE OR REPLACE FUNCTION create_session(start_time TIMESTAMP)
+RETURNS INTEGER AS $$
+DECLARE
+    new_id INTEGER;
+BEGIN
+    INSERT INTO sessions (start_time) VALUES (start_time) RETURNING id INTO new_id;
+    RETURN new_id;
+END;
+$$ LANGUAGE plpgsql

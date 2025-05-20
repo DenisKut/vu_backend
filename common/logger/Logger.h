@@ -204,9 +204,8 @@ public:
 
 	/**
 	 * @brief Инициализация подключения к базе данных.
-	 * @param connectionString Строка подключения к базе данных.
 	 */
-	 void initialize(const QString& connectionString);
+	 void initialize(const int64_t& startTime);
 
 	/**
 	 * @brief Записать текстовое сообщение в файл.
@@ -288,7 +287,10 @@ public:
 
      // END CONVERTERS ----------------------------------------------------------------------
 
-
+	/**
+	 * @brief Остановка потока логгера.
+	 */
+	void stop();
 
 protected:
 	/**
@@ -307,43 +309,7 @@ private:
 	 * @brief Деструктор Logger.
 	 */
 	~Logger();
-	/**
-	 * @brief Остановка потока логгера.
-	 */
-	void stop();
 
-
-    // /**
-    //  * @brief Преобразование текстового сообщения в QByteArray для записи в файл.
-    //  * @param message Текст сообщения.
-    //  * @return Преобразованное сообщение в формате QByteArray.
-    //  */
-    // QByteArray formatMessage(const QString& message);
-
-
-    // /**
-    //  * @brief Преобразование массива данных в Hex-формат.
-    //  * @tparam T Тип данных.
-    //  * @param data Указатель на массив данных.
-    //  * @param length Длина массива данных.
-    //  * @return Преобразованные данные в формате QByteArray.
-    //  */
-    // template<typename T>
-    // QByteArray binaryToHex(const T* data, size_t length);
-
-
-    // /**
-    //  * @brief Преобразование QByteArray в Hex-формат.
-    //  * @param data Данные в формате QByteArray.
-    //  * @return Преобразованные данные в формате QByteArray.
-    //  */
-    // QByteArray binaryToHex(const QByteArray& data);
-
-    // /**
-    //  * @brief Поместить сообщение в очередь на запись в лог-файл.
-    //  * @param msg Сообщение в формате QByteArray.
-    //  */
-    // void enqueueMessage(QByteArray msg);
 
 	/**
 	 * @brief Поместить SQL-запрос в очередь.
@@ -360,11 +326,11 @@ private:
     QString bakeQuery(const LogHeader &logHead)
     {
         const TimeProvider::HumanReadableTimestamp ts = TimeProvider::instance().to_HR_Fmt(logHead.timestampMicroseconds);
-
         return QString(
                    "INSERT INTO log_headers "
-                   "(src, timestamp_micro, date, hrs, minutes, seconds, msec, mksec, log_level) "
-                   "VALUES ('%1', %2, '%3', %4, %5, %6, %7, %8, '%9') RETURNING id")
+                   "(id_session, src, timestamp_micro, date, hrs, minutes, seconds, msec, mksec, log_level) "
+                   "VALUES (%1,'%2', %3, '%4', %5, %6, %7, %8, %9, '%10') RETURNING id")
+            .arg(sessionID)
             .arg(logHead.src)
             .arg(logHead.timestampMicroseconds)
             .arg(ts.data)
@@ -388,5 +354,7 @@ private:
 
     std::vector<QString> m_buffer; ///< Буфер для пакетной вставки.
     const int m_bufferSize = 100; ///< Размер буфера перед записью в БД.
+
+    int sessionID;
 };
 #endif // LOGGER_H

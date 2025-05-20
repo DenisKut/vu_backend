@@ -9,6 +9,7 @@
 #include "network/messages/Message.h"
 #include "network/messages/TcpMessage.h"
 
+
 class NetworkManager : public QObject {
     Q_OBJECT
 public:
