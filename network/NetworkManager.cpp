@@ -1,6 +1,6 @@
 #include "NetworkManager.h"
 #include "utils/env_loader/Settings.h"
-
+#include <QMetaType>
 NetworkManager::NetworkManager(QObject* parent)
     : QObject(parent),
       m_tcpHandler(new TcpHandler()),
@@ -9,6 +9,8 @@ NetworkManager::NetworkManager(QObject* parent)
       m_tcpThread(new QThread(this)),
       m_udpThread(new QThread(this)),
       m_ethThread(new QThread(this)) {
+
+    qRegisterMetaType<RmoMessage_TargetPPU>("RmoMessage_TargetPPU");
 
     // Перемещение обработчиков в потоки
     m_tcpHandler->moveToThread(m_tcpThread);
