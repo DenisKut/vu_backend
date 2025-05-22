@@ -124,7 +124,7 @@ void Logger::initialize(const int64_t& startTime) {
                         "PWD=%5;"
                         "PORT=%2;"
                         "sslmode=disable;")
-                    .arg(host, port, dbname, user, password, driver);
+                    .arg(host, QString::number(port), dbname, user, password, driver);
 #ifdef QT_DEBUG
         qDebug() << "Connection string:" << connection;
 #endif
