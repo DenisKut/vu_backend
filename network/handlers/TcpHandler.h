@@ -33,11 +33,11 @@ public:
 
     Q_INVOKABLE void disconnect();
 
-    Q_INVOKABLE void sendRmoMessage(int idx, const RmoBaseMessage& msg); // по индексу
-    Q_INVOKABLE void sendRmoMessageToAll(const RmoBaseMessage& msg);     // всем TCP-RMO
+    Q_INVOKABLE void sendRmoMessage(int idx, QSharedPointer<RmoBaseMessage> msg); // по индексу
+    Q_INVOKABLE void sendRmoMessageToAll(QSharedPointer<RmoBaseMessage> msg);     // всем TCP-RMO
 
-    Q_INVOKABLE void sendRmoMessageJSON(QWebSocket* ws, const RmoBaseMessage& msg);
-    Q_INVOKABLE void sendRmoMessageToAllJSON(const RmoBaseMessage& msg);
+    Q_INVOKABLE void sendRmoMessageJSON(QWebSocket* ws, QSharedPointer<RmoBaseMessage> msg);
+    Q_INVOKABLE void sendRmoMessageToAllJSON(QSharedPointer<RmoBaseMessage> msg);
 
 signals:
     /**

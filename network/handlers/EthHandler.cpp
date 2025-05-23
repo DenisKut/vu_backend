@@ -289,6 +289,42 @@ void EthHandler::connectAdapter()
 {
     if (m_adapterOpened) return;
     stopReconnectTimer();
+
+    /*
+   //auto msgRmo = QSharedPointer<RmoMessage_TargetPPU>::create();
+
+    //auto msgRmo = RmoMessageFactory::instance().fromBaseConstructor(RmoMsgType::TARGET_PPU);
+    auto msgRmo = RmoMessageFactory::instance().fromBaseConstructor(RmoMsgType::TARGET_PPU);
+    //auto msgRmo = RmoMessageFactory::instance().createFromBaseConstructor<RmoMessage_TargetPPU>();
+
+    auto msgGG = RmoMessageFactory::instance().getDerived<RmoMessage_TargetPPU>(msgRmo);
+
+    msgGG->set_azC(666,666,666);
+    msgGG->anTarget = 8888;
+    msgGG->azTarget = 9999;
+    auto msgByte = msgRmo->toByteArray();
+    //auto msgFromByte = RmoMessageFactory::instance().createFromByteArray<RmoMessage_TargetPPU>(msgByte);
+    //auto msgFromByte = RmoMessageFactory::instance().createFromByteArray2<RmoMessage_TargetPPU>(msgByte);
+    auto msgFromByte = RmoMessageFactory::instance().fromByteArray(msgByte);
+    //auto msgFromByte = RmoMessageFactory::instance().fromByteArray(static_cast<int>(RmoMsgType::TARGET_PPU),msgByte);
+    if(msgFromByte)
+    {
+        qInfo("CREATE FROM BYTE!!!!!!!!!!!!!!1");
+    }
+
+     sleep(5);
+    //auto dMsgRmo = RmoMessageFactory::instance().getDerived<RmoMessage_TargetPPU>(msgRmo);
+    //dMsgRmo->set_azC(555,555,555);
+
+    //msgRmo->set_azC(999,999,999);
+
+    Q_EMIT rmoTargetPpuReady(msgRmo);
+    //Q_EMIT rmoTargetPpuReady(msgGG);
+    //Q_EMIT rmoTargetPpuReady(msgFromByte);
+
+    //sleep(5);
+*/
+
 #ifdef _WIN32
     char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -709,6 +745,7 @@ QString EthHandler::findWiredInterface() {
 
 void EthHandler::processIncomingFrame(const QByteArray& msg) {
     // Вся логика из NetworkManager::onEthReceived
+    qInfo() << "processIncomingFrame";
     auto parsed = EthMessageFactory::parse(msg);
     if (parsed)
     {
@@ -911,6 +948,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     static uint32_t rmoCounter = 0;
 
                     // Отправка отладочных данных на форму для отображения:
+                    /*
                     RmoMessage_TargetPPU msgRmo;
                     msgRmo.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
                     msgRmo.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
@@ -922,6 +960,17 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     msgRmo.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
                     msgRmo.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
                     msgRmo.counter = rmoCounter++;
+                    */
+                    //auto msgRmo = QSharedPointer::create<RmoMessage_TargetPPU>();
+                    auto msgRmo = RmoMessageFactory::instance().fromBaseConstructor(RmoMsgType::TARGET_PPU);
+                    auto msgFill = RmoMessageFactory::instance().getDerived<RmoMessage_TargetPPU>(msgRmo);
+                    msgFill->set_azC(azC0,azC1,azC2);
+                    msgFill->set_anC(anC0,anC1,anC2);
+                    msgFill->counter = rmoCounter++;
+                    //auto ms = RmoMessageFactory::instance().getDerived<RmoMessage_TargetPPU>(msgRmo);
+
+                    //qInfo() << "AZ_TARGET " << ms->azTarget;
+
                     Q_EMIT rmoTargetPpuReady(msgRmo); // You may need to define this signal
                 }
                 else

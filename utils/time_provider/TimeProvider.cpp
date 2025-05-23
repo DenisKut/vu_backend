@@ -47,8 +47,12 @@ std::string TimeProvider::msToDateTime(uint64_t millisecondsSinceEpoch)  {
 
     // Преобразуем в struct tm (локальное время)
     struct tm timeinfo;
-    localtime_r(&seconds, &timeinfo); // Используйте localtime_s для Windows
 
+    #ifdef _WIN32
+        localtime_s(&timeinfo, &seconds);
+    #else
+        localtime_r(&seconds, &timeinfo);
+    #endif
     // Форматируем в строку
     std::ostringstream oss;
     oss << std::put_time(&timeinfo, "%Y-%m-%d %H:%M:%S")

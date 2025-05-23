@@ -34,10 +34,14 @@ NetworkManager::NetworkManager(QObject* parent)
                                     &NetworkManager::onEthReceived,
                                     Qt::QueuedConnection);
     // Подключение EthHandler::rmoTargetPpuReady к TcpHandler::sendRmoMessageToAll через лямбду
+    /*
     connect(m_ethHandler, &EthHandler::rmoTargetPpuReady,
             this, [this](const RmoMessage_TargetPPU& msg) {
                 m_tcpHandler->sendRmoMessageToAll(msg);
             }, Qt::QueuedConnection);
+    */
+    connect(m_ethHandler, &EthHandler::rmoTargetPpuReady,
+            m_tcpHandler, &TcpHandler::sendRmoMessageToAll,Qt::QueuedConnection);
 
 #ifdef _WIN32
     // connect(&m_ethTimer, &QTimer::timeout, m_ethHandler,
@@ -175,10 +179,10 @@ void NetworkManager::sendEth(const QByteArray& data) {
 }
 
 // --- Потокобезопасная отправка TCP (для RMO) ---
-void NetworkManager::sendTcpRmo(std::shared_ptr<const RmoBaseMessage> msg) {
+void NetworkManager::sendTcpRmo(QSharedPointer<RmoBaseMessage> msg) {
     if (m_tcpHandler && msg) {
         QMetaObject::invokeMethod(m_tcpHandler, [this, msg]() {
-            m_tcpHandler->sendRmoMessageToAll(*msg);
+            m_tcpHandler->sendRmoMessageToAll(msg);
         }, Qt::QueuedConnection);
     }
 }

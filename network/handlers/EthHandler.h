@@ -7,6 +7,9 @@
 #include <QDataStream>
 #include <QTimer>
 #include <QPointer>
+
+#include <QSharedPointer>
+
 #include "network/messages/RmoMessage.h"
 
 
@@ -95,7 +98,7 @@ signals:
     /**
      * @brief Сигнал о готовности сообщения RMO TargetPPU
      */
-    void rmoTargetPpuReady(const RmoMessage_TargetPPU& msg);
+    void rmoTargetPpuReady(QSharedPointer<RmoBaseMessage> msg);
 #ifdef _WIN32
     void ethTimerReceiveRestart();
 #endif

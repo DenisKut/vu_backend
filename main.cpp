@@ -20,6 +20,7 @@ void performShuttingDown(int sig){
 }
 
 int main(int argc, char* argv[]) {
+    qRegisterMetaType<QSharedPointer<RmoBaseMessage>>("QSharedPointer<RmoBaseMessage>");
 #ifdef Q_OS_WIN
     // Настройка консоли Windows
     SetConsoleOutputCP(65001); // UTF-8

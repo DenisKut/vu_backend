@@ -305,15 +305,19 @@ void TcpHandler::sendMessage(const QByteArray& data) {
     }
 }
 
-void TcpHandler::sendRmoMessage(int idx, const RmoBaseMessage& msg) {
+void TcpHandler::sendRmoMessage(int idx, QSharedPointer<RmoBaseMessage> msg) {
     if (idx >= 0 && idx < m_rmoConnections.size()) {
-        m_rmoConnections[idx]->sendData(msg.toByteArray());
+        m_rmoConnections[idx]->sendData(msg->toByteArray());
     }
 }
 
-void TcpHandler::sendRmoMessageToAll(const RmoBaseMessage& msg) {
+void TcpHandler::sendRmoMessageToAll(QSharedPointer<RmoBaseMessage> msg) {
+    /*
+    qInfo() << "sendRmoMessageToAllsendRmoMessageToAllsendRmoMessageToAllsendRmoMessageToAll";
+    msg->info();
+    */
     for (auto* handler : m_rmoConnections) {
-        handler->sendData(msg.toByteArray());
+        handler->sendData(msg->toByteArray());
     }
 }
 
@@ -674,7 +678,7 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
     auto msg = RmoMessageFactory::instance().fromByteArray(type, data);
     if (msg) {
         if (type == static_cast<int32_t>(RmoMsgType::TARGET_PPU)) {
-            auto* typedMsg = dynamic_cast<RmoMessage_TargetPPU*>(msg.get());
+            auto typedMsg = dynamic_cast<RmoMessage_TargetPPU*>(msg.get());
             if (typedMsg) {
                 // Используйте поля typedMsg->azPPU, ...
                 AppConfig::instance().setModulePPU_CU(
@@ -682,6 +686,10 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                     typedMsg->azTarget, typedMsg->anTarget,
                     typedMsg->azTargetVel, typedMsg->anTargetVel
                 );
+
+                //отладка полученных рмо сообщений
+                //typedMsg->info();
+
             }
         }
         // else if (type == ...) // другие типы сообщений
@@ -729,14 +737,14 @@ void TcpHandler::onWebSocketTextMessageReceived(const QString& message,
     // }
 }
 
-void TcpHandler::sendRmoMessageJSON(QWebSocket* ws, const RmoBaseMessage& msg) {
+void TcpHandler::sendRmoMessageJSON(QWebSocket* ws, QSharedPointer<RmoBaseMessage> msg) {
     if (ws && ws->state() == QAbstractSocket::ConnectedState) {
-        ws->sendTextMessage(QString::fromStdString(msg.toJson().dump()));
+        ws->sendTextMessage(QString::fromStdString(msg->toJson().dump()));
     }
 }
 
-void TcpHandler::sendRmoMessageToAllJSON(const RmoBaseMessage& msg) {
-    QString msg_string = QString::fromStdString(msg.toJson().dump());
+void TcpHandler::sendRmoMessageToAllJSON(QSharedPointer<RmoBaseMessage> msg) {
+    QString msg_string = QString::fromStdString(msg->toJson().dump());
     for (QWebSocket* ws : m_wsClients) {
         if (ws->state() == QAbstractSocket::ConnectedState) {
             ws->sendTextMessage(msg_string);
