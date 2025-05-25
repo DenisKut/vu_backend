@@ -256,4 +256,24 @@ if (Test-Path $rmoExePath -PathType Leaf) {
     Write-Warning "Не найден исполняемый файл $rmoExePath"
 }
 
+# 11. Копирование .env, settings.ini, database/init_db.sql для vu_backend
+$backendDestDir = Split-Path $backendExePath -Parent
+$backendFilesToCopy = @(
+    Join-Path $backendDir '.env',
+    Join-Path $backendDir 'settings.ini',
+    Join-Path $backendDir 'database/init_db.sql'
+)
+foreach ($srcFile in $backendFilesToCopy) {
+    if (Test-Path $srcFile) {
+        try {
+            Copy-Item $srcFile -Destination $backendDestDir -Force
+            Write-Host "[INFO] Скопирован $srcFile в $backendDestDir"
+        } catch {
+            Write-Warning ("Не удалось скопировать $srcFile : " + $error[0].Exception.Message)
+        }
+    } else {
+        Write-Warning "Файл $srcFile не найден для копирования в $backendDestDir"
+    }
+}
+
 Write-Host "Готово!"
