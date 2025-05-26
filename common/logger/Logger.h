@@ -207,26 +207,6 @@ public:
 	 */
 	 void initialize(const int64_t& startTime);
 
-	/**
-	 * @brief Записать текстовое сообщение в файл.
-	 * @param message Текст сообщения.
-	 */
-    // void writeText(const QString& message);
-
-	/**
-	 * @brief Записать бинарные данные в файл в виде Hex.
-	 * @param message Текст сообщения.
-	 * @param data Бинарные данные в формате QByteArray.
-	 */
-    // void writeBinary(const QString& message, const QByteArray& data);
-
-	/**
-	 * @brief Записать бинарные данные в файл в виде Hex.
-	 * @param message Текст сообщения.
-	 * @param data Бинарные данные в формате const unsigned char*.
-	 * @param length Длина массива данных.
-	 */
-	//void writeBinary(const QString& message, const unsigned char* data, unsigned long long length);
 
 
      /// @brief Главный логирующий универсальный публичный метод
@@ -241,37 +221,8 @@ public:
              "поданая структура должна быть одной из: InitLog InternalMessageLog ProtocolMessageLog"
              );
 
-         enqueueMessage(bakeQuery(logData));
+         enqueueMessage(bakeBinary(logData));
          m_condition.wakeOne();
-     }
-
-
-     QString bakeQuery(const InitLog& logData) {
-         return QString("WITH header AS (%1) "
-                        "INSERT INTO init_logs (header_id, status) "
-                        "SELECT id, '%2' FROM header;")
-             .arg(bakeQuery(static_cast<const LogHeader&>(logData)),
-                  escapeSql(statusInitToString(logData.status)));
-     }
-
-     QString bakeQuery(const InternalMessageLog& logData) {
-         return QString("WITH header AS (%1) "
-                        "INSERT INTO internal_messages (header_id, message_type, message_content) "
-                        "SELECT id, '%2', '%3' FROM header;")
-             .arg(bakeQuery(static_cast<const LogHeader&>(logData)),
-                  escapeSql(logData.messageType),
-                  escapeSql(logData.parsedData));
-     }
-
-     QString bakeQuery(const ProtocolMessageLog& logData) {
-         QString hexData = QString::fromLatin1(logData.rawData.toHex());
-         return QString("WITH header AS (%1) "
-                        "INSERT INTO protocol_messages (header_id, protocol_type, raw_data, parsed_data) "
-                        "SELECT id, '%2', '\\\\x%3', '%4' FROM header;")
-             .arg(bakeQuery(static_cast<const LogHeader&>(logData)),
-                  escapeSql(protocolToString(logData.protocol)),
-                  hexData,
-                  escapeSql(logData.parsedData));
      }
 
      // CONVERTERS --------------------------------------------------------------------------
@@ -318,43 +269,32 @@ private:
 	void enqueueMessage(const QString& query);
 
     /**
-     * @brief Пакетная вставка сообщений в БД.
-     * @details Все сообщения из буффера, макс m_bufferSize, закидываются в БД пачкой
+     * @brief Пакетная вставка сообщений.
+     * @details Все сообщения из буффера, макс m_bufferSize, закидываются пачкой
     */
     void flushBuffer();
 
-    QString bakeQuery(const LogHeader &logHead)
-    {
-        const TimeProvider::HumanReadableTimestamp ts = TimeProvider::instance().to_HR_Fmt(logHead.timestampMicroseconds);
-        return QString(
-                   "INSERT INTO log_headers "
-                   "(id_session, src, timestamp_micro, date, hrs, minutes, seconds, msec, mksec, log_level) "
-                   "VALUES (%1,'%2', %3, '%4', %5, %6, %7, %8, %9, '%10') RETURNING id")
-            .arg(sessionID)
-            .arg(logHead.src)
-            .arg(logHead.timestampMicroseconds)
-            .arg(ts.data)
-            .arg(ts.hrs)
-            .arg(ts.minutes)
-            .arg(ts.sec)
-            .arg(ts.m_sec)
-            .arg(ts.mk_sec)
-            .arg(logLevelToString(logHead.level).toUpper());
+
+    /**
+     * @brief Конвертация структуры в binary данные
+     * @returns QByteArray
+     */
+    template <typename T>
+    QByteArray bakeBinary(T structure){
+        Q_UNUSED(structure);
+        QByteArray bin_data;
+
+
+        return bin_data;
+
     }
 
-    QString escapeSql(const QString& input) const {
-        return QString(input).replace("'", "''");
-    }
 
-    QSqlDatabase m_db; ///< Подключение к базе данных.
     QMutex m_mutex; ///< Мьютекс для синхронизации.
     QWaitCondition m_condition; ///< Условие ожидания.
-    QQueue<QString> m_queryQueue; ///< Очередь SQL-запросов.
     std::atomic<bool> m_stop{false}; ///< Флаг остановки потока.
-
+    QQueue<QString> m_queryQueue; ///< Очередь записей для пакетной вставки
     std::vector<QString> m_buffer; ///< Буфер для пакетной вставки.
-    const int m_bufferSize = 100; ///< Размер буфера перед записью в БД.
-
-    int sessionID;
+    const int m_bufferSize = 100; ///< Размер буфера перед записью
 };
 #endif // LOGGER_H
