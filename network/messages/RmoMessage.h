@@ -43,6 +43,7 @@ struct RmoBaseMessage {
  */
 struct RmoMessage_TargetPPU : RmoBaseMessage {
     int32_t typeField = static_cast<int32_t>(RmoMsgType::TARGET_PPU);
+    int numPPU = AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1;
     double azPPU = 0.0;
     double anPPU = 0.0;
     double azC0 = 0.0, azC1 = 0.0, azC2 = 0.0;
@@ -62,6 +63,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         QDataStream stream(&data, QIODevice::WriteOnly);
         stream.setByteOrder(QDataStream::LittleEndian);
         stream << typeField
+               << numPPU
                << azPPU << anPPU
                << azC0 << azC1 << azC2
                << anC0 << anC1 << anC2
@@ -76,6 +78,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         QDataStream stream(data);
         stream.setByteOrder(QDataStream::LittleEndian);
         stream >> msg->typeField
+            >> msg->numPPU
             >> msg->azTarget >> msg->anTarget
             >> msg->azTargetVel >> msg->anTargetVel;
         return msg;
@@ -87,6 +90,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         QDataStream stream(data);
         stream.setByteOrder(QDataStream::LittleEndian);
         stream >> msg->typeField
+            >> msg->numPPU
             >> msg->azPPU >> msg->anPPU
             >> msg->azC0 >> msg->azC1 >> msg->azC2
             >> msg->anC0 >> msg->anC1 >> msg->anC2
@@ -99,6 +103,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
     // --- JSON сериализация ---
     nlohmann::json toJson() const override {
         return {
+            {"numPPU", numPPU},
             {"azPPU", azPPU}, {"anPPU", anPPU},
             {"azC0", azC0}, {"azC1", azC1}, {"azC2", azC2},
             {"anC0", anC0}, {"anC1", anC1}, {"anC2", anC2},
@@ -110,6 +115,8 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
 
     static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
         auto msg = QSharedPointer<RmoMessage_TargetPPU>::create();
+        msg->numPPU = j.value("numPPU",
+                              AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
         msg->azPPU = j.value("azPPU", 0.0);
         msg->anPPU = j.value("anPPU", 0.0);
         msg->azC0 = j.value("azC0", 0.0);
@@ -127,15 +134,20 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         return msg;
     }
 
+    // Конструктор по умолчанию
     RmoMessage_TargetPPU()
+        : RmoMessage_TargetPPU(AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1) {}
+
+    RmoMessage_TargetPPU(AppConfig::ModulePPU_num numberPPU)
     {
-        azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
-        anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
-        azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-        anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-        azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-        anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-        isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
+        numPPU = numberPPU;
+        azPPU = AppConfig::instance().getModulePPU_az(numberPPU);
+        anPPU = AppConfig::instance().getModulePPU_an(numberPPU);
+        azTarget = AppConfig::instance().getModulePPU_azTarget(numberPPU);
+        anTarget = AppConfig::instance().getModulePPU_anTarget(numberPPU);
+        azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(numberPPU);
+        anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(numberPPU);
+        isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(numberPPU));
     }
 
     static QSharedPointer<RmoMessage_TargetPPU> fromBaseConstructor()
@@ -164,9 +176,6 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         this->anC1 = anC1;
         this->anC2 = anC2;
     }
-
-
-
 };
 
 class RmoMessageFactory {
@@ -226,6 +235,11 @@ public:
         return T::fromBaseConstructor();
     }
 
+    template<typename T, typename... Args>
+    QSharedPointer<T> createWithArgs(Args&&... args) {
+        return QSharedPointer<T>::create(std::forward<Args>(args)...);
+    }
+
    //---------------------------------------------------------------------------------------
     template<typename T>
     void registerType() {
@@ -237,7 +251,7 @@ public:
 
     // Создание из QByteArray с автоматическим определением типа
     QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
-        if (data.size() < sizeof(int32_t)) return nullptr;
+        if (data.size() < (int)sizeof(int32_t)) return nullptr;
 
         // Читаем тип из первых байтов данных
         int32_t type;

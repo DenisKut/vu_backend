@@ -616,6 +616,16 @@ public:
         initBase();
     }
 
+    /// Увеличение счётчика сообщений на РМО
+    uint32_t increaseRmoCounter() {
+        _rmoCounter++;
+        return _rmoCounter;
+    }
+
+    uint32_t getRmoCounter() {
+        return _rmoCounter;
+    }
+
     // *******************************************
     //  Текущее состояние ППУ
     // *******************************************
@@ -1003,6 +1013,9 @@ private:
     uint64_t _ethProtoMacSrc: 48;       ///< MAC отправителя Ethernet-пакетов
     uint16_t _ethProtoEtherType;        ///< Тип протокола Ethernet-пакетов
     /// @}
+
+    /// Счётчик сообщений на РМО (для отладки):
+    uint32_t _rmoCounter = 0;
 
     /// @name Объекты для хранения текущих состояний ППУ
     /// @{

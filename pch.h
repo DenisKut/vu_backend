@@ -80,6 +80,15 @@ namespace Utils {
 
 #define CLASS_NAME Utils::demangleClassName(typeid(*this).name())
 
-
+/**
+ * @brief Преобразует enum class в базовый целочисленный тип
+ * @tparam E Тип перечисления
+ * @param e Значение перечисления
+ * @return Базовое целочисленное значение
+ */
+template <typename E>
+constexpr auto to_underlying(E e) -> typename std::underlying_type<E>::type {
+    return static_cast<typename std::underlying_type<E>::type>(e);
+}
 
 #endif

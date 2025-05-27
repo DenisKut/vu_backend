@@ -41,17 +41,6 @@ static inline uint16_t calculateChecksum(const uint8_t* data, size_t size) {
     return checksum;
 }
 
-/**
- * @brief Преобразует enum class в базовый целочисленный тип
- * @tparam E Тип перечисления
- * @param e Значение перечисления
- * @return Базовое целочисленное значение
- */
-template <typename E>
-constexpr auto to_underlying(E e) -> typename std::underlying_type<E>::type {
-    return static_cast<typename std::underlying_type<E>::type>(e);
-}
-
 // =========================================
 // Номера сообщений по протоколу связи с ПБУ
 // =========================================

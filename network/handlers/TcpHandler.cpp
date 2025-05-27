@@ -1,7 +1,7 @@
 #include "TcpHandler.h"
 #include <QHostAddress>
 #include <QDebug>
-
+#include "network/NetworkManager.h"
 
 TcpHandler::TcpHandler(QObject *parent)
     : QObject(parent)
@@ -680,12 +680,31 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
         if (type == static_cast<int32_t>(RmoMsgType::TARGET_PPU)) {
             auto typedMsg = dynamic_cast<RmoMessage_TargetPPU*>(msg.get());
             if (typedMsg) {
+                qInfo() << "Recieved RMO msg for PPU: " << typedMsg->numPPU;
+                qDebug() << "typedMsg->anC0 =" << typedMsg->anC0;
+                qDebug() << "typedMsg->azVel =" << typedMsg->azC1;
+                qDebug() << "typedMsg->azAcc =" << 2.0 * typedMsg->azC2;
+                qDebug() << "typedMsg->anCur =" << typedMsg->anC0;
+                qDebug() << "typedMsg->anVel =" << typedMsg->anC1;
+                qDebug() << "typedMsg->anAcc =" << 2.0 * typedMsg->anC2;
                 // Используйте поля typedMsg->azPPU, ...
-                AppConfig::instance().setModulePPU_CU(
-                    AppConfig::instance().ModulePPU_num_RLMN_1,
-                    typedMsg->azTarget, typedMsg->anTarget,
-                    typedMsg->azTargetVel, typedMsg->anTargetVel
-                );
+                if(typedMsg->numPPU == 0) {
+                    AppConfig::instance().setModulePPU_CU(
+                        AppConfig::instance().ModulePPU_num_RLMN_1,
+                        typedMsg->azTarget, typedMsg->anTarget,
+                        typedMsg->azTargetVel, typedMsg->anTargetVel
+                    );
+                }
+                else if(typedMsg->numPPU == 1) {
+                    AppConfig::instance().setModulePPU_CU(
+                        AppConfig::instance().ModulePPU_num_RLMN_2,
+                        typedMsg->azTarget, typedMsg->anTarget,
+                        typedMsg->azTargetVel, typedMsg->anTargetVel
+                    );
+
+
+                }
+
 
                 //отладка полученных рмо сообщений
                 //typedMsg->info();
