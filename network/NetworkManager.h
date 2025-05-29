@@ -6,7 +6,7 @@
 #include "handlers/TcpHandler.h"
 #include "handlers/UdpHandler.h"
 #include "handlers/EthHandler.h"
-#include "network/messages/Message.h"
+#include "network/messages/UdpMessage.h"
 #include "network/messages/TcpMessage.h"
 
 
@@ -22,7 +22,7 @@ public:
 	public slots:
     void onTcpReceived(const TcpHeader& msg);
     void onUdpReceived(const QByteArray& msg);
-    void onUdpReceivedDebug(const Message& msg);
+    void onUdpReceivedDebug(const UdpMessage& msg);
     void onEthReceived(const QByteArray &msg);
     // Потокобезопасная отправка UDP
     void sendUdp(const QByteArray& data);
@@ -30,6 +30,9 @@ public:
     void sendEth(const QByteArray& data);
     // Потокобезопасная отправка TCP (для RMO)
     void sendTcpRmo(QSharedPointer<RmoBaseMessage> msg);
+
+signals:
+    void testMCFOS(); // Тестовая отправка пакетов на МЦФОС
 
 private:
     QTimer m_ethTimer;

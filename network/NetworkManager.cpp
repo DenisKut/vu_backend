@@ -148,7 +148,7 @@ void NetworkManager::onUdpReceived(const QByteArray& msg) {
 #endif
 }
 
-void NetworkManager::onUdpReceivedDebug(const Message& msg) {
+void NetworkManager::onUdpReceivedDebug(const UdpMessage& msg) {
     Q_UNUSED(msg);
 #ifdef QT_DEBUG
     qDebug() << "UDP Message debug:" << msg.payload;

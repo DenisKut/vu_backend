@@ -60,9 +60,9 @@ HEADERS += \
     network/handlers/TcpHandler.h \
     network/handlers/UdpHandler.h \
     network/messages/EthMessage.h \
-    network/messages/Message.h \
     network/messages/RmoMessage.h \
     network/messages/TcpMessage.h \
+    network/messages/UdpMessage.h \
     utils/AppConfig.h \
     utils/time_provider/TimeProvider.h \
     utils/env_loader/EnvLoader.h \
