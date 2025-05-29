@@ -21,6 +21,8 @@ UdpHandler::UdpHandler(QObject* parent)
     int N_800 = 800;
     double fc = 0.25; // Центральная частота
 
+    Q_UNUSED(N_800);
+
     // Оконные функции
     double window_hamming_200[200] = {
         0.080000, 0.080229, 0.080917, 0.082062, 0.083664, 0.085720, 0.088230, 0.091189, 0.094597, 0.098448,
@@ -127,6 +129,8 @@ UdpHandler::UdpHandler(QObject* parent)
         0.081152, 0.080910, 0.080697, 0.080512, 0.080356, 0.080228, 0.080128, 0.080057, 0.080014, 0.080000
     };
 
+    Q_UNUSED(window_hamming_800);
+
     // Генерируем массивы излучаемого и опорного сигналов,
     // обрезая разрядность до 16-ти бит и добавляя номера буферов
     for (int i = 0; i < N_200; i++)
@@ -163,11 +167,11 @@ void UdpHandler::testMCFOS()
 
     UdpMessage_MCFOS_Cmd mes;
 
-    qDebug() << endl
+    qDebug() << Qt::endl
              << "!!!!!!!!!!!!!!!!!!!!!!!!! "
                 "testMCFOS() "
                 "!!!!!!!!!!!!!!!!!!!!!!!!!"
-             << endl;
+             << Qt::endl;
 
     mes.CMD_BUF_R = 1;
     sendMessage(mes.serialize());
