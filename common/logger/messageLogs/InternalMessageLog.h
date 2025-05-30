@@ -2,7 +2,7 @@
 #define INTERNALMESSAGELOG_H
 
 #include <QDataStream>
-#include "logheader.h"
+#include "LogHeader.h"
 
 struct InternalMessageLog : public LogHeader {
     QString messageType;

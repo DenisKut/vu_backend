@@ -6,7 +6,7 @@
 #include <memory>
 #include <QMutex>
 
-#include "messageLogs/logheader.h"
+#include "messageLogs/LogHeader.h"
 #include "LogFactory.h"
 class LogStorage {
 public:

@@ -1,7 +1,7 @@
 #ifndef LOGSESSION_H
 #define LOGSESSION_H
 // logsession.h
-#include "logstorage.h"
+#include "LogStorage.h"
 #include <QDateTime>
 #include <QObject>
 #include <QThread>
