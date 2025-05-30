@@ -349,6 +349,7 @@ void EthHandler::connectAdapter()
         qInfo() << "No suitable adapter found for EtherType 0x"
                 << QString::number(m_customEtherType, 16);
 #endif
+        LOG_INTERNAL(CLASS_NAME, "LogLevel::Error", "ADAPTER ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx");
         freeRes();
         startReconnectTimer();
         return;
@@ -374,7 +375,7 @@ void EthHandler::connectAdapter()
         qDebug() << "Failed to open pcapTx";
 #endif
 
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
+        LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx");
 
         // Free the device list
         freeRes();
@@ -386,7 +387,7 @@ void EthHandler::connectAdapter()
 //        emit adapterUpdatePM(pcapTx);  // Обновить указатель на адаптер для менеджера пакетов
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapTx";
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", "WINPCAP; pcapTx открыт"));
+        LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET", "WINPCAP; pcapTx открыт");
     }
 
     pcap_setbuff(pcapTx, 160*1024*1024);
@@ -408,7 +409,7 @@ void EthHandler::connectAdapter()
 #ifdef QT_DEBUG
         qDebug() << "Failed to open pcapRx";
 #endif
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
+        LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx");
         // Free the device list
         freeRes();
         startReconnectTimer();
@@ -420,7 +421,7 @@ void EthHandler::connectAdapter()
 #ifdef QT_DEBUG
         qDebug() << "Open pcapRx";
 #endif
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP; pcapTx открыт"));
+        LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET","WINPCAP; pcapTx открыт");
     }
 
     pcap_setbuff(pcapRx, 160*1024*1024);
@@ -443,7 +444,7 @@ void EthHandler::connectAdapter()
 #ifdef QT_DEBUG
     qDebug() << "Opened Ethernet adapter: " << ds;
 #endif
-    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP; " + ds));
+    LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "WINPCAP; " + ds);
 
     if (!setupCustomProtocolFilter(pcapRx, m_customEtherType)) {
         freeRes();
@@ -455,7 +456,7 @@ void EthHandler::connectAdapter()
 
     m_lastPacketTime = QDateTime::currentDateTime();
     stopReconnectTimer(); // На всякий случай останавливаем таймер
-	// Запуск отдельного polling-потока
+    // Запуск отдельного polling-потока
     startPollingThread();
 #else
     if (ethSocketID != -1) {
@@ -463,7 +464,7 @@ void EthHandler::connectAdapter()
         m_adapterOpened = true;
         return;
     }
-    
+
     ethSocketID = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (ethSocketID == -1) {
         perror("socket");
@@ -506,7 +507,7 @@ void EthHandler::connectAdapter()
 
     if (setsockopt(ethSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
         perror("SO_BINDTODEVICE");
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", 
+        LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET",
         "ОШИБКА : EthHandler::connectAdapter() - SO_BINDTODEVICE "));
         close(ethSocketID);
         ethSocketID = -1;
@@ -515,7 +516,7 @@ void EthHandler::connectAdapter()
     }
 
     qDebug() << "Starting capture on interface" << ifName << "...\n";
-    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", QString("Подключен Ethernet адаптер: %1").arg(ifName)));
+    LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET", QString("Подключен Ethernet адаптер: %1").arg(ifName)));
 
     // Создание SocketNotifier
     if (m_notifier) {
@@ -567,7 +568,7 @@ bool EthHandler::sendMessage(const QByteArray &data) {
 #ifdef QT_DEBUG
     qDebug("Ошибка при отправке Ethernet-пакета");
 #endif
-    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WIN32; Ошибка при отправке Ethernet-пакета"));
+    LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "WIN32; Ошибка при отправке Ethernet-пакета");
     return false;
 #else
     if (ethSocketID == -1) {
@@ -577,7 +578,7 @@ bool EthHandler::sendMessage(const QByteArray &data) {
 
         // Структура для указания интерфейса и адреса
         struct sockaddr_ll socket_addr;
-        memset(&socket_addr, 0, sizeof(socket_addr));
+        memset(&socket_addr, 0, sizeof(socket_addr);
 
         // Получить индекс интерфейса
         socket_addr.sll_family = AF_PACKET;
@@ -627,7 +628,7 @@ void EthHandler::checkReceived() {
                 m_lastPacketTime = QDateTime::currentDateTime();
 
                 QByteArray msg(reinterpret_cast<const char*>(data), header->len);
-                LOG(ProtocolMessageLog(CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(header->len)));
+                LOG(ProtocolMessageLog,CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(header->len));
                 processIncomingFrame(msg); // Важно: обработка каждого кадра
             }
             else if(res == -1)
@@ -776,7 +777,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "periodWidth =" << TO_HEX_STR(&msgBS_SYNC->periodWidth, 4);
                 qDebug() << "--------------------------------------------";
 #endif
-                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,Protocol::RAW_MAC, msg, Logger::jobj_toString(msgBS_SYNC->to_json())));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgBS_SYNC->to_json()));
             }
         }
         // PPU_POSITION (11.1)
@@ -819,10 +820,10 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);
                 qDebug() << "--------------------------------------------";
 #endif
-                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
 #ifdef QT_DEBUG
                 qDebug() << "PPU";
-#endif 
+#endif
 #ifdef TRACE
                 qDebug() << "--------------------------------------------";
                 qDebug() << "lastCommand =" << AppConfig::instance().getModulePPU_lastCommand(AppConfig::instance().ModulePPU_num_RLMN_1);
@@ -859,7 +860,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                             QByteArray data = QByteArray(reinterpret_cast<const char*>(buf), sizeof(buf));
 #ifdef QT_DEBUG
                             qDebug() << "Sending message to change period of messages on imitator:";
-#endif 
+#endif
 #ifdef TRACE
                             qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
@@ -927,12 +928,12 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         QByteArray data = msg.serializeFull();
 #ifdef QT_DEBUG
                         qDebug() << "Sending message to move the PPU";
-#endif 
+#endif
 #ifdef TRACE
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                         sendMessage(data);
-                        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
+                        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
                     }
                     else if (mode == 4) { mode = 5; }
                     else if (mode == 5) { mode = 3; }
@@ -988,7 +989,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                     sendMessage(data);
-                    LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msgEnable.to_json())));
+                    LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
                 }
             }
         }

@@ -36,11 +36,18 @@ QMAKE_CLEAN += \
 
 # Общие для всех платформ настройки
 SOURCES += \
+    common/logger/LogFactory.cpp \
+    common/logger/LogManager.cpp \
+    common/logger/LogSession.cpp \
+    common/logger/LogStorage.cpp \
+    common/logger/messageLogs/InitLog.cpp \
+    common/logger/messageLogs/InternalMessageLog.cpp \
+    common/logger/messageLogs/LogHeader.cpp \
+    common/logger/messageLogs/ProtocolMessageLog.cpp \
     main.cpp \
     pch.cpp \
     common/CoreManager.cpp \
     common/calculator/calculator.cpp \
-    common/logger/Logger.cpp \
     network/NetworkManager.cpp \
     network/handlers/EthHandler.cpp \
     network/handlers/TcpConnectionHandler.cpp \
@@ -53,7 +60,17 @@ SOURCES += \
 HEADERS += \
     common/CoreManager.h \
     common/calculator/calculator.h \
-    common/logger/Logger.h \
+    common/logger/LogFactory.h \
+    common/logger/LogManager.h \
+    common/logger/LogSession.h \
+    common/logger/LogStorage.h \
+    common/logger/LoggerMacros.h \
+    common/logger/messageLogs/InitLog.h \
+    common/logger/messageLogs/InternalMessageLog.h \
+    common/logger/messageLogs/LogEnums.h \
+    common/logger/messageLogs/LogHeader.h \
+    common/logger/messageLogs/ProtocolMessageLog.h \
+    common/logger/messageLogs/PrtUtils.h \
     network/NetworkManager.h \
     network/handlers/EthHandler.h \
     network/handlers/TcpConnectionHandler.h \

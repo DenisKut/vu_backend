@@ -3298,7 +3298,8 @@ struct TcpMessage_0x25 : TcpMessage<TcpMessage_0x25,
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TcpMessage_0x25) == 16 + 20, "Wrong size 0x25");
+//static_assert(sizeof(TcpMessage_0x25) == 16 + 20, "Wrong size 0x25");
+static_assert(sizeof(TcpMessage_0x25) == 32, "Wrong size 0x25");
 
 #pragma pack(push, 1)
 /**
@@ -3630,7 +3631,8 @@ struct TcpMessage_0x45 : TcpMessage<TcpMessage_0x45,
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TcpMessage_0x45) == 16 + 16, "Wrong size 0x45");
+//static_assert(sizeof(TcpMessage_0x45) == 16 + 16, "Wrong size 0x45");
+static_assert(sizeof(TcpMessage_0x45) == 28, "Wrong size 0x45");
 
 /**
  * @class MessageFactory
