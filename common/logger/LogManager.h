@@ -1,8 +1,8 @@
 #ifndef LOGMANAGER_H
 #define LOGMANAGER_H
-#include "LogSession.h"
 #include <memory>
-#include "QJsonDocument"
+#include <QJsonDocument>
+#include "LogSession.h"
 class LogManager {
 public:
     static LogSession& instance();

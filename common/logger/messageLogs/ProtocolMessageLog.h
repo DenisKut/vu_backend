@@ -1,7 +1,7 @@
 #ifndef PROTOCOLMESSAGELOG_H
 #define PROTOCOLMESSAGELOG_H
-#include "LogHeader.h"
 #include <QDataStream>
+#include "LogHeader.h"
 
 struct ProtocolMessageLog : public LogHeader {
     Protocol protocol;

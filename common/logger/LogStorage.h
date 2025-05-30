@@ -35,7 +35,9 @@ public:
 private:
     QString filename;
     LogFactory& factory;
+
     QDataStream::Version streamVersion = QDataStream::Qt_5_15;
+    QDataStream::ByteOrder streambyteOrder = QDataStream::LittleEndian;
 
     QMutex m_writeMutex;
 };

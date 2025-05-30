@@ -1,4 +1,5 @@
 #include "LogHeader.h"
+
 LogHeader::LogHeader(const QString& source, const LogLevel& logLevel)
     : timestampMicroseconds(TimeProvider::instance().getMks()),
     src(source),
@@ -13,13 +14,24 @@ LogHeader::LogHeader(qint64 timestamp, const QString& source, LogLevel logLevel)
 
 
 void LogHeader::serialize(QDataStream& stream) const {
-    stream << timestampMicroseconds << src << static_cast<quint8>(level);
+
+    stream << timestampMicroseconds << src.toUtf8() << static_cast<quint8>(level);
 }
 
 void LogHeader::deserialize(QDataStream& stream) {
+    //---------------------------------------
+    QByteArray src;
+    //---------------------------------------
+
     quint8 levelVal;
     stream >> timestampMicroseconds >> src >> levelVal;
     level = static_cast<LogLevel>(levelVal);
+
+    //----------------------------------------
+    this->src = QString::fromUtf8(src);
+    //----------------------------------------
+
+
 }
 
 

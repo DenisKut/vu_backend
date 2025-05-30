@@ -39,14 +39,22 @@ ProtocolMessageLog::ProtocolMessageLog(const LogHeader& header,
 // Переопределение виртуальных методов
 void ProtocolMessageLog::serialize(QDataStream& stream) const {
     LogHeader::serialize(stream);
-    stream << static_cast<quint8>(protocol) << rawData << parsedData;
+    stream << static_cast<quint8>(protocol) << rawData << parsedData.toUtf8();
 }
 
 void ProtocolMessageLog::deserialize(QDataStream& stream) {
+    //------------------------
+    QByteArray parsedData;
+    //-----------------------
+
     quint8 proto;
     LogHeader::deserialize(stream);
     stream >> proto >> rawData >> parsedData;
     protocol = static_cast<Protocol>(proto);
+
+    //-----------------
+    this->parsedData = QString::fromUtf8(parsedData);
+    //-------------------
 }
 
 

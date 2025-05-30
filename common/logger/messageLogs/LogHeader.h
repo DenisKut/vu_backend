@@ -2,8 +2,8 @@
 #define LOGHEADER_H
 #include <QString>
 #include <QDataStream>
-#include "LogEnums.h"
 #include <QDebug>
+#include "LogEnums.h"
 
 struct LogHeader {
     qint64 timestampMicroseconds;

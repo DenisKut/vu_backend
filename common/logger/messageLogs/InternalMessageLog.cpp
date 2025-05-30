@@ -1,5 +1,4 @@
 #include "InternalMessageLog.h"
-#include "LogHeader.h"
 InternalMessageLog::InternalMessageLog(const QString& source,
                                        const QString& messageType,
                                        const QString& parsedData)
@@ -29,12 +28,24 @@ InternalMessageLog::InternalMessageLog(const LogHeader& header,
 
 void InternalMessageLog::serialize(QDataStream& stream) const {
     LogHeader::serialize(stream);
-    stream << messageType << parsedData;
+    stream << messageType.toUtf8() << parsedData.toUtf8();
 }
 
 void InternalMessageLog::deserialize(QDataStream& stream) {
     LogHeader::deserialize(stream);
+
+    //-----------
+    QByteArray messageType, parsedData;
+    //-----------
+
     stream >> messageType >> parsedData;
+
+    //--------------
+    this->messageType =  QString::fromUtf8(messageType);
+    this->parsedData = QString::fromUtf8(parsedData);
+    //-------------
+
+
 }
 
 QDataStream& operator<<(QDataStream& stream, const InternalMessageLog& log) {

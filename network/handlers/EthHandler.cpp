@@ -349,7 +349,10 @@ void EthHandler::connectAdapter()
         qInfo() << "No suitable adapter found for EtherType 0x"
                 << QString::number(m_customEtherType, 16);
 #endif
-        LOG_INTERNAL(CLASS_NAME, "LogLevel::Error", "ADAPTER ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx");
+        LOG_INTERNAL(CLASS_NAME, "LogLevel::Error", "ADAPTER ERROR; EthHandler::connectAdapter()");
+        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC,QByteArray("#777#777#777") , "АБОБАБАБАБАБ");
+        LOG_INIT(CLASS_NAME, LogLevel::Error ,StatusInit::NOT_LOADED);
+
         freeRes();
         startReconnectTimer();
         return;
@@ -508,7 +511,7 @@ void EthHandler::connectAdapter()
     if (setsockopt(ethSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
         perror("SO_BINDTODEVICE");
         LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET",
-        "ОШИБКА : EthHandler::connectAdapter() - SO_BINDTODEVICE "));
+        "ОШИБКА : EthHandler::connectAdapter() - SO_BINDTODEVICE ");
         close(ethSocketID);
         ethSocketID = -1;
         startReconnectTimer();
@@ -516,7 +519,7 @@ void EthHandler::connectAdapter()
     }
 
     qDebug() << "Starting capture on interface" << ifName << "...\n";
-    LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET", QString("Подключен Ethernet адаптер: %1").arg(ifName)));
+    LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET", QString("Подключен Ethernet адаптер: %1").arg(ifName));
 
     // Создание SocketNotifier
     if (m_notifier) {
@@ -578,7 +581,7 @@ bool EthHandler::sendMessage(const QByteArray &data) {
 
         // Структура для указания интерфейса и адреса
         struct sockaddr_ll socket_addr;
-        memset(&socket_addr, 0, sizeof(socket_addr);
+        memset(&socket_addr, 0, sizeof(socket_addr));
 
         // Получить индекс интерфейса
         socket_addr.sll_family = AF_PACKET;
