@@ -658,6 +658,7 @@ public:
      * @brief Перечень состояний ППУ
      */
     enum ModulePPU_state {
+        ModulePPU_state_TurnedOff       = 0, ///< ППУ выключено
         ModulePPU_state_TurnedOn        = 1, ///< ППУ включено
         ModulePPU_state_TurnOff         = 2, ///< Выполняется отключение ППУ
         ModulePPU_state_Targeting       = 4, ///< Выполняется отработка ЦУ
@@ -678,6 +679,15 @@ public:
         ModulePPU_isRemote_support      = 2     ///< Выполняется сопровождение
                                                 ///< цели по команде
                                                 ///< «Целеуказание»
+    };
+
+    /**
+     * @enum ModulePPU_controlMode
+     * @brief Список режимов управления ППУ
+     */
+    enum ModulePPU_controlMode {
+        ModulePPU_controlMode_point = 0,
+        ModulePPU_controlMode_speed = 1
     };
 
     /**
@@ -706,6 +716,8 @@ public:
         double      azTargetVel;
         double      anTargetVel;
 
+        uint8_t     controlMode;
+
         /// ===========================
         /// Поля для сообщений о состояниях с ПБУ
         /// ===========================
@@ -727,6 +739,7 @@ public:
             anTarget(0),
             azTargetVel(0),
             anTargetVel(0),
+            controlMode(ModulePPU_controlMode_point),
             isRemote(0)
         {};
     };
@@ -789,6 +802,12 @@ public:
                                ModulePPU_isRemote value) {
         QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->isRemote = to_uint8(value);
+    }
+
+    void setModulePPU_controlMode(ModulePPU_num moduleNum,
+                                  ModulePPU_controlMode value) {
+        QMutexLocker lock(&m_mutex);
+        ModulePPU_mas[moduleNum]->controlMode = value;
     }
 
     /// ЦУ для ППУ
@@ -885,6 +904,12 @@ public:
         QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->anTargetVel;
     }
+
+    uint8_t getModulePPU_controlMode(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->controlMode;
+    }
+
     /// @}
 
 
@@ -896,13 +921,7 @@ private:
     /// @{
     std::string _tcpHostIP;         ///< IP адрес TCP сервера
                                     ///
-    int _tcpHostPort;               ///< Порт TCP сервера
-                                    ///
-    int _udpPort;                   ///< Порт UDP
-                                    ///
     std::string _ethInterfaceName;  ///< Имя сетевого интерфейса
-                                    ///
-    int _ethSocketBuffSize;         ///< Размер буфера MAC сокета
     /// @}
 
     /// @name Версии протоколов

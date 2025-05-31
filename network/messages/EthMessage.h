@@ -29,21 +29,29 @@ enum class ETH_MessageNumbers: uint16_t {
     BS_SYNC             = 0x0502,    ///< 2.5   - сообщение синхронизации БС;
 
     // -----------------------------------------
-    // Сообщения от БС на ВУ [ПРИВОД]
+    // Сообщения от БС на ВУ [ПРИВОД] (квитанции)
     // -----------------------------------------
-    PPU_POSITION_1      = 0x010B,    ///< 11.1  - информация ориентации ППУ 1;
-    PPU_POSITION_2      = 0x0B0B,    ///< 11.11 - информация ориентации ППУ 2;
+    PPU_POSITION_1      = 0x010B,    ///< 11.1  - информация ориентации ППУ1 (таблица 4.4);
+    PPU_ANSWER_1        = 0x030B,    ///< 11.3  - ответ от ППУ1 (таблица 4.5);
+    PPU_POSITION_2      = 0x0B0B,    ///< 11.11 - информация ориентации ППУ2 (таблица 4.4);
+    PPU_ANSWER_2        = 0x0D0B,    ///< 11.13 - ответ от ППУ2 (таблица 4.5);
+
     // -----------------------------------------
-    // Сообщения от ВУ на БС [ПРИВОД]
+    // Сообщения от ВУ на БС [ПРИВОД] (команды)
     // -----------------------------------------
-    PPU_STOP_1          = 0x040B,    ///< 11.4 – команда остановки ППУ1;
-    PPU_STOP_2          = 0x0E0B,    ///< 11.14 – команда остановки ППУ2;
-    PPU_ENABLE_1        = 0x060B,    ///< 11.6 - команда включения ППУ1;
-    PPU_ENABLE_2        = 0x100B,    ///< 11.16 - команда включения ППУ2;
-    PPU_REBOOT_1        = 0x000B,    ///< 11.0 - команда перезагрузки ППУ 1;
-    PPU_REBOOT_2        = 0x0A0B,    ///< 11.10 - команда перезагрузки ППУ 2;
-    PPU_MOVE_1          = 0x080B,    ///< 11.8  - целеуказание для ППУ 1;
-    PPU_MOVE_2          = 0x120B,    ///< 11.18 - указание к передвижению ППУ 2;
+    // Для ППУ1
+    PPU_REBOOT_1        = 0x000B,    ///< 11.0  - команда перезагрузки ППУ1 (нет данных);
+    PPU_SET_MODE_1      = 0x020B,    ///< 11.2  - команда установки режима ППУ1 (таблица 4.1);
+    PPU_STOP_1          = 0x040B,    ///< 11.4  - команда остановки ППУ1 (нет данных);
+    PPU_ENABLE_1        = 0x060B,    ///< 11.6  - команда включения ППУ1 (таблица 4.2);
+    PPU_MOVE_1          = 0x080B,    ///< 11.8  - целеуказание ППУ1 (таблица 4.3);
+
+    // Для ППУ2
+    PPU_REBOOT_2        = 0x0A0B,    ///< 11.10 - команда перезагрузки ППУ2 (нет данных);
+    PPU_SET_MODE_2      = 0x0C0B,    ///< 11.12 - команда установки режима ППУ2 (таблица 4.1);
+    PPU_STOP_2          = 0x0E0B,    ///< 11.14 - команда остановки ППУ2 (нет данных);
+    PPU_ENABLE_2        = 0x100B,    ///< 11.16 - команда включения ППУ2 (таблица 4.2);
+    PPU_MOVE_2          = 0x120B,    ///< 11.18 - целеуказание ППУ2 (таблица 4.3);
 
     // -----------------------------------------
     // Сообщения от БС на ВУ [МЦФОС]
@@ -209,15 +217,13 @@ struct EthMessage : EthHeader {
         json["messageType"] = static_cast<qint64>(MESSAGE_TYPE);
         return json;
     }
-
-
 };
 
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_BS_SYNC
  * @brief Сообщение синхронизации БС (2.5)
  */
-#pragma pack(push, 1)
 struct EthMessage_BS_SYNC : EthMessage<EthMessage_BS_SYNC, ETH_MessageNumbers::BS_SYNC> {
     // Метки времени:
     uint8_t     timeReceive[5];     ///< Время приёма
@@ -245,11 +251,11 @@ struct EthMessage_BS_SYNC : EthMessage<EthMessage_BS_SYNC, ETH_MessageNumbers::B
 
 static_assert(sizeof(EthMessage_BS_SYNC) == 26 + 29, "Invalid size [EthMessage_BS_SYNC]");
 
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_PPU_POSITION_1
  * @brief Информация ориентации ППУ №1 (11.1)
  */
-#pragma pack(push, 1)
 struct EthMessage_PPU_POSITION_1 : EthMessage<EthMessage_PPU_POSITION_1, ETH_MessageNumbers::PPU_POSITION_1> {
     // Метки времени:
     uint8_t     timeReceive[5];     ///< Время приёма
@@ -286,6 +292,42 @@ struct EthMessage_PPU_POSITION_1 : EthMessage<EthMessage_PPU_POSITION_1, ETH_Mes
 #pragma pack(pop)
 
 static_assert(sizeof(EthMessage_PPU_POSITION_1) == 24 + 29, "Invalid size [EthMessage_PPU_POSITION_1]");
+
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_ANSWER_1
+ * @brief Ответ от ППУ №1 (11.3)
+ * Символьная строка ответа ППУ, переменной длины
+ */
+struct EthMessage_PPU_ANSWER_1 : EthMessage<EthMessage_PPU_ANSWER_1, ETH_MessageNumbers::PPU_ANSWER_1> {
+    // Метки времени:
+    uint8_t     timeReceive[5];     ///< Время приёма
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    QByteArray answerString; ///< Символьная строка ответа ППУ переменной длины
+
+    QByteArray serializeFull() const {
+        QByteArray data = EthHeader::serialize();
+        data.append(answerString);
+        return data;
+    }
+
+    static EthMessage_PPU_ANSWER_1 deserialize(const QByteArray& data) {
+        EthMessage_PPU_ANSWER_1 msg;
+        if (data.size() >= static_cast<int>(sizeof(EthHeader))) {
+            memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
+            msg.answerString = data.mid(sizeof(EthHeader), data.size() - sizeof(EthHeader));
+        }
+        return msg;
+    }
+
+    bool isValid() const {
+        return !answerString.isEmpty();
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(EthMessage_PPU_ANSWER_1) == 18 + 29, "Invalid size [EthMessage_PPU_ANSWER_1]");
 
 /**
  * @struct EthMessage_PPU_POSITION_2
@@ -329,11 +371,47 @@ struct EthMessage_PPU_POSITION_2 : EthMessage<EthMessage_PPU_POSITION_2, ETH_Mes
 
 static_assert(sizeof(EthMessage_PPU_POSITION_2) == 24 + 29, "Invalid size [EthMessage_PPU_POSITION_2]");
 
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_ANSWER_2
+ * @brief Ответ от ППУ №2 (11.13)
+ * Символьная строка ответа ППУ, переменной длины
+ */
+struct EthMessage_PPU_ANSWER_2 : EthMessage<EthMessage_PPU_ANSWER_2, ETH_MessageNumbers::PPU_ANSWER_2> {
+    // Метки времени:
+    uint8_t     timeReceive[5];     ///< Время приёма
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    QByteArray answerString; ///< Символьная строка ответа ППУ переменной длины
+
+    QByteArray serializeFull() const {
+        QByteArray data = EthHeader::serialize();
+        data.append(answerString);
+        return data;
+    }
+
+    static EthMessage_PPU_ANSWER_2 deserialize(const QByteArray& data) {
+        EthMessage_PPU_ANSWER_2 msg;
+        if (data.size() >= static_cast<int>(sizeof(EthHeader))) {
+            memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
+            msg.answerString = data.mid(sizeof(EthHeader), data.size() - sizeof(EthHeader));
+        }
+        return msg;
+    }
+
+    bool isValid() const {
+        return !answerString.isEmpty();
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(EthMessage_PPU_ANSWER_2) == 18 + 29, "Invalid size [EthMessage_PPU_ANSWER_2]");
+
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_PPU_STOP_1
  * @brief Команда остановки ППУ №1 (11.4)
  */
-#pragma pack(push, 1)
 struct EthMessage_PPU_STOP_1 : EthMessage<EthMessage_PPU_STOP_1, ETH_MessageNumbers::PPU_STOP_1> {
     // Метки времени:
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
@@ -919,6 +997,12 @@ public:
         }
         case ETH_MessageNumbers::PPU_POSITION_2: {
             return parseMessage<EthMessage_PPU_POSITION_2>(data);
+        }
+        case ETH_MessageNumbers::PPU_ANSWER_1: {
+            return parseMessage<EthMessage_PPU_ANSWER_1>(data);
+        }
+        case ETH_MessageNumbers::PPU_ANSWER_2: {
+            return parseMessage<EthMessage_PPU_ANSWER_2>(data);
         }
         // Обработка других типов...
         default: return nullptr;

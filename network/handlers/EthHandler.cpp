@@ -728,16 +728,16 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 }
                 timeTemp &= 0x000000FFFFFFFFFF;
                 TimeProvider::instance().setBsTimePPU(timeTemp);
-                AppConfig::instance().setModulePPU_lastCommand(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->lastCommand);
-                AppConfig::instance().setModulePPU_state(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->state);
-                AppConfig::instance().setModulePPU_ispr(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->ispr);
-                AppConfig::instance().setModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->az);
-                AppConfig::instance().setModulePPU_azDelay(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->azDelay);
-                AppConfig::instance().setModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->an);
-                AppConfig::instance().setModulePPU_anDelay(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->anDelay);
-                AppConfig::instance().setModulePPU_borders(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->borders);
-                AppConfig::instance().setModulePPU_waitCommands(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->waitCommands);
-                AppConfig::instance().setModulePPU_waitTarget(AppConfig::instance().ModulePPU_num_RLMN_1, msgPPU_POSITION->waitTarget);
+                AppConfig::instance().setModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->lastCommand);
+                AppConfig::instance().setModulePPU_state(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->state);
+                AppConfig::instance().setModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->ispr);
+                AppConfig::instance().setModulePPU_az(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->az);
+                AppConfig::instance().setModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->azDelay);
+                AppConfig::instance().setModulePPU_an(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->an);
+                AppConfig::instance().setModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->anDelay);
+                AppConfig::instance().setModulePPU_borders(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->borders);
+                AppConfig::instance().setModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->waitCommands);
+                AppConfig::instance().setModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->waitTarget);
 #ifdef QT_DEBUG
                 qDebug() << "11.1 RECEIVED";
 #endif
@@ -763,23 +763,23 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
 #endif 
 #ifdef TRACE
                 qDebug() << "--------------------------------------------";
-                qDebug() << "lastCommand =" << AppConfig::instance().getModulePPU_lastCommand(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "state =" << AppConfig::instance().getModulePPU_state(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "ispr =" << AppConfig::instance().getModulePPU_ispr(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "az =" << AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "azDelay =" << AppConfig::instance().getModulePPU_azDelay(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "an =" << AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "anDelay =" << AppConfig::instance().getModulePPU_anDelay(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "borders =" << AppConfig::instance().getModulePPU_borders(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "waitCommands =" << AppConfig::instance().getModulePPU_waitCommands(AppConfig::instance().ModulePPU_num_RLMN_1);
-                qDebug() << "waitTarget =" << AppConfig::instance().getModulePPU_waitTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
+                qDebug() << "lastCommand =" << AppConfig::instance().getModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "state =" << AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "ispr =" << AppConfig::instance().getModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "az =" << AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "azDelay =" << AppConfig::instance().getModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "an =" << AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "anDelay =" << AppConfig::instance().getModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "borders =" << AppConfig::instance().getModulePPU_borders(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "waitCommands =" << AppConfig::instance().getModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_1);
+                qDebug() << "waitTarget =" << AppConfig::instance().getModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_1);
                 qDebug() << "--------------------------------------------";
                 qDebug() << "getBsPeriodNumber =" << TimeProvider::instance().getBsPeriodNumber();
                 qDebug() << "getBsPeriodTime =" << TimeProvider::instance().getBsPeriodTime();
                 qDebug() << "getBsPeriodWidth =" << TimeProvider::instance().getBsPeriodWidth();
 #endif
-                uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::instance().ModulePPU_num_RLMN_1);
-                if (state & AppConfig::instance().ModulePPU_state_TurnedOn)
+                uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_1);
+                if (state & AppConfig::ModulePPU_state_TurnedOn)
                 {
 #ifdef QT_DEBUG
                     qDebug() << "PPU 1 is turned On" << Qt::endl;
@@ -812,15 +812,15 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         mode = 4;
 //                        double dt = 0.0000001*static_cast<double>(TimeProvider::instance().getBsPeriodWidth());
                         // double dt = 0.1;
-                        // double az = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
-                        // double an = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
+                        // double az = AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_1);
+                        // double an = AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_1);
                         // static double azLast = 0, azAccLast = 0, anLast = 0, anAccLast = 0;
                         // double aMax = 30.0, KP = 3.0, KD = 6.0;
                         // dt *= 3.0;
                         double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_1);
                         double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_1);
-                        // double azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-                        // double anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
+                        // double azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::ModulePPU_num_RLMN_1);
+                        // double anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::ModulePPU_num_RLMN_1);
 //                        calculateCoefficientsPPU(azTarget, azTargetVel, az, &azLast, &azAccLast, aMax, KP, KD, dt, &azC0, &azC1, &azC2);
 //                        calculateCoefficientsPPU(anTarget, anTargetVel, an, &anLast, &anAccLast, aMax, KP, KD, dt, &anC0, &anC1, &anC2);
 //                        azC2 *= 2.0; anC2 *= 2.0;
@@ -885,15 +885,15 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     // Отправка отладочных данных на форму для отображения:
                     /*
                     RmoMessage_TargetPPU msgRmo;
-                    msgRmo.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msgRmo.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
+                    msgRmo.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_1);
+                    msgRmo.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_1);
                     msgRmo.azC0 = azC0; msgRmo.azC1 = azC1; msgRmo.azC2 = azC2;
                     msgRmo.anC0 = anC0; msgRmo.anC1 = anC1; msgRmo.anC2 = anC2;
-                    msgRmo.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msgRmo.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msgRmo.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msgRmo.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::instance().ModulePPU_num_RLMN_1);
-                    msgRmo.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::instance().ModulePPU_num_RLMN_1));
+                    msgRmo.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_1);
+                    msgRmo.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_1);
+                    msgRmo.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::ModulePPU_num_RLMN_1);
+                    msgRmo.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::ModulePPU_num_RLMN_1);
+                    msgRmo.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::ModulePPU_num_RLMN_1));
                     msgRmo.counter = rmoCounter++;
                     */
                     //auto msgRmo = QSharedPointer::create<RmoMessage_TargetPPU>();
@@ -914,7 +914,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     qDebug() << "PPU 1 is turned Off" << Qt::endl;
 #endif
                     auto msgEnable = EthMessageFactory::create<EthMessage_PPU_ENABLE_1>();
-                    msgEnable.state = 1; // Включить ППУ
+                    msgEnable.state = AppConfig::ModulePPU_state_TurnedOn; // Включить ППУ
                     QByteArray data = msgEnable.serializeFull();
 #ifdef QT_DEBUG
                     qDebug() << "Sending message to turn on the PPU";
@@ -938,16 +938,16 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 }
                 timeTemp &= 0x000000FFFFFFFFFF;
                 TimeProvider::instance().setBsTimePPU(timeTemp);
-                AppConfig::instance().setModulePPU_lastCommand(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->lastCommand);
-                AppConfig::instance().setModulePPU_state(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->state);
-                AppConfig::instance().setModulePPU_ispr(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->ispr);
-                AppConfig::instance().setModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->az);
-                AppConfig::instance().setModulePPU_azDelay(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->azDelay);
-                AppConfig::instance().setModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->an);
-                AppConfig::instance().setModulePPU_anDelay(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->anDelay);
-                AppConfig::instance().setModulePPU_borders(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->borders);
-                AppConfig::instance().setModulePPU_waitCommands(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->waitCommands);
-                AppConfig::instance().setModulePPU_waitTarget(AppConfig::instance().ModulePPU_num_RLMN_2, msgPPU_POSITION->waitTarget);
+                AppConfig::instance().setModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->lastCommand);
+                AppConfig::instance().setModulePPU_state(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->state);
+                AppConfig::instance().setModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->ispr);
+                AppConfig::instance().setModulePPU_az(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->az);
+                AppConfig::instance().setModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->azDelay);
+                AppConfig::instance().setModulePPU_an(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->an);
+                AppConfig::instance().setModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->anDelay);
+                AppConfig::instance().setModulePPU_borders(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->borders);
+                AppConfig::instance().setModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->waitCommands);
+                AppConfig::instance().setModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->waitTarget);
 #ifdef QT_DEBUG
                 qDebug() << "11.11 RECEIVED";
 #endif
@@ -973,23 +973,23 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
 #endif
 #ifdef TRACE
                 qDebug() << "--------------------------------------------";
-                qDebug() << "lastCommand =" << AppConfig::instance().getModulePPU_lastCommand(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "state =" << AppConfig::instance().getModulePPU_state(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "ispr =" << AppConfig::instance().getModulePPU_ispr(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "az =" << AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "azDelay =" << AppConfig::instance().getModulePPU_azDelay(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "an =" << AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "anDelay =" << AppConfig::instance().getModulePPU_anDelay(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "borders =" << AppConfig::instance().getModulePPU_borders(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "waitCommands =" << AppConfig::instance().getModulePPU_waitCommands(AppConfig::instance().ModulePPU_num_RLMN_2);
-                qDebug() << "waitTarget =" << AppConfig::instance().getModulePPU_waitTarget(AppConfig::instance().ModulePPU_num_RLMN_2);
+                qDebug() << "lastCommand =" << AppConfig::instance().getModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "state =" << AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "ispr =" << AppConfig::instance().getModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "az =" << AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "azDelay =" << AppConfig::instance().getModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "an =" << AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "anDelay =" << AppConfig::instance().getModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "borders =" << AppConfig::instance().getModulePPU_borders(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "waitCommands =" << AppConfig::instance().getModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "waitTarget =" << AppConfig::instance().getModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_2);
                 qDebug() << "--------------------------------------------";
                 qDebug() << "getBsPeriodNumber =" << TimeProvider::instance().getBsPeriodNumber();
                 qDebug() << "getBsPeriodTime =" << TimeProvider::instance().getBsPeriodTime();
                 qDebug() << "getBsPeriodWidth =" << TimeProvider::instance().getBsPeriodWidth();
 #endif
-                uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::instance().ModulePPU_num_RLMN_2);
-                if (state & AppConfig::instance().ModulePPU_state_TurnedOn)
+                uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_2);
+                if (state & AppConfig::ModulePPU_state_TurnedOn)
                 {
 #ifdef QT_DEBUG
                     qDebug() << "PPU 2 is turned On" << Qt::endl;
@@ -1020,8 +1020,8 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     else if (mode == 2) { mode = 3; }
                     else if (mode == 3) {
                         mode = 4;
-                        double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_2);
-                        double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::instance().ModulePPU_num_RLMN_2);
+                        double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_2);
+                        double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_2);
                         //------------------------------------------------------
                         azC0 = azTarget;
                         anC0 = anTarget;
@@ -1095,7 +1095,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     qDebug() << "PPU 2 is turned Off" << Qt::endl;
 #endif
                     auto msgEnable = EthMessageFactory::create<EthMessage_PPU_ENABLE_2>();
-                    msgEnable.state = 1; // Включить ППУ
+                    msgEnable.state = AppConfig::ModulePPU_state_TurnedOn; // Включить ППУ
                     QByteArray data = msgEnable.serializeFull();
 #ifdef QT_DEBUG
                     qDebug() << "Sending message to turn on the PPU 2";
