@@ -39,6 +39,8 @@ public:
     Q_INVOKABLE void sendRmoMessageJSON(QWebSocket* ws, QSharedPointer<RmoBaseMessage> msg);
     Q_INVOKABLE void sendRmoMessageToAllJSON(QSharedPointer<RmoBaseMessage> msg);
 
+    void setEthSendCallback(std::function<void(const QByteArray&)> cb);
+
 signals:
     /**
      * @brief Сигнал о приёме TCP-сообщения
@@ -98,6 +100,8 @@ private:
 
     template<typename F>
     void processBuffer(QByteArray& buffer, F processFunc);
+
+    std::function<void(const QByteArray&)> m_ethSendCallback;
 };
 
 #endif // TCPHANDLER_H

@@ -10,12 +10,26 @@ NetworkManager::NetworkManager(QObject* parent)
       m_udpThread(new QThread(this)),
       m_ethThread(new QThread(this)) {
 
+    // Установка приоритетов потоков
+    m_ethThread->setPriority(QThread::TimeCriticalPriority);
+    m_udpThread->setPriority(QThread::HighPriority);
+    m_tcpThread->setPriority(QThread::NormalPriority);
+
     qRegisterMetaType<RmoMessage_TargetPPU>("RmoMessage_TargetPPU");
 
     // Перемещение обработчиков в потоки
     m_tcpHandler->moveToThread(m_tcpThread);
     m_udpHandler->moveToThread(m_udpThread);
     m_ethHandler->moveToThread(m_ethThread);
+
+    // Установка колбэка для отправки в EthHandler
+    m_tcpHandler->setEthSendCallback([this](const QByteArray& data) {
+        this->sendEth(data);
+    });
+    // Установка колбэка для передачи сообщений из EthHandler в TcpHandler
+    m_ethHandler->setTcpSendCallback([this](QSharedPointer<RmoBaseMessage> msg) {
+        this->sendTcpRmo(msg);
+    });
 
     // Подключение сигналов и слотов для потоков
     connect(m_tcpThread, &QThread::started, m_tcpHandler,
@@ -33,15 +47,6 @@ NetworkManager::NetworkManager(QObject* parent)
     connect(m_ethHandler, &EthHandler::messageReceived, this,
                                     &NetworkManager::onEthReceived,
                                     Qt::QueuedConnection);
-    // Подключение EthHandler::rmoTargetPpuReady к TcpHandler::sendRmoMessageToAll через лямбду
-    /*
-    connect(m_ethHandler, &EthHandler::rmoTargetPpuReady,
-            this, [this](const RmoMessage_TargetPPU& msg) {
-                m_tcpHandler->sendRmoMessageToAll(msg);
-            }, Qt::QueuedConnection);
-    */
-    connect(m_ethHandler, &EthHandler::rmoTargetPpuReady,
-            m_tcpHandler, &TcpHandler::sendRmoMessageToAll,Qt::QueuedConnection);
 
 #ifdef _WIN32
     // connect(&m_ethTimer, &QTimer::timeout, m_ethHandler,

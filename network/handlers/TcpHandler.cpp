@@ -69,7 +69,7 @@ void TcpHandler::initialize()
                                                 &TcpHandler::onDisconnected);
     connect(m_socket, &QTcpSocket::readyRead, this,
                                                 &TcpHandler::onReadyRead);
-    #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     // Для Qt 5.15 и новее используем новый сигнал errorOccurred
     connect(m_socket, &QAbstractSocket::errorOccurred,
             this, &TcpHandler::onError);
@@ -312,10 +312,6 @@ void TcpHandler::sendRmoMessage(int idx, QSharedPointer<RmoBaseMessage> msg) {
 }
 
 void TcpHandler::sendRmoMessageToAll(QSharedPointer<RmoBaseMessage> msg) {
-    /*
-    qInfo() << "sendRmoMessageToAllsendRmoMessageToAllsendRmoMessageToAllsendRmoMessageToAll";
-    msg->info();
-    */
     for (auto* handler : m_rmoConnections) {
         handler->sendData(msg->toByteArray());
     }
@@ -712,6 +708,10 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
             }
         }
         // else if (type == ...) // другие типы сообщений
+        // Отправка в EthHandler через лямбду-колбэк
+        if (m_ethSendCallback) {
+            m_ethSendCallback(msg->toByteArray());
+        }
     }
 }
 
@@ -769,4 +769,8 @@ void TcpHandler::sendRmoMessageToAllJSON(QSharedPointer<RmoBaseMessage> msg) {
             ws->sendTextMessage(msg_string);
         }
     }
+}
+
+void TcpHandler::setEthSendCallback(std::function<void(const QByteArray&)> cb) {
+    m_ethSendCallback = std::move(cb);
 }

@@ -86,6 +86,8 @@ public:
                                   double KP, double KD, double dt,
                                   double* C0, double* C1, double* C2);
 
+    void setTcpSendCallback(std::function<void(QSharedPointer<RmoBaseMessage>)> cb);
+
 public slots:
     void start();
     void checkReceived();
@@ -95,10 +97,6 @@ signals:
      * @brief Сигнал о приёме Ethernet-фрейма
      */
     void messageReceived(const QByteArray& msg);
-    /**
-     * @brief Сигнал о готовности сообщения RMO TargetPPU
-     */
-    void rmoTargetPpuReady(QSharedPointer<RmoBaseMessage> msg);
 #ifdef _WIN32
     void ethTimerReceiveRestart();
 #endif
@@ -136,6 +134,7 @@ private:
 
     bool attachBpfFilter(int sockfd, uint16_t etherType);
 #endif
+    std::function<void(QSharedPointer<RmoBaseMessage>)> m_tcpSendCallback;
 };
 
 #endif // ETHHANDLER_H

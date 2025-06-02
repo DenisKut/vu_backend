@@ -301,15 +301,9 @@ void EthHandler::connectAdapter()
 
     // Подключить передатчик к выбранному адаптеру:
     //------------------------------------------------------------------
-    if ( (pcapTx = pcap_open(d->name,   // name of the device
-        2048,                           // portion of the packet to capture.
-        PCAP_OPENFLAG_PROMISCUOUS |
+    if ( (pcapTx = pcap_open(d->name,        2048,        PCAP_OPENFLAG_PROMISCUOUS |
         PCAP_OPENFLAG_MAX_RESPONSIVENESS |
-        PCAP_OPENFLAG_NOCAPTURE_LOCAL,  // promiscuous mode
-       10,                              // read timeout
-       nullptr,                         // authentication on the remote machine
-       errbuf                           // error buffer
-    ) ) == nullptr)
+        PCAP_OPENFLAG_NOCAPTURE_LOCAL,       10,       nullptr,       errbuf    ) ) == nullptr)
     {
 #ifdef QT_DEBUG
         qDebug() << "Failed to open pcapTx";
@@ -332,19 +326,14 @@ void EthHandler::connectAdapter()
 
     pcap_setbuff(pcapTx, 160*1024*1024);
     pcap_setnonblock(pcapTx, 0, errbuf);
+    pcap_setmintocopy(pcapTx, 1); // Minimize latency for TX
     //------------------------------------------------------------------
 
     // Подключить приёмник к выбранному адаптеру:
     //------------------------------------------------------------------
-    if ( (pcapRx = pcap_open(d->name,     // name of the device
-                               65536,     // portion of the packet to capture.
-                                            // 65536 guarantees that the whole packet will be captured on all the link layers
-                               PCAP_OPENFLAG_PROMISCUOUS| PCAP_OPENFLAG_MAX_RESPONSIVENESS|PCAP_OPENFLAG_NOCAPTURE_LOCAL,    // promiscuous mode
-//                               PCAP_OPENFLAG_PROMISCUOUS,    // promiscuous mode
-                               10,          // read timeout
-                               nullptr,     // authentication on the remote machine
-                               errbuf       // error buffer
-                               ) ) == nullptr)
+    if ( (pcapRx = pcap_open(d->name,        2048,        PCAP_OPENFLAG_PROMISCUOUS |
+        PCAP_OPENFLAG_MAX_RESPONSIVENESS |
+        PCAP_OPENFLAG_NOCAPTURE_LOCAL,       10,       nullptr,       errbuf    ) ) == nullptr)
     {
 #ifdef QT_DEBUG
         qDebug() << "Failed to open pcapRx";
@@ -366,6 +355,7 @@ void EthHandler::connectAdapter()
 
     pcap_setbuff(pcapRx, 160*1024*1024);
     pcap_setnonblock(pcapRx, 1, errbuf); // 1 - неблокирующий режим
+    pcap_setmintocopy(pcapRx, 1); // Minimize latency for RX
     //------------------------------------------------------------------
 
     // Кладём имя адаптера в список подключенных адаптеров:
@@ -906,7 +896,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     msgFill->set_anC(anC0, anC1, anC2);
                     msgFill->counter = AppConfig::instance().increaseRmoCounter();
 
-                    Q_EMIT rmoTargetPpuReady(msgFill);
+                    if (m_tcpSendCallback) m_tcpSendCallback(msgFill);
                 }
                 else
                 {
@@ -1087,7 +1077,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     msgFill->set_anC(anC0, anC1, anC2);
                     msgFill->counter = AppConfig::instance().increaseRmoCounter();
 
-                    Q_EMIT rmoTargetPpuReady(msgFill);
+                    if (m_tcpSendCallback) m_tcpSendCallback(msgFill);
                 }
                 else
                 {
@@ -1177,3 +1167,6 @@ void EthHandler::calculateCoefficientsPPU(double angleTarget,
     *C2 = 0.5 * a1;     // Ускорение, деленное на 2
 }
 //----------------------------------------------------------
+void EthHandler::setTcpSendCallback(std::function<void(QSharedPointer<RmoBaseMessage>)> cb) {
+    m_tcpSendCallback = std::move(cb);
+}
