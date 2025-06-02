@@ -43,3 +43,10 @@ std::vector<std::unique_ptr<LogHeader>> LogStorage::readAll() {
 
     return logs;
 }
+
+ const QString& LogStorage::getFileName() const { return filename; }
+
+ void LogStorage::setFileName(const QString& newFilename) {
+     QMutexLocker locker(&m_writeMutex);
+     filename = newFilename;
+ }

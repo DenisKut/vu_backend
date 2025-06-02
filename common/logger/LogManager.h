@@ -6,10 +6,15 @@
 class LogManager {
 public:
     static LogSession& instance();
-    static QString jobj_toString(const QJsonObject& obj){
-        // Compact | Indented
-        return QJsonDocument(obj).toJson(QJsonDocument::Indented);
-    }
+
+
+    static void setFileName(const QString& newFilename);
+
+    static QString generateFileName();
+
+    static void setGeneratedFileName();
+
+    static QString jobj_toString(const QJsonObject& obj);
 private:
     static std::unique_ptr<LogSession> createInstance();
 

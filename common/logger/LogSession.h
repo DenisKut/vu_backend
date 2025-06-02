@@ -29,7 +29,9 @@ public:
         log(new T(std::forward<Args>(args)...));
     }
 
-    const QString& getSessionFileName() const { return storage.getFilename(); }
+    const QString& getSessionFileName() const { return storage.getFileName(); }
+
+
 
     LogStorage& getStorage() { return storage; }
     LogFactory& getFactory() { return factory; }
@@ -41,6 +43,8 @@ signals:
 
 public slots:
     void handleLogRequest(LogHeader* log);
+
+    void setFileName(const QString& newFilename);
 
 private:
     QString generateFileName() const;

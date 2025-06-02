@@ -30,7 +30,9 @@ public:
 
     std::vector<std::unique_ptr<LogHeader>> readAll();
 
-    const QString& getFilename() const { return filename; }
+    const QString& getFileName() const;
+
+    void setFileName(const QString& newFilename);
 
 private:
     QString filename;

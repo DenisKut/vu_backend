@@ -79,6 +79,10 @@ void LogSession::handleLogRequest(LogHeader* log) {
     HandleCount++;
 }
 
+void LogSession::setFileName(const QString& newFilename) {
+    storage.setFileName(newFilename);
+}
+
 QString LogSession::generateFileName() const {
     return QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + "_log.bin";
 }
