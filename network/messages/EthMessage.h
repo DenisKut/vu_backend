@@ -40,14 +40,14 @@ enum class ETH_MessageNumbers: uint16_t {
     // Сообщения от ВУ на БС [ПРИВОД] (команды)
     // -----------------------------------------
     // Для ППУ1
-    PPU_REBOOT_1        = 0x000B,    ///< 11.0  - команда перезагрузки ППУ1 (нет данных);
+    PPU_RESET_1         = 0x000B,    ///< 11.0  - команда перезагрузки ППУ1 (нет данных);
     PPU_SET_MODE_1      = 0x020B,    ///< 11.2  - команда установки режима ППУ1 (таблица 4.1);
     PPU_STOP_1          = 0x040B,    ///< 11.4  - команда остановки ППУ1 (нет данных);
     PPU_ENABLE_1        = 0x060B,    ///< 11.6  - команда включения ППУ1 (таблица 4.2);
     PPU_MOVE_1          = 0x080B,    ///< 11.8  - целеуказание ППУ1 (таблица 4.3);
 
     // Для ППУ2
-    PPU_REBOOT_2        = 0x0A0B,    ///< 11.10 - команда перезагрузки ППУ2 (нет данных);
+    PPU_RESET_2         = 0x0A0B,    ///< 11.10 - команда перезагрузки ППУ2 (нет данных);
     PPU_SET_MODE_2      = 0x0C0B,    ///< 11.12 - команда установки режима ППУ2 (таблица 4.1);
     PPU_STOP_2          = 0x0E0B,    ///< 11.14 - команда остановки ППУ2 (нет данных);
     PPU_ENABLE_2        = 0x100B,    ///< 11.16 - команда включения ППУ2 (таблица 4.2);
@@ -469,6 +469,64 @@ struct EthMessage_PPU_STOP_2 : EthMessage<EthMessage_PPU_STOP_2, ETH_MessageNumb
 
 static_assert(sizeof(EthMessage_PPU_STOP_2) == 5 + 29, "Invalid size [EthMessage_PPU_STOP_2]");
 
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_RESET_1
+ * @brief Команда перезагрузки ППУ №1 (11.0)
+ */
+struct EthMessage_PPU_RESET_1 : EthMessage<EthMessage_PPU_RESET_1, ETH_MessageNumbers::PPU_RESET_1> {
+    // Метки времени:
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    // Поле данных отсутствует
+
+    EthMessage_PPU_RESET_1() {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
+        //        timeBeginTrans[0] = time & 0xFF;
+        //        timeBeginTrans[1] = (time >> 8) & 0xFF;
+        //        timeBeginTrans[2] = (time >> 16) & 0xFF;
+        //        timeBeginTrans[3] = (time >> 24) & 0xFF;
+        //        timeBeginTrans[4] = (time >> 32) & 0xFF;
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeBeginTrans"] =QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        return json;
+    }
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_RESET_2
+ * @brief Команда перезагрузки ППУ №2 (11.10)
+ */
+struct EthMessage_PPU_RESET_2 : EthMessage<EthMessage_PPU_RESET_2, ETH_MessageNumbers::PPU_RESET_2> {
+    // Метки времени:
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    // Поле данных отсутствует
+
+    EthMessage_PPU_RESET_2() {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
+        //        timeBeginTrans[0] = time & 0xFF;
+        //        timeBeginTrans[1] = (time >> 8) & 0xFF;
+        //        timeBeginTrans[2] = (time >> 16) & 0xFF;
+        //        timeBeginTrans[3] = (time >> 24) & 0xFF;
+        //        timeBeginTrans[4] = (time >> 32) & 0xFF;
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeBeginTrans"] =QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        return json;
+    }
+};
+#pragma pack(pop)
+
 /**
  * @struct EthMessage_PPU_ENABLE_1
  * @brief Команда включения ППУ №1 (11.6)
@@ -490,6 +548,12 @@ struct EthMessage_PPU_ENABLE_1 : EthMessage<EthMessage_PPU_ENABLE_1, ETH_Message
 //        timeBeginTrans[2] = (time >> 16) & 0xFF;
 //        timeBeginTrans[3] = (time >> 24) & 0xFF;
 //        timeBeginTrans[4] = (time >> 32) & 0xFF;
+    }
+
+    EthMessage_PPU_ENABLE_1(int state) {
+        this->state = state;
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
     }
 
     QJsonObject to_json() const {
@@ -525,6 +589,13 @@ struct EthMessage_PPU_ENABLE_2 : EthMessage<EthMessage_PPU_ENABLE_2, ETH_Message
         //        timeBeginTrans[3] = (time >> 24) & 0xFF;
         //        timeBeginTrans[4] = (time >> 32) & 0xFF;
     }
+
+    EthMessage_PPU_ENABLE_2(int state) {
+        this->state = (uint8_t)state;
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
+    }
+
 
     QJsonObject to_json() const {
         QJsonObject json = EthMessage::to_json();
@@ -969,6 +1040,19 @@ public:
     template<typename T>
     static typename std::enable_if<std::is_base_of<EthHeader, T>::value, T>::type create() {
         return T();
+    }
+
+    /**
+     * @brief Создание сообщения с произвольными параметрами
+     * @tparam T Тип сообщения (должен наследовать от TcpHeader)
+     * @tparam... Args Произвольные аргументы для конструкторов сообщений,
+     * которым необходимы параметры
+     * @return Экземпляр сообщения
+     */
+    template<typename T, typename... Args>
+    static typename std::enable_if<std::is_base_of<EthHeader, T>::value, T>::
+        type create(Args&&... args) {
+        return T(std::forward<Args>(args)...);
     }
 
     /**

@@ -1,4 +1,5 @@
 #include "TcpHandler.h"
+#include "network/messages/EthMessage.h"
 #include <QHostAddress>
 #include <QDebug>
 
@@ -674,52 +675,105 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
     // Передаём ВСЮ data (включая type) в фабрику
     auto msg = RmoMessageFactory::instance().fromByteArray(type, data);
     if (msg) {
-        if (type == static_cast<int32_t>(RmoMsgType::TARGET_PPU)) {
-            auto typedMsg = dynamic_cast<RmoMessage_TargetPPU*>(msg.get());
-            if (typedMsg) {
-                qInfo() << "Recieved RMO msg for PPU: " << typedMsg->numPPU;
-                qDebug() << "typedMsg->azPPU =" << typedMsg->azPPU;
-                qDebug() << "typedMsg->anPPU =" << typedMsg->anPPU;
-                qDebug() << "typedMsg->azC0 =" << typedMsg->azC0;
-                qDebug() << "typedMsg->azC1 =" << typedMsg->azC1;
-                qDebug() << "typedMsg->azC2 =" << typedMsg->azC2;
-                qDebug() << "typedMsg->anC0 =" << typedMsg->anC0;
-                qDebug() << "typedMsg->anC1 =" << typedMsg->anC1;
-                qDebug() << "typedMsg->anC2 =" << typedMsg->anC2;
-                qDebug() << "typedMsg->azTarget =" << typedMsg->azTarget;
-                qDebug() << "typedMsg->anTarget =" << typedMsg->anTarget;
-                qDebug() << "typedMsg->azTargetVel =" << typedMsg->azTargetVel;
-                qDebug() << "typedMsg->anTargetVel =" << typedMsg->anTargetVel;
-                // Используйте поля typedMsg->azPPU, ...
-                if(typedMsg->numPPU == 0) {
-                    AppConfig::instance().setModulePPU_CU(
-                        AppConfig::instance().ModulePPU_num_RLMN_1,
-                        typedMsg->azTarget, typedMsg->anTarget,
-                        typedMsg->azTargetVel, typedMsg->anTargetVel,
-                        typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
-                        typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
-                    );
+        switch (type) {
+            case static_cast<int32_t>(RmoMsgType::TARGET_PPU): {
+                auto typedMsg = dynamic_cast<RmoMessage_TargetPPU*>(msg.get());
+                if (typedMsg) {
+                    typedMsg->info();
+                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
+                        AppConfig::instance().setModulePPU_CU(
+                            AppConfig::ModulePPU_num_RLMN_1,
+                            typedMsg->azTarget, typedMsg->anTarget,
+                            typedMsg->azTargetVel, typedMsg->anTargetVel,
+                            typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
+                            typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
+                        );
+                    }
+                    else
+                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
+                        AppConfig::instance().setModulePPU_CU(
+                            AppConfig::ModulePPU_num_RLMN_2,
+                            typedMsg->azTarget, typedMsg->anTarget,
+                            typedMsg->azTargetVel, typedMsg->anTargetVel,
+                            typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
+                            typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
+                        );
+                    }
                 }
-                else if(typedMsg->numPPU == 1) {
-                    AppConfig::instance().setModulePPU_CU(
-                        AppConfig::instance().ModulePPU_num_RLMN_2,
-                        typedMsg->azTarget, typedMsg->anTarget,
-                        typedMsg->azTargetVel, typedMsg->anTargetVel,
-                        typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
-                        typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
-                    );
-                }
-
-
-                //отладка полученных рмо сообщений
-                //typedMsg->info();
-
+                break;
             }
-        }
-        // else if (type == ...) // другие типы сообщений
-        // Отправка в EthHandler через лямбду-колбэк
-        if (m_ethSendCallback) {
-            m_ethSendCallback(msg->toByteArray());
+            case static_cast<int32_t>(RmoMsgType::ENABLE_PPU): {
+                auto typedMsg = dynamic_cast<RmoMessage_EnablePPU*>(msg.get());
+                static QByteArray ethResult;
+                if (typedMsg) {
+                    typedMsg->info();
+                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
+                        auto ethMsgPPU1 = EthMessageFactory
+                            ::create<EthMessage_PPU_ENABLE_1>(typedMsg->state);
+                        ethResult = ethMsgPPU1.serializeFull();
+                    }
+                    else
+                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
+                        auto ethMsgPPU2 = EthMessageFactory
+                            ::create<EthMessage_PPU_ENABLE_2>(typedMsg->state);
+                        ethResult = ethMsgPPU2.serializeFull();
+                    }
+                    // Отправка в EthHandler через лямбду-колбэк
+                    if(m_ethSendCallback && !ethResult.isEmpty()) {
+                        m_ethSendCallback(ethResult);
+                    }
+                }
+                break;
+            }
+            case static_cast<int32_t>(RmoMsgType::RESET_PPU): {
+                auto typedMsg = dynamic_cast<RmoMessage_ResetPPU*>(msg.get());
+                static QByteArray ethResult;
+                if (typedMsg) {
+                    typedMsg->info();
+                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
+                        auto ethMsgPPU1 = EthMessageFactory
+                            ::create<EthMessage_PPU_RESET_1>();
+                        ethResult = ethMsgPPU1.serializeFull();
+                    }
+                    else
+                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
+                        auto ethMsgPPU2 = EthMessageFactory
+                            ::create<EthMessage_PPU_RESET_2>();
+                        ethResult = ethMsgPPU2.serializeFull();
+                    }
+                    // Отправка в EthHandler через лямбду-колбэк
+                    if(m_ethSendCallback && !ethResult.isEmpty()) {
+                        m_ethSendCallback(ethResult);
+                    }
+                }
+                break;
+            }
+            case static_cast<int32_t>(RmoMsgType::STOP_PPU): {
+                auto typedMsg = dynamic_cast<RmoMessage_StopPPU*>(msg.get());
+                static QByteArray ethResult;
+                if (typedMsg) {
+                    typedMsg->info();
+                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
+                        auto ethMsgPPU1 = EthMessageFactory
+                            ::create<EthMessage_PPU_STOP_1>();
+                        ethResult = ethMsgPPU1.serializeFull();
+                    }
+                    else
+                        if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
+                            auto ethMsgPPU2 = EthMessageFactory
+                                ::create<EthMessage_PPU_STOP_2>();
+                            ethResult = ethMsgPPU2.serializeFull();
+                        }
+                    // Отправка в EthHandler через лямбду-колбэк
+                    if(m_ethSendCallback && !ethResult.isEmpty()) {
+                        m_ethSendCallback(ethResult);
+                    }
+                }
+                break;
+            }
+            default:{
+                break;
+            }
         }
     }
 }
