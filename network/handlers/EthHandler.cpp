@@ -324,8 +324,8 @@ void EthHandler::connectAdapter()
 
     //sleep(5);
 */
-
-    static int recCnt = 0;
+    //тест логов
+    //static int recCnt = 0;
 
 #ifdef _WIN32
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -352,9 +352,9 @@ void EthHandler::connectAdapter()
                 << QString::number(m_customEtherType, 16);
 #endif
         //тест логов
-        LOG_INTERNAL(CLASS_NAME, "LogLevel::Error", "ADAPTER ERROR; EthHandler::connectAdapter()");
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC,QByteArray("#777#777#777") , "АБОБАБАБАБАБ");
-        LOG_INIT(CLASS_NAME, LogLevel::Error ,StatusInit::NOT_LOADED);
+        //LOG_INTERNAL(CLASS_NAME, "LogLevel::Error", "ADAPTER ERROR; EthHandler::connectAdapter()");
+        //LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC,QByteArray("#777#777#777") , "АБОБАБАБАБАБ");
+        //LOG_INIT(CLASS_NAME, LogLevel::Error ,StatusInit::NOT_LOADED);
         /* тест смены имени файла
         recCnt++;
         if(recCnt && (recCnt % 5 == 0))

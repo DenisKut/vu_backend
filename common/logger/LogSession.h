@@ -13,7 +13,7 @@
 class LogSession: public QObject {
     Q_OBJECT
 public:
-    explicit LogSession(QObject *parent = nullptr);
+    explicit LogSession(const QString& filename, QObject *parent = nullptr);
     //LogSession() = default;
     ~LogSession();
 
@@ -47,7 +47,6 @@ public slots:
     void setFileName(const QString& newFilename);
 
 private:
-    QString generateFileName() const;
 
     LogFactory factory;
     LogStorage storage;
