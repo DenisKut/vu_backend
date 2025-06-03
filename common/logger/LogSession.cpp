@@ -5,8 +5,8 @@
 #include "messageLogs/ProtocolMessageLog.h"
 #include "messageLogs/InitLog.h"
 
-LogSession::LogSession(QObject *parent) : QObject(parent),
-    storage(generateFileName(), factory),
+LogSession::LogSession(const QString& filename, QObject *parent) : QObject(parent),
+    storage(filename, factory),
     shuttingDown(false)
 {
     factoryInit();
@@ -22,17 +22,8 @@ LogSession::LogSession(QObject *parent) : QObject(parent),
     // QMetaObject::invokeMethod(this, &LogSession::factoryInit, Qt::QueuedConnection);
 }
 
+
 LogSession::~LogSession() {
-    /*
-    workerThread.quit();
-    workerThread.wait();
-    */
-    /*
-    shuttingDown = true;
-    QCoreApplication::sendPostedEvents(this, QEvent::MetaCall);
-    workerThread.quit();
-    workerThread.wait(500); // Таймаут 500 мс
-    */
 
     shuttingDown.store(true, std::memory_order_release);
     QCoreApplication::sendPostedEvents(this, QEvent::MetaCall);
@@ -44,13 +35,16 @@ LogSession::~LogSession() {
 }
 
 void LogSession::log(LogHeader* logEntry) {
-    qInfo() << "HELLO FROM LOG";
-    LogCount++;
-    qInfo() << "LogCount = " << LogCount;
-    qInfo() << "HandleCount = " << HandleCount;
+    //qInfo() << "HELLO FROM LOG";
+    //LogCount++;
+    //qInfo() << "LogCount = " << LogCount;
+    //qInfo() << "HandleCount = " << HandleCount;
+
     if(logEntry == nullptr) return;
-    qInfo() << "LOG NUT NULL";
-    logEntry->info();
+
+    //qInfo() << "LOG NUT NULL";
+    //logEntry->info();
+
     if (!shuttingDown.load(std::memory_order_acquire))
         emit logRequested(logEntry);
     else
@@ -59,13 +53,13 @@ void LogSession::log(LogHeader* logEntry) {
 }
 
 void LogSession::log(std::unique_ptr<LogHeader> logEntry) {
-    qInfo() << "HELLO FROM LOG";
-    LogCount++;
-    qInfo() << "LogCount = " << LogCount;
-    qInfo() << "HandleCount = " << HandleCount;
+    //qInfo() << "HELLO FROM LOG";
+    //LogCount++;
+    //qInfo() << "LogCount = " << LogCount;
+    //qInfo() << "HandleCount = " << HandleCount;
     if(logEntry == nullptr) return;
-    qInfo() << "LOG NUT NULL";
-    logEntry->info();
+    //qInfo() << "LOG NOT NULL";
+    //logEntry->info();
     if (!shuttingDown.load(std::memory_order_acquire))
         emit logRequested(logEntry.release());
 }
@@ -76,15 +70,12 @@ void LogSession::handleLogRequest(LogHeader* log) {
     std::unique_ptr<LogHeader> logPtr(log);
     if (!shuttingDown.load(std::memory_order_acquire))
         storage.write(*logPtr);
-    HandleCount++;
+    //HandleCount++;
+    //qInfo() << "HANDLE--------------------COUNT = " << HandleCount;
 }
 
 void LogSession::setFileName(const QString& newFilename) {
     storage.setFileName(newFilename);
-}
-
-QString LogSession::generateFileName() const {
-    return QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + "_log.bin";
 }
 
 void LogSession::factoryInit()

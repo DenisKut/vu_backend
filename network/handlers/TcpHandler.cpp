@@ -652,7 +652,19 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                     );
 
                 //отладка полученных рмо сообщений
+                //выводит инфо сообщения с рмо
                 //typedMsg->info();
+
+                //записывает лог с изменным anTarget + azTarget
+                //нужно для отладки работы логов,связааных с автооправкой и
+                //отправкаой сообщений из vu_rmo  и читалки бинарника
+                /*
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP, data,
+                             "anTarget = " +
+                             QString::number(typedMsg->anTarget) +
+                            " azTarget = " +
+                             QString::number(typedMsg->azTarget));
+                */
 
             }
         }

@@ -1,9 +1,14 @@
 #include "LogManager.h"
 #include "LogSession.h"
 
-std::unique_ptr<LogSession> LogManager::createInstance() {
-    return make_unique<LogSession>();
+std::unique_ptr<LogSession> LogManager::createInstance(const QString& filename) {
+    return make_unique<LogSession>(filename);
 }
+
+std::unique_ptr<LogSession> LogManager::createInstance() {
+    return createInstance(LogUtils::generateLogFileName());
+}
+
 
 LogSession& LogManager::instance() {
     static auto session = createInstance();
@@ -16,12 +21,9 @@ void LogManager::setFileName(const QString& newFilename) {
                               Q_ARG(QString, newFilename));
 }
 
-QString LogManager::generateFileName() {
-    return QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + "_log.bin";
-}
 
 void LogManager::setGeneratedFileName() {
-    setFileName(generateFileName());
+    setFileName(LogUtils::generateLogFileName());
 }
 
 QString LogManager::jobj_toString(const QJsonObject& obj){

@@ -129,6 +129,8 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
 
     RmoMessage_TargetPPU()
     {
+        //отладка появления сообщения
+        //qInfo() << "Hello from RMORMORMORMROMRORMORMORMOR";
         azPPU = AppConfig::instance().getModulePPU_az(AppConfig::instance().ModulePPU_num_RLMN_1);
         anPPU = AppConfig::instance().getModulePPU_an(AppConfig::instance().ModulePPU_num_RLMN_1);
         azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::instance().ModulePPU_num_RLMN_1);
@@ -144,6 +146,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
     }
     //----------------------------------------------------------------------
 
+    //метод для отладки
     void info() const override
     {
         //qInfo() << azC0 << " " << azC1 << " " << azC2 << " ";

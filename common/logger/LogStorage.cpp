@@ -25,8 +25,9 @@ bool LogStorage::write(const LogHeader& log) {
 std::vector<std::unique_ptr<LogHeader>> LogStorage::readAll() {
     QMutexLocker locker(&m_writeMutex);
 
+    //qInfo() << "HELLO FROM READALL---------------------";
+
     std::vector<std::unique_ptr<LogHeader>> logs;
-    qInfo() << "hello from readall";
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly)) return logs;
 
