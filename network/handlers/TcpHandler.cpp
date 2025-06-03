@@ -1,7 +1,6 @@
 #include "TcpHandler.h"
 #include <QHostAddress>
 #include <QDebug>
-#include "network/NetworkManager.h"
 
 TcpHandler::TcpHandler(QObject *parent)
     : QObject(parent)
@@ -529,7 +528,9 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                         static_cast<double>(msg_0x641->ceilAz),
                         static_cast<double>(msg_0x641->ceilElev),
                         static_cast<double>(msg_0x641->ceilVAz),
-                        static_cast<double>(msg_0x641->ceilVElev));
+                        static_cast<double>(msg_0x641->ceilVElev),
+                        0, 0, 0, 0, 0, 0
+                );
 
             // Определяем, насколько текущие координаты ППУ отличаются от ЦУ
             double dAz = AppConfig::instance().getModulePPU_az(
@@ -677,28 +678,36 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
             auto typedMsg = dynamic_cast<RmoMessage_TargetPPU*>(msg.get());
             if (typedMsg) {
                 qInfo() << "Recieved RMO msg for PPU: " << typedMsg->numPPU;
+                qDebug() << "typedMsg->azPPU =" << typedMsg->azPPU;
+                qDebug() << "typedMsg->anPPU =" << typedMsg->anPPU;
+                qDebug() << "typedMsg->azC0 =" << typedMsg->azC0;
+                qDebug() << "typedMsg->azC1 =" << typedMsg->azC1;
+                qDebug() << "typedMsg->azC2 =" << typedMsg->azC2;
                 qDebug() << "typedMsg->anC0 =" << typedMsg->anC0;
-                qDebug() << "typedMsg->azVel =" << typedMsg->azC1;
-                qDebug() << "typedMsg->azAcc =" << 2.0 * typedMsg->azC2;
-                qDebug() << "typedMsg->anCur =" << typedMsg->anC0;
-                qDebug() << "typedMsg->anVel =" << typedMsg->anC1;
-                qDebug() << "typedMsg->anAcc =" << 2.0 * typedMsg->anC2;
+                qDebug() << "typedMsg->anC1 =" << typedMsg->anC1;
+                qDebug() << "typedMsg->anC2 =" << typedMsg->anC2;
+                qDebug() << "typedMsg->azTarget =" << typedMsg->azTarget;
+                qDebug() << "typedMsg->anTarget =" << typedMsg->anTarget;
+                qDebug() << "typedMsg->azTargetVel =" << typedMsg->azTargetVel;
+                qDebug() << "typedMsg->anTargetVel =" << typedMsg->anTargetVel;
                 // Используйте поля typedMsg->azPPU, ...
                 if(typedMsg->numPPU == 0) {
                     AppConfig::instance().setModulePPU_CU(
                         AppConfig::instance().ModulePPU_num_RLMN_1,
                         typedMsg->azTarget, typedMsg->anTarget,
-                        typedMsg->azTargetVel, typedMsg->anTargetVel
+                        typedMsg->azTargetVel, typedMsg->anTargetVel,
+                        typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
+                        typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
                     );
                 }
                 else if(typedMsg->numPPU == 1) {
                     AppConfig::instance().setModulePPU_CU(
                         AppConfig::instance().ModulePPU_num_RLMN_2,
                         typedMsg->azTarget, typedMsg->anTarget,
-                        typedMsg->azTargetVel, typedMsg->anTargetVel
+                        typedMsg->azTargetVel, typedMsg->anTargetVel,
+                        typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
+                        typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
                     );
-
-
                 }
 
 

@@ -1012,10 +1012,15 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         mode = 4;
                         double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_2);
                         double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_2);
+
                         //------------------------------------------------------
                         azC0 = azTarget;
                         anC0 = anTarget;
                         if (anC0 < 0.01) anC0 = 0.01;
+                        azC1 = AppConfig::instance().getModulePPU_azC1(AppConfig::ModulePPU_num_RLMN_2);
+                        anC1 = AppConfig::instance().getModulePPU_anC1(AppConfig::ModulePPU_num_RLMN_2);
+                        azC2 = AppConfig::instance().getModulePPU_azC2(AppConfig::ModulePPU_num_RLMN_2);
+                        anC2 = AppConfig::instance().getModulePPU_anC2(AppConfig::ModulePPU_num_RLMN_2);
                         //------------------------------------------------------
 
                         static constexpr double INV_SCALE = 65536.0 / 360.0;

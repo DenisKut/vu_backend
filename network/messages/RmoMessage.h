@@ -79,8 +79,12 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         stream.setByteOrder(QDataStream::LittleEndian);
         stream >> msg->typeField
             >> msg->numPPU
+            >> msg->azPPU >> msg->anPPU
+            >> msg->azC0 >> msg->azC1 >> msg->azC2
+            >> msg->anC0 >> msg->anC1 >> msg->anC2
             >> msg->azTarget >> msg->anTarget
-            >> msg->azTargetVel >> msg->anTargetVel;
+            >> msg->azTargetVel >> msg->anTargetVel
+            >> msg->isRemote >> msg->counter;
         return msg;
     }
 
@@ -91,12 +95,8 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
         stream.setByteOrder(QDataStream::LittleEndian);
         stream >> msg->typeField
             >> msg->numPPU
-            >> msg->azPPU >> msg->anPPU
-            >> msg->azC0 >> msg->azC1 >> msg->azC2
-            >> msg->anC0 >> msg->anC1 >> msg->anC2
             >> msg->azTarget >> msg->anTarget
-            >> msg->azTargetVel >> msg->anTargetVel
-            >> msg->isRemote >> msg->counter;
+            >> msg->azTargetVel >> msg->anTargetVel;
         return msg;
     }
     */

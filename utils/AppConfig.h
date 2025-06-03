@@ -718,6 +718,8 @@ public:
 
         uint8_t     controlMode;
 
+        double azC0, anC0, azC1, anC1, azC2, anC2;
+
         /// ===========================
         /// Поля для сообщений о состояниях с ПБУ
         /// ===========================
@@ -740,6 +742,12 @@ public:
             azTargetVel(0),
             anTargetVel(0),
             controlMode(ModulePPU_controlMode_point),
+            azC0(0),
+            anC0(0),
+            azC1(0),
+            anC1(0),
+            azC2(0),
+            anC2(0),
             isRemote(0)
         {};
     };
@@ -813,12 +821,20 @@ public:
     /// ЦУ для ППУ
     void setModulePPU_CU(ModulePPU_num moduleNum,
                          double azTarget,    double anTarget,
-                         double azTargetVel, double anTargetVel) {
+                         double azTargetVel, double anTargetVel,
+                         double azC0, double anC0, double azC1,
+                         double anC1, double azC2, double anC2) {
         QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->azTarget = azTarget;
         ModulePPU_mas[moduleNum]->anTarget = anTarget;
         ModulePPU_mas[moduleNum]->azTargetVel = azTargetVel;
         ModulePPU_mas[moduleNum]->anTargetVel = anTargetVel;
+        ModulePPU_mas[moduleNum]->azC0 = azC0;
+        ModulePPU_mas[moduleNum]->azC1 = azC1;
+        ModulePPU_mas[moduleNum]->azC2 = azC2;
+        ModulePPU_mas[moduleNum]->anC0 = anC0;
+        ModulePPU_mas[moduleNum]->anC1 = anC1;
+        ModulePPU_mas[moduleNum]->anC2 = anC2;
     }
     /// @}
 
@@ -910,6 +926,35 @@ public:
         return ModulePPU_mas[moduleNum]->controlMode;
     }
 
+    double getModulePPU_azC0(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->azC0;
+    }
+
+    double getModulePPU_anC0(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->anC0;
+    }
+
+    double getModulePPU_azC1(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->azC1;
+    }
+
+    double getModulePPU_anC1(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->anC1;
+    }
+
+    double getModulePPU_azC2(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->azC2;
+    }
+
+    double getModulePPU_anC2(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->anC2;
+    }
     /// @}
 
 
