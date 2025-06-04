@@ -267,7 +267,10 @@ void EthHandler::connectAdapter()
     if (m_adapterOpened) return;
     stopReconnectTimer();
 
-#ifdef _WIN32
+    //тест логов
+    //static int recCnt = 0;
+
+	#ifdef _WIN32
     char errbuf[PCAP_ERRBUF_SIZE];
 
     if (pcap_findalldevs_ex(const_cast<char*>(PCAP_SRC_IF_STRING),
@@ -291,6 +294,17 @@ void EthHandler::connectAdapter()
         qInfo() << "No suitable adapter found for EtherType 0x"
                 << QString::number(m_customEtherType, 16);
 #endif
+        //тест логов
+        //LOG_INTERNAL(CLASS_NAME, "LogLevel::Error", "ADAPTER ERROR; EthHandler::connectAdapter()");
+        //LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC,QByteArray("#777#777#777") , "АБОБАБАБАБАБ");
+        //LOG_INIT(CLASS_NAME, LogLevel::Error ,StatusInit::NOT_LOADED);
+        /* тест смены имени файла
+        recCnt++;
+        if(recCnt && (recCnt % 5 == 0))
+        {
+            LogManager::setFileName("session_" + QString::number(recCnt / 5) + "_logs.bin");
+        }
+        */
         freeRes();
         startReconnectTimer();
         return;
@@ -310,7 +324,7 @@ void EthHandler::connectAdapter()
         qDebug() << "Failed to open pcapTx";
 #endif
 
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","NPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
+        LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx");
 
         // Free the device list
         freeRes();
@@ -322,7 +336,7 @@ void EthHandler::connectAdapter()
 //        emit adapterUpdatePM(pcapTx);  // Обновить указатель на адаптер для менеджера пакетов
 //        emit adapterConnected();    // Адаптер подключен
         qDebug() << "Open pcapTx";
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", "NPCAP; pcapTx открыт"));
+        LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET", "WINPCAP; pcapTx открыт");
     }
 
     pcap_setbuff(pcapTx, 160*1024*1024);
@@ -339,7 +353,7 @@ void EthHandler::connectAdapter()
 #ifdef QT_DEBUG
         qDebug() << "Failed to open pcapRx";
 #endif
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","NPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx"));
+        LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "WINPCAP ERROR; EthHandler::connectAdapter() - Не получилось открыть pcapTx");
         // Free the device list
         freeRes();
         startReconnectTimer();
@@ -351,7 +365,7 @@ void EthHandler::connectAdapter()
 #ifdef QT_DEBUG
         qDebug() << "Open pcapRx";
 #endif
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","NPCAP; pcapTx открыт"));
+        LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET","WINPCAP; pcapTx открыт");
     }
 
     pcap_setbuff(pcapRx, 160*1024*1024);
@@ -375,7 +389,7 @@ void EthHandler::connectAdapter()
 #ifdef QT_DEBUG
     qDebug() << "Opened Ethernet adapter: " << ds;
 #endif
-    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WINPCAP; " + ds));
+    LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "WINPCAP; " + ds);
 
     if (!setupCustomProtocolFilter(pcapRx, m_customEtherType)) {
         freeRes();
@@ -387,7 +401,7 @@ void EthHandler::connectAdapter()
 
     m_lastPacketTime = QDateTime::currentDateTime();
     stopReconnectTimer(); // На всякий случай останавливаем таймер
-	// Запуск отдельного polling-потока
+    // Запуск отдельного polling-потока
     startPollingThread();
 #else
     if (ethSocketID != -1) {
@@ -395,7 +409,7 @@ void EthHandler::connectAdapter()
         m_adapterOpened = true;
         return;
     }
-    
+
     ethSocketID = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (ethSocketID == -1) {
         perror("socket");
@@ -438,8 +452,8 @@ void EthHandler::connectAdapter()
 
     if (setsockopt(ethSocketID, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
         perror("SO_BINDTODEVICE");
-        LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", 
-        "ОШИБКА : EthHandler::connectAdapter() - SO_BINDTODEVICE "));
+        LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET",
+        "ОШИБКА : EthHandler::connectAdapter() - SO_BINDTODEVICE ");
         close(ethSocketID);
         ethSocketID = -1;
         startReconnectTimer();
@@ -447,7 +461,7 @@ void EthHandler::connectAdapter()
     }
 
     qDebug() << "Starting capture on interface" << ifName << "...\n";
-    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET", QString("Подключен Ethernet адаптер: %1").arg(ifName)));
+    LOG(InternalMessageLog,CLASS_NAME, "MAC SOCKET", QString("Подключен Ethernet адаптер: %1").arg(ifName));
 
     // Создание SocketNotifier
     if (m_notifier) {
@@ -499,7 +513,7 @@ bool EthHandler::sendMessage(const QByteArray &data) {
 #ifdef QT_DEBUG
     qDebug("Ошибка при отправке Ethernet-пакета");
 #endif
-    LOG(InternalMessageLog(CLASS_NAME, "MAC SOCKET","WIN32; Ошибка при отправке Ethernet-пакета"));
+    LOG_INTERNAL(CLASS_NAME, "MAC SOCKET", "WIN32; Ошибка при отправке Ethernet-пакета");
     return false;
 #else
     if (ethSocketID == -1) {
@@ -559,7 +573,7 @@ void EthHandler::checkReceived() {
                 m_lastPacketTime = QDateTime::currentDateTime();
 
                 QByteArray msg(reinterpret_cast<const char*>(data), header->len);
-                LOG(ProtocolMessageLog(CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(header->len)));
+                LOG(ProtocolMessageLog,CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(header->len));
                 processIncomingFrame(msg); // Важно: обработка каждого кадра
             }
             else if(res == -1)
@@ -705,7 +719,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "periodWidth =" << TO_HEX_STR(&msgBS_SYNC->periodWidth, 4);
                 qDebug() << "--------------------------------------------";
 #endif
-                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived,Protocol::RAW_MAC, msg, Logger::jobj_toString(msgBS_SYNC->to_json())));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgBS_SYNC->to_json()));
             }
         }
         // PPU_POSITION_1 (11.1)
@@ -748,7 +762,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);
                 qDebug() << "--------------------------------------------";
 #endif
-                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
 #ifdef QT_DEBUG
                 qDebug() << "PPU 1";
 #endif 
@@ -788,7 +802,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                             QByteArray data = QByteArray(reinterpret_cast<const char*>(buf), sizeof(buf));
 #ifdef QT_DEBUG
                             qDebug() << "Sending message to change period of messages on imitator:";
-#endif 
+#endif
 #ifdef TRACE
                             qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
@@ -861,7 +875,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                         sendMessage(data);
-                        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
+                        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
                     }
                     else if (mode == 4) { mode = 5; }
                     else if (mode == 5) { mode = 3; }
@@ -1100,7 +1114,193 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                     sendMessage(data);
-                    LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msgEnable.to_json())));
+                    LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
+                }
+            }
+        }
+        // PPU_POSITION_2 (11.11)
+        else if(parsed->mesNumber == to_underlying(ETH_MessageNumbers::PPU_POSITION_2)) {
+            auto msgPPU_POSITION = reinterpret_cast<EthMessage_PPU_POSITION_2*>(parsed.get());
+            if (msgPPU_POSITION)
+            {
+                int64_t timeTemp = 0;
+                for (int i = 4; i >= 0; --i) {
+                    timeTemp = (timeTemp << 8) | msgPPU_POSITION->timeBeginTrans[i];
+                }
+                timeTemp &= 0x000000FFFFFFFFFF;
+                TimeProvider::instance().setBsTimePPU(timeTemp);
+                AppConfig::instance().setModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->lastCommand);
+                AppConfig::instance().setModulePPU_state(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->state);
+                AppConfig::instance().setModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->ispr);
+                AppConfig::instance().setModulePPU_az(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->az);
+                AppConfig::instance().setModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->azDelay);
+                AppConfig::instance().setModulePPU_an(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->an);
+                AppConfig::instance().setModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->anDelay);
+                AppConfig::instance().setModulePPU_borders(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->borders);
+                AppConfig::instance().setModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->waitCommands);
+                AppConfig::instance().setModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->waitTarget);
+#ifdef QT_DEBUG
+                qDebug() << "11.11 RECEIVED";
+#endif
+#ifdef TRACE
+                qDebug() << "--------------------------------------------";
+                qDebug() << "timeReceive =" << TO_HEX_STR(msgPPU_POSITION->timeReceive, 5);
+                qDebug() << "timeBeginTrans =" << TO_HEX_STR(msgPPU_POSITION->timeBeginTrans, 5);
+                qDebug() << "lastCommand =" << TO_HEX_STR(&msgPPU_POSITION->lastCommand, 1);
+                qDebug() << "state =" << TO_HEX_STR(&msgPPU_POSITION->state, 1);
+                qDebug() << "ispr =" << TO_HEX_STR(&msgPPU_POSITION->ispr, 1);
+                qDebug() << "az =" << TO_HEX_STR(msgPPU_POSITION->az, 3);
+                qDebug() << "azDelay =" << TO_HEX_STR(&msgPPU_POSITION->azDelay, 1);
+                qDebug() << "an =" << TO_HEX_STR(msgPPU_POSITION->an, 3);
+                qDebug() << "anDelay =" << TO_HEX_STR(&msgPPU_POSITION->anDelay, 1);
+                qDebug() << "borders =" << TO_HEX_STR(&msgPPU_POSITION->borders, 1);
+                qDebug() << "waitCommands =" << TO_HEX_STR(&msgPPU_POSITION->waitCommands, 1);
+                qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);
+                qDebug() << "--------------------------------------------";
+#endif
+                LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
+#ifdef QT_DEBUG
+                qDebug() << "PPU 2";
+#endif
+#ifdef TRACE
+                qDebug() << "--------------------------------------------";
+                qDebug() << "lastCommand =" << AppConfig::instance().getModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "state =" << AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "ispr =" << AppConfig::instance().getModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "az =" << AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "azDelay =" << AppConfig::instance().getModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "an =" << AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "anDelay =" << AppConfig::instance().getModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "borders =" << AppConfig::instance().getModulePPU_borders(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "waitCommands =" << AppConfig::instance().getModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "waitTarget =" << AppConfig::instance().getModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_2);
+                qDebug() << "--------------------------------------------";
+                qDebug() << "getBsPeriodNumber =" << TimeProvider::instance().getBsPeriodNumber();
+                qDebug() << "getBsPeriodTime =" << TimeProvider::instance().getBsPeriodTime();
+                qDebug() << "getBsPeriodWidth =" << TimeProvider::instance().getBsPeriodWidth();
+#endif
+                uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_2);
+                if (state & AppConfig::ModulePPU_state_TurnedOn)
+                {
+#ifdef QT_DEBUG
+                    qDebug() << "PPU 2 is turned On" << Qt::endl;
+#endif
+                    static double azC0 = 0, anC0 = 0, azC1 = 0, anC1 = 0, azC2 = 0, anC2 = 0;
+                    static uint16_t azC1u = 0, azC2u = 0, anC1u = 0, anC2u = 0;
+                    static uint32_t azC0u = 0, anC0u = 0;
+                    static int mode = 3;
+                    auto msg = EthMessageFactory::create<EthMessage_PPU_MOVE_2>();
+                    if (mode == 0)
+                    {
+                        static bool isChangedImitPeriod = false;
+                        if (!isChangedImitPeriod) {
+                            const u_char buf[60] = {0x00, 0x0A, 0x35, 0x00, 0x23, 0x03, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x20, 0x20, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x04, 0x06, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x28, 0x00, 0x19, 0x00, 0x05, 0x00, 0x64, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+                            QByteArray data = QByteArray(reinterpret_cast<const char*>(buf), sizeof(buf));
+#ifdef QT_DEBUG
+                            qDebug() << "Sending message to change period of messages on imitator:";
+#endif
+#ifdef TRACE
+                            qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+#endif
+                            QMetaObject::invokeMethod(this, "sendMessage", Qt::QueuedConnection, Q_ARG(QByteArray, data));
+                            isChangedImitPeriod = true;
+                            mode = 1;
+                        }
+                    }
+                    else if (mode == 1) { mode = 2; }
+                    else if (mode == 2) { mode = 3; }
+                    else if (mode == 3) {
+                        mode = 4;
+                        double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_2);
+                        double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_2);
+
+                        //------------------------------------------------------
+                        azC0 = azTarget;
+                        anC0 = anTarget;
+                        if (anC0 < 0.01) anC0 = 0.01;
+                        azC1 = AppConfig::instance().getModulePPU_azC1(AppConfig::ModulePPU_num_RLMN_2);
+                        anC1 = AppConfig::instance().getModulePPU_anC1(AppConfig::ModulePPU_num_RLMN_2);
+                        azC2 = AppConfig::instance().getModulePPU_azC2(AppConfig::ModulePPU_num_RLMN_2);
+                        anC2 = AppConfig::instance().getModulePPU_anC2(AppConfig::ModulePPU_num_RLMN_2);
+                        //------------------------------------------------------
+
+                        static constexpr double INV_SCALE = 65536.0 / 360.0;
+                        azC0u = static_cast<uint32_t>(azC0 * INV_SCALE);
+                        azC1u = static_cast<uint16_t>(azC1 * INV_SCALE);
+                        azC2u = static_cast<uint16_t>(azC2 * INV_SCALE);
+                        anC0u = static_cast<uint32_t>(anC0 * INV_SCALE);
+                        anC1u = static_cast<uint16_t>(anC1 * INV_SCALE);
+                        anC2u = static_cast<uint16_t>(anC2 * INV_SCALE);
+#ifdef QT_DEBUG
+                        qDebug() << "azCur =" << azC0;
+                        qDebug() << "azVel =" << azC1 << "=" << azC1u;
+                        qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
+                        qDebug() << "anCur =" << anC0;
+                        qDebug() << "anVel =" << anC1 << "=" << anC1u;
+                        qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
+#endif
+                        msg.azC0[0] = static_cast<uint8_t>(azC0u);
+                        msg.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
+                        msg.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
+                        msg.azC1 = azC1u;
+                        msg.azC2 = azC2u;
+
+                        msg.anC0[0] = static_cast<uint8_t>(anC0u);
+                        msg.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
+                        msg.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
+                        msg.anC1 = anC1u;
+                        msg.anC2 = anC2u;
+
+                        msg.azSector = 0;
+                        msg.anSector = 0;
+
+                        QByteArray data = msg.serializeFull();
+#ifdef QT_DEBUG
+                        qDebug() << "Sending message to move the PPU 2";
+#endif
+#ifdef TRACE
+                        qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+#endif
+                        sendMessage(data);
+                        LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
+                    }
+                    else if (mode == 4) { mode = 5; }
+                    else if (mode == 5) { mode = 3; }
+                    //                    else if (mode == 6) { mode = 7; }
+                    //                    else if (mode == 7) { mode = 8; }
+                    //                    else if (mode == 8) { mode = 9; }
+                    //                    else if (mode == 9) { mode = 10; }
+                    //                    else if (mode == 10) { mode = 11; }
+                    //                    else if (mode == 11) { mode = 12; }
+                    //                    else if (mode == 12) { mode = 3; }
+
+                    // Отправка отладочных данных на форму для отображения:
+                    auto msgFill = RmoMessageFactory::instance()
+                            .createWithArgs<RmoMessage_TargetPPU>(
+                                AppConfig::ModulePPU_num::ModulePPU_num_RLMN_2
+                            );
+                    msgFill->set_azC(azC0, azC1, azC2);
+                    msgFill->set_anC(anC0, anC1, anC2);
+                    msgFill->counter = AppConfig::instance().increaseRmoCounter();
+
+                    if (m_tcpSendCallback) m_tcpSendCallback(msgFill);
+                }
+                else
+                {
+#ifdef QT_DEBUG
+                    qDebug() << "PPU 2 is turned Off" << Qt::endl;
+#endif
+                    auto msgEnable = EthMessageFactory::create<EthMessage_PPU_ENABLE_2>();
+                    msgEnable.state = AppConfig::ModulePPU_state_TurnedOn; // Включить ППУ
+                    QByteArray data = msgEnable.serializeFull();
+#ifdef QT_DEBUG
+                    qDebug() << "Sending message to turn on the PPU 2";
+#endif
+#ifdef TRACE
+                    qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
+#endif
+                    sendMessage(data);
+                    LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
                 }
             }
         }

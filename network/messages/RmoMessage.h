@@ -157,6 +157,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
     }
     //----------------------------------------------------------------------
 
+    //метод для отладки
     void info() const override
     {
         qInfo() << "RmoMessage_TargetPPU # " << numPPU;

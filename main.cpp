@@ -13,15 +13,18 @@
 #include "utils/env_loader/Settings.h"
 #include "common/test_fftw.cpp"
 
-
+/*
 void performShuttingDown(int sig){
     Q_UNUSED(sig);
-    Logger::instance().stop();
+    //Logger::instance().stop();
     exit(1);
 }
-
+*/
 int main(int argc, char* argv[]) {
+
     qRegisterMetaType<QSharedPointer<RmoBaseMessage>>("QSharedPointer<RmoBaseMessage>");
+    qRegisterMetaType<LogHeader *>("LogHeader *");
+
 #ifdef Q_OS_WIN
     // Настройка консоли Windows
     SetConsoleOutputCP(65001); // UTF-8
@@ -42,13 +45,14 @@ int main(int argc, char* argv[]) {
 
     QCoreApplication a(argc, argv);
 
-    // Инициализация Логгера (обязательно, иначе Логгер не запустится)
+
     try{
-        Logger::instance().initialize(TimeProvider::instance().getMs());
+        LogManager::instance();
+        //Logger::instance().initialize(TimeProvider::instance().getMs());
     } catch (const std::exception& e) {
-        qCritical() << "Не могу связаться с БД. Нет логирования!." << e.what();
+        qCritical() <<"Ошибка инициализации логгера: " << e.what();
     } catch (...) {
-        qCritical() << "Не могу связаться с БД. Неизвестная ошибка.";
+        qCritical() << "Ошибка инициализации логгера: неизвестная ошибка!";
     }
 
     // Путь к .env
@@ -93,9 +97,11 @@ int main(int argc, char* argv[]) {
     core.initialize();
 
     //отлов ошибок и сигналов завершения работы программы, чтобы дописать данные в логгер
+    /*
     for (int sig : {SIGINT, SIGSEGV, SIGTERM}) {
         signal(sig, performShuttingDown);
     }
+	*/
     test_fftw(); // Проверка работы FFTW
     return a.exec();
 }

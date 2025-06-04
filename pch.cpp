@@ -1,6 +1,7 @@
 #include "pch.h"
 #include <cxxabi.h>
 
+
 QString Utils::demangleClassName(const char* name) {
     int status = 0;
     char* demangled = abi::__cxa_demangle(name, nullptr, nullptr, &status);
