@@ -3,6 +3,7 @@
 #include "utils/time_provider/TimeProvider.h"
 #include "network/messages/EthMessage.h"
 #include "utils/AppConfig.h"
+#include "utils/env_loader/Settings.h"
 #include <QDebug>
 
 //DS ADD BEG

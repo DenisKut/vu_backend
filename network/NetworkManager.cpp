@@ -10,11 +10,6 @@ NetworkManager::NetworkManager(QObject* parent)
       m_udpThread(new QThread(this)),
       m_ethThread(new QThread(this)) {
 
-    // Установка приоритетов потоков
-    m_ethThread->setPriority(QThread::TimeCriticalPriority);
-    m_udpThread->setPriority(QThread::HighPriority);
-    m_tcpThread->setPriority(QThread::NormalPriority);
-
     qRegisterMetaType<RmoMessage_TargetPPU>("RmoMessage_TargetPPU");
 
     // Перемещение обработчиков в потоки
@@ -56,6 +51,11 @@ NetworkManager::NetworkManager(QObject* parent)
     m_tcpThread->start();
     m_udpThread->start();
     m_ethThread->start();
+
+    // Установка приоритетов потоков
+    m_udpThread->setPriority(QThread::TimeCriticalPriority);
+    m_ethThread->setPriority(QThread::HighPriority);
+    m_tcpThread->setPriority(QThread::NormalPriority);
 }
 
 NetworkManager::~NetworkManager() {

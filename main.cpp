@@ -11,6 +11,7 @@
 #include "utils/env_loader/EnvLoader.h"
 #include "common/CoreManager.h"
 #include "utils/env_loader/Settings.h"
+#include "common/test_fftw.cpp"
 
 
 void performShuttingDown(int sig){
@@ -95,5 +96,6 @@ int main(int argc, char* argv[]) {
     for (int sig : {SIGINT, SIGSEGV, SIGTERM}) {
         signal(sig, performShuttingDown);
     }
+    test_fftw(); // Проверка работы FFTW
     return a.exec();
 }

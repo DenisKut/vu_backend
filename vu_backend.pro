@@ -93,6 +93,19 @@ win32 {
     DEFINES += WPCAP HAVE_REMOTE
 }
 
+# FFTW library
+# Windows
+win32 {
+    INCLUDEPATH += $$PWD/libs/fftw
+    LIBS += -L$$PWD/libs/fftw -lfftw3-3
+}
+# Linux
+unix:!macx {
+    # Используем системную версию FFTW
+    INCLUDEPATH += /usr/include
+    LIBS += -lfftw3
+}
+
 #-------------------------------
 # 2. Кастомные цели сборки
 #-------------------------------
@@ -133,17 +146,20 @@ DISTFILES += \
 # 5. Копирование .env в выходную директорию
 #-------------------------------
 
-# Копирование .env, config.ini, database/init_db.sql
+# Копирование .env, settings.ini, init_db.sql и FFTW DLL
 win32 {
     QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR \
         & copy /Y $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) \
         & copy /Y $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) \
-        & copy /Y $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
-} else {
+        & copy /Y $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR) \
+        & copy /Y $$shell_path($$PWD/libs/fftw/libfftw3-3.dll) $$shell_path($$DESTDIR))
+}
+# Копирование .env, settings.ini, init_db.sql для Linux
+unix:!macx {
     QMAKE_POST_LINK += $$quote(mkdir -p $$DESTDIR && \
-        cp -f $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) && \
-        cp -f $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) && \
-        cp -f $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
+        cp -f $$PWD/.env $$DESTDIR && \
+        cp -f $$PWD/settings.ini $$DESTDIR && \
+        cp -f $$PWD/database/init_db.sql $$DESTDIR)
 }
 
 win32 {
@@ -171,6 +187,11 @@ QMAKE_DISTCLEAN += \
     Makefile.Release \
     object_script.*.Debug \
     object_script.*.Release
+
+win32 {
+		QMAKE_DISTCLEAN += \
+		$$DESTDIR/libfftw3-3.dll 
+}
 
 # Для рекурсивного удаления директорий
 win32 {
