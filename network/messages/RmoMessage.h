@@ -556,18 +556,35 @@ private:
 
     RmoMessageFactory() {
         // Регистрация типов сообщений
-
-
-        registerType
-            (
-                RmoMsgType::TARGET_PPU,
-                RmoMessage_TargetPPU::fromByteArray,
-                RmoMessage_TargetPPU::fromJson,
-                RmoMessage_TargetPPU::fromBaseConstructor
-            );
-
+        registerType(
+            RmoMsgType::TARGET_PPU,
+            RmoMessage_TargetPPU::fromByteArray,
+            RmoMessage_TargetPPU::fromJson,
+            RmoMessage_TargetPPU::fromBaseConstructor
+        );
+        registerType(
+            RmoMsgType::ENABLE_PPU,
+            RmoMessage_EnablePPU::fromByteArray,
+            RmoMessage_EnablePPU::fromJson,
+            RmoMessage_EnablePPU::fromBaseConstructor
+        );
+        registerType(
+            RmoMsgType::RESET_PPU,
+            RmoMessage_ResetPPU::fromByteArray,
+            RmoMessage_ResetPPU::fromJson,
+            RmoMessage_ResetPPU::fromBaseConstructor
+        );
+        registerType(
+            RmoMsgType::STOP_PPU,
+            RmoMessage_StopPPU::fromByteArray,
+            RmoMessage_StopPPU::fromJson,
+            RmoMessage_StopPPU::fromBaseConstructor
+        );
 
         registerType<RmoMessage_TargetPPU>();
+        registerType<RmoMessage_EnablePPU>();
+        registerType<RmoMessage_ResetPPU>();
+        registerType<RmoMessage_StopPPU>();
 
         // registerType(...); // Для новых сообщений
     }
