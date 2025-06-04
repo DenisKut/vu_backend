@@ -8,7 +8,7 @@ void test_fftw() {
     fftw_complex out[8];
     fftw_plan p = fftw_plan_dft_r2c_1d(N, in, out, FFTW_ESTIMATE);
     fftw_execute(p);
-    std::cout << "FFTW output:\n";
+    std::cout << std::endl << "FFTW output:\n";
     for (int i = 0; i < N/2+1; ++i) {
         std::cout << out[i][0] << "+i" << out[i][1] << std::endl;
     }

@@ -23,6 +23,8 @@ UdpHandler::UdpHandler(QObject* parent)
     int N_200 = 200;
     int N_800 = 800;
 
+    Q_UNUSED(N_30);
+    Q_UNUSED(N_200);
     Q_UNUSED(N_800);
 
     // Оконные функции
@@ -136,7 +138,9 @@ UdpHandler::UdpHandler(QObject* parent)
         0.081152, 0.080910, 0.080697, 0.080512, 0.080356, 0.080228, 0.080128, 0.080057, 0.080014, 0.080000
     };
 
-//    Q_UNUSED(window_hamming_800);
+    Q_UNUSED(window_hamming_30);
+    Q_UNUSED(window_hamming_200);
+    Q_UNUSED(window_hamming_800);
 
     int N = N_800;
     double *window = window_hamming_800;
