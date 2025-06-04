@@ -17,13 +17,20 @@ UdpHandler::UdpHandler(QObject* parent)
     //------------------------------------------------------------------------------------
     // Параметры сигнала
     double A = 32767.; // Амплитуда
-    int N_200 = 200; // Кол-во отсчётов
-    int N_800 = 800;
     double fc = 0.25; // Центральная частота
+    // Кол-во отсчётов
+    int N_30  = 30;
+    int N_200 = 200;
+    int N_800 = 800;
 
     Q_UNUSED(N_800);
 
     // Оконные функции
+    double window_hamming_30[30] = {
+        0.080000, 0.090755, 0.122515, 0.173797, 0.242202, 0.324532, 0.416937, 0.515096, 0.614420, 0.710264,
+        0.798146, 0.873958, 0.934154, 0.975920, 0.997303, 0.997303, 0.975920, 0.934154, 0.873958, 0.798146,
+        0.710264, 0.614420, 0.515096, 0.416937, 0.324532, 0.242202, 0.173797, 0.122515, 0.090755, 0.080000
+    };
     double window_hamming_200[200] = {
         0.080000, 0.080229, 0.080917, 0.082062, 0.083664, 0.085720, 0.088230, 0.091189, 0.094597, 0.098448,
         0.102739, 0.107466, 0.112624, 0.118209, 0.124213, 0.130633, 0.137460, 0.144689, 0.152311, 0.160320,
@@ -129,32 +136,37 @@ UdpHandler::UdpHandler(QObject* parent)
         0.081152, 0.080910, 0.080697, 0.080512, 0.080356, 0.080228, 0.080128, 0.080057, 0.080014, 0.080000
     };
 
-    Q_UNUSED(window_hamming_800);
+//    Q_UNUSED(window_hamming_800);
+
+    int N = N_800;
+    double *window = window_hamming_800;
 
     // Генерируем массивы излучаемого и опорного сигналов,
     // обрезая разрядность до 16-ти бит и добавляя номера буферов
-    for (int i = 0; i < N_200; i++)
+    for (int i = 0; i < N; i++)
     {
         vecSignalDAC_Re.append(0x00010000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(A * cos(2. * _pi * fc * i))))));
         vecSignalDAC_Im.append(0x00020000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(A * sin(2. * _pi * fc * i))))));
 
-        vecSignalREF_Re.append(0x00040000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(A * cos(2. * _pi * fc * i) * window_hamming_200[i])))));
-        vecSignalREF_Im.append(0x00080000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(A * sin(2. * _pi * fc * i) * window_hamming_200[i])))));
+        vecSignalREF_Re.append(0x00040000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(A * cos(2. * _pi * fc * i) * window[i])))));
+        vecSignalREF_Im.append(0x00080000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(-A * sin(2. * _pi * fc * i) * window[i])))));
     }
+    // * В буфер vecSignalREF_Im пишутся комплексно-сопряжённые значения,
+    //   поэтому в формуле есть знак "минус"
 
     // Зануляем первый и последний элементы массивов,
     // добавляя номера буферов и признаки последнего отсчёта
-    vecSignalDAC_Re[0]          = 0x00010000;
-    vecSignalDAC_Re[N_200 - 1]  = 0x01010000;
+    vecSignalDAC_Re[0]      = 0x00010000;
+    vecSignalDAC_Re[N - 1]  = 0x01010000;
 
-    vecSignalDAC_Im[0]          = 0x00020000;
-    vecSignalDAC_Im[N_200 - 1]  = 0x01020000;
+    vecSignalDAC_Im[0]      = 0x00020000;
+    vecSignalDAC_Im[N - 1]  = 0x01020000;
 
-    vecSignalREF_Re[0]          = 0x00040000;
-    vecSignalREF_Re[N_200 - 1]  = 0x01040000;
+    vecSignalREF_Re[0]      = 0x00040000;
+    vecSignalREF_Re[N - 1]  = 0x01040000;
 
-    vecSignalREF_Im[0]          = 0x00080000;
-    vecSignalREF_Im[N_200 - 1]  = 0x01080000;
+    vecSignalREF_Im[0]      = 0x00080000;
+    vecSignalREF_Im[N - 1]  = 0x01080000;
     //------------------------------------------------------------------------------------
 
 //    testMCFOS();
@@ -293,7 +305,7 @@ void UdpHandler::writeSignalToMCFOS(UdpMessage_MCFOS_Cmd *mes,
                 dataBuf.append(static_cast<quint8>(word >> 24));
             }
             sendMessage(dataBuf);
-            qInfo() << "dataBuf =" << Qt::endl << dataBuf.toHex(' ').toUpper();
+//            qInfo() << "dataBuf =" << Qt::endl << dataBuf.toHex(' ').toUpper();
         }
         // Если есть остаток, до отправляем его в дополнительном пакете
         if (last > 0) {
@@ -310,7 +322,7 @@ void UdpHandler::writeSignalToMCFOS(UdpMessage_MCFOS_Cmd *mes,
                 dataBuf.append(static_cast<quint8>(word >> 24));
             }
             sendMessage(dataBuf);
-            qInfo() << "dataBuf_last =" << Qt::endl << dataBuf.toHex(' ').toUpper();
+//            qInfo() << "dataBuf_last =" << Qt::endl << dataBuf.toHex(' ').toUpper();
         }
     }
 }
