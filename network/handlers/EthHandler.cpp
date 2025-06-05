@@ -928,7 +928,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                     sendMessage(data);
-                    // LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msgEnable.to_json())));
+                    LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
                 }
             }
         }
@@ -972,7 +972,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);
                 qDebug() << "--------------------------------------------";
 #endif
-                // LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
+                LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
 #ifdef QT_DEBUG
                 qDebug() << "PPU 2";
 #endif
@@ -1076,7 +1076,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                         sendMessage(data);
-                        // LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
+                        LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
                     }
                     else if (mode == 4) { mode = 5; }
                     else if (mode == 5) { mode = 3; }
@@ -1158,7 +1158,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);
                 qDebug() << "--------------------------------------------";
 #endif
-                // LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, Logger::jobj_toString(msgPPU_POSITION->to_json())));
+                LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
 #ifdef QT_DEBUG
                 qDebug() << "PPU 2";
 #endif
@@ -1262,7 +1262,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                         sendMessage(data);
-                        // LOG(ProtocolMessageLog(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), Logger::jobj_toString(msg.to_json())));
+                        LOG(ProtocolMessageLog, CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
                     }
                     else if (mode == 4) { mode = 5; }
                     else if (mode == 5) { mode = 3; }
