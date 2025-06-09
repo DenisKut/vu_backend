@@ -40,6 +40,7 @@ public:
     Q_INVOKABLE void sendRmoMessageToAllJSON(QSharedPointer<RmoBaseMessage> msg);
 
     void setEthSendCallback(std::function<void(const QByteArray&)> cb);
+    void setUdpSendCallback(std::function<void(const QByteArray&)> cb);
 
 signals:
     /**
@@ -47,6 +48,9 @@ signals:
      */
     void messageReceived(const TcpHeader& msg);
     void errorOccurred(const QString& error);
+    // --- MCFOS control signals ---
+    void mcfosWriteRequested(QSharedPointer<RmoBaseMessage> msg);
+    void mcfosStartRequested(QSharedPointer<RmoBaseMessage> msg);
 
 public slots:
     void initialize();
@@ -102,6 +106,7 @@ private:
     void processBuffer(QByteArray& buffer, F processFunc);
 
     std::function<void(const QByteArray&)> m_ethSendCallback;
+    std::function<void(const QByteArray&)> m_udpSendCallback;
 };
 
 #endif // TCPHANDLER_H

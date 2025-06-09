@@ -21,6 +21,10 @@ NetworkManager::NetworkManager(QObject* parent)
     m_tcpHandler->setEthSendCallback([this](const QByteArray& data) {
         this->sendEth(data);
     });
+    // Установка колбэка для передачи сообщений из UdpHandler
+    m_tcpHandler->setUdpSendCallback([this](const QByteArray& data) {
+        this->sendUdp(data);
+    });
     // Установка колбэка для передачи сообщений из EthHandler в TcpHandler
     m_ethHandler->setTcpSendCallback([this](QSharedPointer<RmoBaseMessage> msg) {
         this->sendTcpRmo(msg);
@@ -42,6 +46,10 @@ NetworkManager::NetworkManager(QObject* parent)
     connect(m_ethHandler, &EthHandler::messageReceived, this,
                                     &NetworkManager::onEthReceived,
                                     Qt::QueuedConnection);
+
+    // --- Connect MCFOS TCP->UDP routing ---
+    connect(m_tcpHandler, &TcpHandler::mcfosWriteRequested, m_udpHandler, &UdpHandler::mcfosWrite_DAC_REF, Qt::QueuedConnection);
+    connect(m_tcpHandler, &TcpHandler::mcfosStartRequested, m_udpHandler, &UdpHandler::mcfosStart, Qt::QueuedConnection);
 
 #ifdef _WIN32
     // connect(&m_ethTimer, &QTimer::timeout, m_ethHandler,
@@ -94,7 +102,12 @@ void NetworkManager::start() {
             QString ip = appSettings().value("vu_settings/udp_ip", "0.0.0.0")
                                                                 .toString();
             int port = appSettings().value("vu_settings/udp_port").toInt();
-            m_udpHandler->start(ip, port);
+
+            QString ip_target = appSettings().value("vu_settings/udp_taregt_ip",
+                                                    "0.0.0.0").toString();
+            int port_target = appSettings().value("vu_settings/udp_taregt_port")
+                                                    .toInt();
+            m_udpHandler->start(ip, port, ip_target, port_target);
         });
 		qDebug()<<"VU_LOCALHOST selected";
         break;
@@ -110,7 +123,14 @@ void NetworkManager::start() {
                                                                 .toString();
             int port = appSettings()
                                 .value("vu_settings_almaz/udp_port").toInt();
-            m_udpHandler->start(ip, port);
+
+            QString ip_target = appSettings()
+                                .value("vu_settings_almaz/udp_taregt_ip",
+                                                        "0.0.0.0").toString();
+            int port_target = appSettings()
+                                .value("vu_settings_almaz/udp_taregt_port")
+                                                        .toInt();
+           m_udpHandler->start(ip, port, ip_target, port_target);
         });
         qDebug()<<"VU_REMOTE_ALMAZ selected";
         break;

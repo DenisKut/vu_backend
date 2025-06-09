@@ -735,6 +735,14 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                 }
                 break;
             }
+            case static_cast<int32_t>(RmoMsgType::MCFOS_WRITE_DAC_REF): {
+                emit mcfosWriteRequested(msg);
+                break;
+            }
+            case static_cast<int32_t>(RmoMsgType::MCFOS_START): {
+                emit mcfosStartRequested(msg);
+                break;
+            }
             default:{
                 break;
             }
@@ -800,4 +808,8 @@ void TcpHandler::sendRmoMessageToAllJSON(QSharedPointer<RmoBaseMessage> msg) {
 
 void TcpHandler::setEthSendCallback(std::function<void(const QByteArray&)> cb) {
     m_ethSendCallback = std::move(cb);
+}
+
+void TcpHandler::setUdpSendCallback(std::function<void(const QByteArray&)> cb) {
+    m_udpSendCallback = std::move(cb);
 }

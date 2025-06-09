@@ -21,7 +21,9 @@ enum class RmoMsgType : int {
     TARGET_PPU = 1,
     ENABLE_PPU = 2,
     RESET_PPU = 3,
-    STOP_PPU = 4
+    STOP_PPU = 4,
+    MCFOS_WRITE_DAC_REF = 5,
+    MCFOS_START = 6
 };
 
 struct RmoBaseMessage {
@@ -384,6 +386,151 @@ struct RmoMessage_StopPPU : RmoBaseMessage {
 };
 
 /**
+ * @struct RmoMessage_MCFOS_Write_DAC_REF
+ * @brief Сообщение для записи опорных сигналов в MCFOS
+ */
+struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage {
+    int32_t typeField = static_cast<int32_t>(RmoMsgType::MCFOS_WRITE_DAC_REF);
+    float amlitude;
+    float f0;
+    float df;
+    quint32 windowType;
+
+    int type() const override { return typeField; }
+    static int typeStatic() { return static_cast<int>(RmoMsgType::MCFOS_WRITE_DAC_REF); }
+
+    QByteArray toByteArray() const override {
+        QByteArray data;
+        QDataStream stream(&data, QIODevice::WriteOnly);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream << typeField << amlitude << f0 << df << windowType;
+        return data;
+    }
+    static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
+        auto msg = QSharedPointer<RmoMessage_MCFOS_Write_DAC_REF>::create();
+        QDataStream stream(data);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream >> msg->typeField >> msg->amlitude >> msg->f0
+            >> msg->df >> msg->windowType;
+        return msg;
+    }
+    nlohmann::json toJson() const override {
+        nlohmann::json j;
+        j["amlitude"] = amlitude;
+        j["f0"] = f0;
+        j["df"] = df;
+        j["windowType"] = windowType;
+        return j;
+    }
+
+    static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
+        auto msg = QSharedPointer<RmoMessage_MCFOS_Write_DAC_REF>::create();
+        msg->amlitude = j.value("amlitude", 0);
+        msg->f0 = j.value("f0", 0);
+        msg->df = j.value("df", 0);
+        msg->windowType = j.value("windowType", 0);
+        return msg;
+    }
+
+    void info() const override {
+        qInfo() << "RmoMessage_MCFOS_Write_DAC_REF:";
+        qInfo() << "amlitude = " << amlitude;
+        qInfo() << "f0 = " << f0;
+        qInfo() << "df = " << df;
+        qInfo() << "windowType = " << windowType;
+    }
+
+    static QSharedPointer<RmoMessage_MCFOS_Write_DAC_REF> fromBaseConstructor() {
+        return QSharedPointer<RmoMessage_MCFOS_Write_DAC_REF>::create();
+    }
+};
+
+/**
+ * @struct RmoMessage_MCFOS_Start
+ * @brief Сообщение для старта MCFOS
+ */
+struct RmoMessage_MCFOS_Start : RmoBaseMessage {
+    int32_t typeField = static_cast<int32_t>(RmoMsgType::MCFOS_START);
+    quint32 pulseSize;
+    quint32 periodCount;
+    quint32 pulseOn;
+    quint32 pulseOff;
+    quint32 ampOff;
+    quint32 procDelay;
+    quint32 procDelta;
+    quint32 periodSize;
+    quint32 windowType;
+
+    int type() const override { return typeField; }
+    static int typeStatic() { return static_cast<int>(RmoMsgType::MCFOS_START); }
+
+    QByteArray toByteArray() const override {
+        QByteArray data;
+        QDataStream stream(&data, QIODevice::WriteOnly);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream << typeField << pulseSize << periodCount << pulseOn
+               << pulseOff
+               << ampOff
+               << procDelay
+               << procDelta
+               << periodSize
+               << windowType;
+        return data;
+    }
+    static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
+        auto msg = QSharedPointer<RmoMessage_MCFOS_Start>::create();
+        QDataStream stream(data);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream >> msg->typeField >> msg->pulseSize >> msg->periodCount
+            >> msg->pulseOn >> msg->pulseOff >> msg->ampOff >> msg->procDelay
+            >> msg->procDelta >> msg->periodSize >> msg->windowType;
+        return msg;
+    }
+    nlohmann::json toJson() const override {
+        nlohmann::json j;
+        j["pulseSize"] = pulseSize;
+        j["periodCount"] = periodCount;
+        j["pulseOn"] = pulseOn;
+        j["pulseOff"] = pulseOff;
+        j["ampOff"] = ampOff;
+        j["procDelay"] = procDelay;
+        j["procDelta"] = procDelta;
+        j["periodSize"] = periodSize;
+        j["windowType"] = windowType;
+        return j;
+    }
+    static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
+        auto msg = QSharedPointer<RmoMessage_MCFOS_Start>::create();
+        msg->pulseSize = j.value("pulseSize", 0);
+        msg->periodCount = j.value("periodCount", 0);
+        msg->pulseOn = j.value("pulseOn", 0);
+        msg->pulseOff = j.value("pulseOff", 0);
+        msg->ampOff = j.value("ampOff", 0);
+        msg->procDelay = j.value("procDelay", 0);
+        msg->procDelta = j.value("procDelta", 0);
+        msg->periodSize = j.value("periodSize", 0);
+        msg->windowType = j.value("windowType", 0);
+        return msg;
+    }
+    static QSharedPointer<RmoMessage_MCFOS_Start> fromBaseConstructor() {
+        return QSharedPointer<RmoMessage_MCFOS_Start>::create();
+    }
+    void info() const override {
+        qInfo() << "RmoMessage_MCFOS_Start:";
+        qInfo() << "pulseSize = " << pulseSize;
+        qInfo() << "periodCount = " << periodCount;
+        qInfo() << "pulseOn = " << pulseOn;
+        qInfo() << "pulseOff = " << pulseOff;
+        qInfo() << "ampOff = " << ampOff;
+        qInfo() << "procDelay = " << procDelay;
+        qInfo() << "procDelta = " << procDelta;
+        qInfo() << "periodSize = " << periodSize;
+        qInfo() << "pulseSize = " << pulseSize;
+        qInfo() << "windowType = " << windowType;
+    }
+};
+
+/**
  * @class RmoMessageFactory
  * @brief Фабрика сообщений для реализации реализации
  */
@@ -581,11 +728,25 @@ private:
             RmoMessage_StopPPU::fromJson,
             RmoMessage_StopPPU::fromBaseConstructor
         );
+        registerType(
+            RmoMsgType::MCFOS_WRITE_DAC_REF,
+            RmoMessage_MCFOS_Write_DAC_REF::fromByteArray,
+            RmoMessage_MCFOS_Write_DAC_REF::fromJson,
+            [](){ return QSharedPointer<RmoMessage_MCFOS_Write_DAC_REF>::create(); }
+        );
+        registerType(
+            RmoMsgType::MCFOS_START,
+            RmoMessage_MCFOS_Start::fromByteArray,
+            RmoMessage_MCFOS_Start::fromJson,
+            [](){ return QSharedPointer<RmoMessage_MCFOS_Start>::create(); }
+        );
 
         registerType<RmoMessage_TargetPPU>();
         registerType<RmoMessage_EnablePPU>();
         registerType<RmoMessage_ResetPPU>();
         registerType<RmoMessage_StopPPU>();
+        registerType<RmoMessage_MCFOS_Write_DAC_REF>();
+        registerType<RmoMessage_MCFOS_Start>();
 
         // registerType(...); // Для новых сообщений
     }

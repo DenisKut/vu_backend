@@ -173,30 +173,65 @@ UdpHandler::UdpHandler(QObject* parent)
     vecSignalREF_Im[N - 1]  = 0x01080000;
     //------------------------------------------------------------------------------------
 
-//    testMCFOS();
+//    testMCFOS_DAC_REF();
 }
 
-void UdpHandler::testMCFOS()
+void UdpHandler::mcfosWrite_DAC_REF(QSharedPointer<RmoBaseMessage> msg)
 {
-    m_targetAddr = QHostAddress("192.168.2.10");
-    m_targetPort = 49498;
+    qDebug() << "[MCFOS] mcfosWrite_DAC_REF called with message:";
+    if (msg) msg->info();
+    // Здесь можно привести msg к RmoMessage_MCFOS_Write_DAC_REF и использовать параметры
+    // auto m = qSharedPointerCast<RmoMessage_MCFOS_Write_DAC_REF>(msg);
+    // ...
 
     UdpMessage_MCFOS_Cmd mes;
 
     qDebug() << Qt::endl
              << "!!!!!!!!!!!!!!!!!!!!!!!!! "
-                "testMCFOS() "
+                "mcfosWrite_DAC_REF() "
                 "!!!!!!!!!!!!!!!!!!!!!!!!!"
              << Qt::endl;
 
     mes.CMD_BUF_R = 1;
+    // Режим работы МЦФОС
+    m_mode = 1; // очистка буферов ЦАП и Ref
     sendMessage(mes.serialize());
 
     mes.CMD_BUF_R = 0;
+    // Режим работы МЦФОС
+    m_mode = 2; // запись сигнала в буфер ЦАП
     writeSignalToMCFOS(&mes, &vecSignalDAC_Re);
     writeSignalToMCFOS(&mes, &vecSignalDAC_Im);
+    // Режим работы МЦФОС
+    m_mode = 3; // запись сигнала в буфер REF
     writeSignalToMCFOS(&mes, &vecSignalREF_Re);
     writeSignalToMCFOS(&mes, &vecSignalREF_Im);
+}
+
+void UdpHandler::mcfosStart(QSharedPointer<RmoBaseMessage> msg)
+{
+    qDebug() << "[MCFOS] mcfosStart called with message:";
+    if (msg) msg->info();
+    // Здесь можно привести msg к RmoMessage_MCFOS_Start и использовать параметры
+    // auto m = qSharedPointerCast<RmoMessage_MCFOS_Start>(msg);
+    // ...
+
+    /// @note ОБНУЛЕНИЕ АДРЕСА DDR!!!!!
+    resetMcfosAdressDDR();
+
+    UdpMessage_MCFOS_Cmd mes;
+
+    qDebug() << Qt::endl
+             << "!!!!!!!!!!!!!!!!!!!!!!!!! "
+                "mcfosStart() "
+                "!!!!!!!!!!!!!!!!!!!!!!!!!"
+             << Qt::endl;
+
+    mes.CMD_BUF_R = 1;
+
+    // Режим работы МЦФОС
+    m_mode = 4; // излучение и приём
+    sendMessage(mes.serialize());
 }
 
 UdpHandler::~UdpHandler()
@@ -204,21 +239,22 @@ UdpHandler::~UdpHandler()
     stop();
 }
 
-void UdpHandler::start(const QString& ip, int port)
+void UdpHandler::start(const QString& my_ip, int my_port,
+                       const QString& target_ip, int target_port)
 {
     if (m_socket) return;
-    m_port = port;
-    m_targetAddr = QHostAddress(ip);
-    m_targetPort = port;
+    m_port = my_port;
+    m_addr = QHostAddress(my_ip);
+    m_targetPort = target_port;
+    m_targetAddr = QHostAddress(target_ip);
     m_socket = new QUdpSocket(this);
     bool bindResult = m_socket->bind(m_targetAddr, m_port,
                    QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     connect(m_socket, &QUdpSocket::readyRead, this, &UdpHandler::onReadyRead);
     if (bindResult) {
-        qInfo() << "[UDP] Listening on" << ip << ":" << port;
-        testMCFOS();
+        qInfo() << "[UDP] Listening on" << my_ip << ":" << my_port;
     } else {
-        qCritical() << "[UDP] Failed to bind on" << ip << ":" << port;
+        qCritical() << "[UDP] Failed to bind on" << my_ip << ":" << my_port;
     }
 }
 
@@ -331,15 +367,47 @@ void UdpHandler::writeSignalToMCFOS(UdpMessage_MCFOS_Cmd *mes,
     }
 }
 
+void UdpHandler::resetMcfosAdressDDR() {
+    mcfosAdressDDR = 0;
+};
+
+void UdpHandler::incrementMcfosAdressDDR() {
+    mcfosAdressDDR += 128;
+};
+
+void UdpHandler::mcfosReadDDR() {
+    incrementMcfosAdressDDR();
+
+    /// !!!!!!!!!!!!!!!!!!!!
+    /// To be continued....
+    /// !!!!!!!!!!!!!!!!!!!!
+}
+
 void UdpHandler::processIncomingDatagram(const QByteArray& data,
                                     const QHostAddress& sender,
                                     quint16 senderPort)
 {
+    // Было чтение ошибок записи в память DDR
+    if (m_mode == 5) {
+        m_mode = 6;
+        m_step = 0;
+    } else
+    // Был отправлен первый пакет на чтение памяти DDR
+    if (m_mode == 6) {
+    }
+
+    /// @warning ЗДЕСЬ НУЖНО ДОБАВЛЯТЬ ПЕРЕБОР СООБЩЕНИЙ и ДОБАВЛЕНИЕ ПАРАМЕТРОВ
+    /// В ФУНКЦИЮ!!!!!!!!!!!
+    mcfosReadDDR();
+
     Q_UNUSED(data);
     Q_UNUSED(sender);
     Q_UNUSED(senderPort);
     // Здесь разбор пакета, логика обработки, парсинг и т.д.
     // Пример: просто hex :)
+
+
+
 #if defined(QT_DEBUG) || defined(TRACE)
     QStringList traceParts;
 #ifdef QT_DEBUG
