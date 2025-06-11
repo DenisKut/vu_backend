@@ -25,7 +25,7 @@ struct ProtocolMessageLog : public LogHeader {
                        const QByteArray& data,
                        const QString& jsonData);
 
-    ProtocolMessageLog() : LogHeader("", LogLevel::MessageReceived), protocol(Protocol::TCP) {}
+    ProtocolMessageLog() : LogHeader("", LogLevel::MessageReceived), protocol(Protocol::TCP_BINARY) {}
 
     LogType logType() const override { return LogType::ProtocolMessage; }
 

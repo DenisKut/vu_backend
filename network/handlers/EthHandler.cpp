@@ -296,7 +296,7 @@ void EthHandler::connectAdapter()
 #endif
         //тест логов
         //LOG_INTERNAL(CLASS_NAME, "LogLevel::Error", "ADAPTER ERROR; EthHandler::connectAdapter()");
-        //LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC,QByteArray("#777#777#777") , "АБОБАБАБАБАБ");
+        //LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::ETH_BINARY,QByteArray("#777#777#777") , "АБОБАБАБАБАБ");
         //LOG_INIT(CLASS_NAME, LogLevel::Error ,StatusInit::NOT_LOADED);
         /* тест смены имени файла
         recCnt++;
@@ -573,7 +573,7 @@ void EthHandler::checkReceived() {
                 m_lastPacketTime = QDateTime::currentDateTime();
 
                 QByteArray msg(reinterpret_cast<const char*>(data), header->len);
-                LOG(ProtocolMessageLog,CLASS_NAME, Protocol::RAW_MAC, msg, QString("Длинна принятого пакета: %1").arg(header->len));
+                LOG(ProtocolMessageLog,CLASS_NAME, Protocol::ETH_BINARY, msg, QString("Длинна принятого пакета: %1").arg(header->len));
                 processIncomingFrame(msg); // Важно: обработка каждого кадра
             }
             else if(res == -1)
@@ -719,7 +719,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "periodWidth =" << TO_HEX_STR(&msgBS_SYNC->periodWidth, 4);
                 qDebug() << "--------------------------------------------";
 #endif
-                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgBS_SYNC->to_json()));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::ETH_BINARY, msg, LogManager::jobj_toString(msgBS_SYNC->to_json()));
             }
         }
         // PPU_POSITION_1 (11.1)
@@ -762,7 +762,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);
                 qDebug() << "--------------------------------------------";
 #endif
-                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::ETH_BINARY, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
 #ifdef QT_DEBUG
                 qDebug() << "PPU 1";
 #endif 
@@ -875,7 +875,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                         sendMessage(data);
-                        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
+                        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
                     }
                     else if (mode == 4) { mode = 5; }
                     else if (mode == 5) { mode = 3; }
@@ -928,7 +928,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                     sendMessage(data);
-                    LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
+                    LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
                 }
             }
         }
@@ -972,7 +972,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);
                 qDebug() << "--------------------------------------------";
 #endif
-                LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
+                LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageReceived, Protocol::ETH_BINARY, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
 #ifdef QT_DEBUG
                 qDebug() << "PPU 2";
 #endif
@@ -1076,7 +1076,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                         sendMessage(data);
-                        LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
+                        LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
                     }
                     else if (mode == 4) { mode = 5; }
                     else if (mode == 5) { mode = 3; }
@@ -1114,7 +1114,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                     sendMessage(data);
-                    LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
+                    LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
                 }
             }
         }
@@ -1158,7 +1158,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                 qDebug() << "waitTarget =" << TO_HEX_STR(&msgPPU_POSITION->waitTarget, 1);
                 qDebug() << "--------------------------------------------";
 #endif
-                LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageReceived, Protocol::RAW_MAC, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
+                LOG(ProtocolMessageLog,CLASS_NAME, LogLevel::MessageReceived, Protocol::ETH_BINARY, msg, LogManager::jobj_toString(msgPPU_POSITION->to_json()));
 #ifdef QT_DEBUG
                 qDebug() << "PPU 2";
 #endif
@@ -1262,7 +1262,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                         qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                         sendMessage(data);
-                        LOG(ProtocolMessageLog, CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
+                        LOG(ProtocolMessageLog, CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
                     }
                     else if (mode == 4) { mode = 5; }
                     else if (mode == 5) { mode = 3; }
@@ -1300,7 +1300,7 @@ void EthHandler::processIncomingFrame(const QByteArray& msg) {
                     qDebug() << "ETH Message from VU to BS:" << Qt::endl << data.toHex(' ').toUpper();
 #endif
                     sendMessage(data);
-                    LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::RAW_MAC, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
+                    LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
                 }
             }
         }
