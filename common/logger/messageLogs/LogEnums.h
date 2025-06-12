@@ -51,19 +51,38 @@ QString inline statusInitToString(StatusInit status) {
 
 
 enum class Protocol{
-    TCP,
-    UDP,
-    RAW_MAC
+    ETH_BINARY,
+    ETH_JSON,
+    TCP_BINARY,
+    TCP_JSON,
+    UDP_BINARY,
+    UDP_JSON,
+    RMO_BINARY,
+    RMO_JSON
 };
 
 QString inline protocolToString(Protocol proto) {
     switch(proto) {
-    case Protocol::TCP:                     return "TCP";
-    case Protocol::UDP:                     return "UDP";
-    case Protocol::RAW_MAC:                 return "RAW_MAC";
-    default:                                return "N/A";
+    case Protocol::ETH_BINARY:            return "ETH_BINARY";
+
+    case Protocol::ETH_JSON:              return "ETH_JSON";
+
+    case Protocol::TCP_BINARY:            return "TCP_BINARY";
+
+    case Protocol::TCP_JSON:              return "TCP_JSON";
+
+    case Protocol::UDP_BINARY:            return "UDP_BINARY";
+
+    case Protocol::UDP_JSON:              return "UDP_JSON";
+
+    case Protocol::RMO_BINARY:            return "RMO_BINARY";
+
+    case Protocol::RMO_JSON:              return "RMO_JSON";
+
+    default:                              return "N/A";
     }
 }
+
 
 enum class LogType : quint8 {
     Init,

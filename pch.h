@@ -34,6 +34,9 @@
 namespace Utils {
     QString demangleClassName(const char* name);
 
+   // Порядок байт в приложении
+    constexpr QDataStream::ByteOrder ByteOrder = QDataStream::LittleEndian;
+
 }
 #define CLASS_NAME Utils::demangleClassName(typeid(*this).name())
 

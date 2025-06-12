@@ -11,26 +11,52 @@
 #if __cplusplus < 201402L
 namespace std {
 template<typename T, typename... Args>
-QSharedPointer<T> make_unique(Args&&... args) {
-    return QSharedPointer<T>(new T(std::forward<Args>(args)...));
+std::unique_ptr<T> make_unique(Args&&... args)
+{
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 }
 #endif
 
-enum class RmoMsgType : int {
-    TARGET_PPU = 1,
-    ENABLE_PPU = 2,
-    RESET_PPU = 3,
-    STOP_PPU = 4,
-    SET_MODE_PPU = 5,
-    PPU_MSG = 6
-};
+class RmoMsgType {
+public:
+    enum Value : int {
+        TARGET_PPU = 1,
+        ENABLE_PPU = 2,
+        RESET_PPU = 3,
+		STOP_PPU = 4,
+		SET_MODE_PPU = 5,
+		PPU_MSG = 6
+    };
 
+    // Конструкторы
+    constexpr RmoMsgType(Value val) : value_(val) {}
+    RmoMsgType() = default;
+
+    // Неявное приведение к int
+    constexpr operator int() const noexcept {
+        return value_;
+    }
+
+    // Операторы сравнения для удобства
+    constexpr bool operator==(RmoMsgType other) const noexcept { return value_ == other.value_; }
+    constexpr bool operator!=(RmoMsgType other) const noexcept { return value_ != other.value_; }
+
+private:
+    Value value_;
+};
+/*
+m_bin[typeId] = &T::fromByteArray;
+m_json[typeId] = &T::fromJson;
+m_baseConstructorCreator[typeId] = &T::fromBaseConstructor;
+*/
 struct RmoBaseMessage {
     virtual ~RmoBaseMessage() = default;
 
     virtual QByteArray toByteArray() const = 0;
     virtual nlohmann::json toJson() const = 0;
+
+
 
     virtual int type() const = 0; // Вернуть номер/тип сообщения
 
@@ -64,7 +90,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
     QByteArray toByteArray() const override {
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream << typeField
                << numPPU
                << azPPU << anPPU
@@ -79,7 +105,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
     static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
         auto msg = QSharedPointer<RmoMessage_TargetPPU>::create();
         QDataStream stream(data);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream >> msg->typeField
             >> msg->numPPU
             >> msg->azPPU >> msg->anPPU
@@ -95,7 +121,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
     static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
         auto msg = QSharedPointer<RmoMessage_TargetPPU>::create();
         QDataStream stream(data);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream >> msg->typeField
             >> msg->numPPU
             >> msg->azTarget >> msg->anTarget
@@ -210,7 +236,7 @@ struct RmoMessage_EnablePPU : RmoBaseMessage {
     QByteArray toByteArray() const override {
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream << typeField
                << numPPU
                << state;
@@ -220,7 +246,7 @@ struct RmoMessage_EnablePPU : RmoBaseMessage {
     static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
         auto msg = QSharedPointer<RmoMessage_EnablePPU>::create();
         QDataStream stream(data);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream >> msg->typeField
             >> msg->numPPU
             >> msg->state;
@@ -278,7 +304,7 @@ struct RmoMessage_ResetPPU : RmoBaseMessage {
     QByteArray toByteArray() const override {
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream << typeField
                << numPPU
                << resetDst;
@@ -288,7 +314,7 @@ struct RmoMessage_ResetPPU : RmoBaseMessage {
     static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
         auto msg = QSharedPointer<RmoMessage_ResetPPU>::create();
         QDataStream stream(data);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream >> msg->typeField
             >> msg->numPPU
             >> msg->resetDst;
@@ -349,7 +375,7 @@ struct RmoMessage_StopPPU : RmoBaseMessage {
     QByteArray toByteArray() const override {
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream << typeField
                << numPPU;
         return data;
@@ -358,16 +384,16 @@ struct RmoMessage_StopPPU : RmoBaseMessage {
     static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
         auto msg = QSharedPointer<RmoMessage_StopPPU>::create();
         QDataStream stream(data);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream >> msg->typeField
             >> msg->numPPU;
         return msg;
     }
 
     nlohmann::json toJson() const override {
-        return {
+        return{
                 {"numPPU", numPPU},
-                };
+              };
     }
 
     static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
@@ -554,51 +580,6 @@ public:
         return inst;
     }
 
-    template<typename T>
-    QSharedPointer<T> createFromByteArray(const QByteArray& data) {
-        int typeId = T::typeStatic();
-        if (m_bin.count(typeId)) {
-            auto basePtr = fromByteArray(typeId, data);
-            return getDerived<T>(basePtr);
-        }
-        return nullptr;
-    }
-    //чтобы не хранить в мапе, но доступ только через параметры шаблона
-    template<typename T>
-    QSharedPointer<T> createFromByteArray2(const QByteArray& data) {
-
-        return getDerived<T>(T::fromByteArray(data));
-    }
-
-    template<typename T>
-    QSharedPointer<T> createFromJson(const nlohmann::json& j) {
-        int typeId = T::typeStatic();
-        if (m_json.count(typeId)) {
-            auto basePtr = fromJson(typeId, j);
-            return getDerived<T>(basePtr);
-        }
-        return nullptr;
-    }
-
-    template<typename T>
-    QSharedPointer<T> createFromJson2(const nlohmann::json& j) {
-              return getDerived<T>(T::fromJson(j));
-    }
-
-    template<typename T>
-    QSharedPointer<T> createFromBaseConstructor() {
-        int typeId = T::typeStatic();
-        if (m_baseConstructorCreator.count(typeId)) {
-            auto basePtr = m_baseConstructorCreator[typeId]();
-            return getDerived<T>(basePtr);
-        }
-        return nullptr;
-    }
-
-    template<typename T>
-    QSharedPointer<T> createFromBaseConstructor2() {
-        return T::fromBaseConstructor();
-    }
 
     template<typename T, typename... Args>
     QSharedPointer<T> createWithArgs(Args&&... args) {
@@ -621,7 +602,7 @@ public:
         // Читаем тип из первых байтов данных
         int32_t type;
         QDataStream stream(data);
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(Utils::ByteOrder);
         stream >> type;
 
         if (m_bin.count(type)) {
@@ -631,6 +612,8 @@ public:
     }
 
     // Создание из JSON с автоматическим определением типа
+    //если добавить в формирование json указание типа, то будет работать
+    /*
     QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
         if (!j.contains("type")) return nullptr;
 
@@ -640,39 +623,9 @@ public:
         }
         return nullptr;
     }
-
-    // Создание через базовый конструктор с автоматическим определением типа
-
-
-    //----------------------------------------------------------------------------------------
-
-    //на светлое будущее(автоматическая генерация функции
-    //для создания объектов с использованием базового конструктора
-    //---------------------------------
-    /*
-        template<typename T>
-        static QSharedPointer<T> createShared() {
-            return QSharedPointer<T>::create();
-        }
-
-        template<typename T>
-        void registerType(int typeId)
-        {
-            m_baseConstructorCreator[typeId] = createShared<T>;
-        }
-        */
-    //-----------------------------------
+    */
 
     //БАЗА ОСНОВА---------------------------------------------------------------------------
-    void registerType(int type, ByteArrayCreatorFunc bin, JsonCreatorFunc json, BaseConstructorCreatorFunc base) {
-        m_bin[type] = bin;
-        m_json[type] = json;
-        m_baseConstructorCreator[type] = base;
-    }
-
-    void registerType(RmoMsgType type, ByteArrayCreatorFunc bin, JsonCreatorFunc json, BaseConstructorCreatorFunc base) {
-        registerType(static_cast<int>(type), bin, json, base);
-    }
 
     QSharedPointer<RmoBaseMessage> fromByteArray(int type, const QByteArray& data) {
         if (m_bin.count(type)) return m_bin[type](data);
@@ -692,11 +645,6 @@ public:
         return nullptr;
     }
 
-    QSharedPointer<RmoBaseMessage> fromBaseConstructor(RmoMsgType type) {
-
-        return fromBaseConstructor(static_cast<int>(type));
-    }
-
     template<typename Derived>
     QSharedPointer<Derived> getDerived(QSharedPointer<RmoBaseMessage> basePtr) {
         return basePtr.dynamicCast<Derived>();
@@ -710,7 +658,6 @@ private:
     std::unordered_map<int, JsonCreatorFunc> m_json;
     std::unordered_map<int, BaseConstructorCreatorFunc> m_baseConstructorCreator;
 
-
     RmoMessageFactory() {
         registerType<RmoMessage_TargetPPU>();
         registerType<RmoMessage_EnablePPU>();
@@ -719,5 +666,4 @@ private:
         registerType<RmoMessage_SetModePPU>();
         registerType<RmoMessage_MessagePPU>();
     }
-
 };

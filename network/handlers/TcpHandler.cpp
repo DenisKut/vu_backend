@@ -320,7 +320,7 @@ void TcpHandler::handleRegistration() {
         auto msg_0x01 = MessageFactory::create<TcpMessage_0x01>();
         QByteArray data = msg_0x01.serializeFull();
         sendMessage(data);
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, data, LogManager::jobj_toString(msg_0x01.to_json()));
+        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x01.to_json()));
     }
 }
 
@@ -337,7 +337,7 @@ void TcpHandler::sendPeriodicMessages() {
                   << std::endl << "\n";
 #endif
         sendMessage(msg_0x03.serializeFull());
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x03.serializeFull(), LogManager::jobj_toString(msg_0x03.to_json()));
+        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x03.serializeFull(), LogManager::jobj_toString(msg_0x03.to_json()));
         // !!!!Отправка 0x24 (Статус модуля)
         auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
@@ -348,7 +348,7 @@ void TcpHandler::sendPeriodicMessages() {
                   << std::endl << "\n";
 #endif
         sendMessage(msg_0x24.serializeFull());
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
+        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
         // TcpHandler::sendModuleStatus();
 
         // Отправка 0x1021 (Текущее состояние РЛС-Н)
@@ -370,10 +370,10 @@ void TcpHandler::sendPeriodicMessages() {
                   << std::endl << "\n";
 #endif
         sendMessage(msg_0x1021_1.serializeFull());
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x1021_1.serializeFull(), LogManager::jobj_toString(msg_0x1021_1.to_json()));
+        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1021_1.serializeFull(), LogManager::jobj_toString(msg_0x1021_1.to_json()));
 
         sendMessage(msg_0x1021_2.serializeFull());
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x1021_2.serializeFull(), LogManager::jobj_toString(msg_0x1021_2.to_json()));
+        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1021_2.serializeFull(), LogManager::jobj_toString(msg_0x1021_2.to_json()));
     }
 }
 
@@ -391,7 +391,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
         switch (static_cast<PBU_MessageNumbers>(parsed->typePack)) {
         case PBU_MessageNumbers::RES_REGISTRATION: {
             auto msg_0x02 = reinterpret_cast<TcpMessage_0x02*>(parsed.get());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP, data, LogManager::jobj_toString(msg_0x02->to_json()));
+            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x02->to_json()));
             if (msg_0x02->errorConnect == 0) {
 #ifdef QT_DEBUG
                 std::cout << "Module registered using message 0x02."
@@ -406,7 +406,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                 auto msg_0x05 = MessageFactory::create<TcpMessage_0x05>();
 
                 sendMessage(msg_0x05.serializeFull());
-                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x05.serializeFull(), LogManager::jobj_toString(msg_0x05.to_json()));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x05.serializeFull(), LogManager::jobj_toString(msg_0x05.to_json()));
 #ifdef QT_DEBUG
                 std::cout << "Sent message 0x05:\n";
 #endif
@@ -424,7 +424,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                     ::create<TcpMessage_0x1023>(capabilities);
 
                 sendMessage(msg_0x1023.serializeFull());
-                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x1023.serializeFull(), LogManager::jobj_toString(msg_0x1023.to_json()));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1023.serializeFull(), LogManager::jobj_toString(msg_0x1023.to_json()));
 #ifdef QT_DEBUG
                 std::cout << "Sent message 0x1023:\n";
 #endif
@@ -438,7 +438,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
         }
         case PBU_MessageNumbers::TIMESTAMP: {
             auto msg_0x04 = reinterpret_cast<TcpMessage_0x04*>(parsed.get());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP, data, LogManager::jobj_toString(msg_0x04->to_json()));
+            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x04->to_json()));
             TimeProvider::instance().syncTimePBU(msg_0x04->timeRequest1,
                                                  msg_0x04->timeRequest2,
                                                  msg_0x04->timeAnswer1,
@@ -456,7 +456,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
         }
         case PBU_MessageNumbers::TARGET_DESIGNATION: {
             auto msg_0x641 = reinterpret_cast<TcpMessage_0x641*>(parsed.get());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP, data, LogManager::jobj_toString(msg_0x641->to_json()));
+            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x641->to_json()));
 
             AppConfig::instance().SET_PBU_PROTO_0X24_MODE(1024);
             AppConfig::instance().SET_PBU_PROTO_0X23_ID_COM(
@@ -484,7 +484,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                       << std::endl << "\n";
 #endif
             sendMessage(msg_0x23.serializeFull());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x23.serializeFull(), LogManager::jobj_toString(msg_0x23.to_json()));
+            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x23.serializeFull(), LogManager::jobj_toString(msg_0x23.to_json()));
 
             auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
@@ -495,7 +495,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                       << std::endl << "\n";
 #endif
             sendMessage(msg_0x24.serializeFull());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
+            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
 
             // Задать ЦУ для ППУ
             AppConfig::instance().setModulePPU_CU(
@@ -559,7 +559,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                 std::cout << " " << msg_0x1022.toString() << std::endl;
 #endif
                 sendMessage(msg_0x1022.serializeFull());
-                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x1022.serializeFull(), LogManager::jobj_toString(msg_0x1022.to_json()));
+                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1022.serializeFull(), LogManager::jobj_toString(msg_0x1022.to_json()));
             }
 
             AppConfig::instance().SET_PBU_PROTO_0X24_MODE(0);
@@ -574,7 +574,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                       << std::endl << "\n";
 #endif
             sendMessage(msg_0x23_2.serializeFull());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x23_2.serializeFull(), LogManager::jobj_toString(msg_0x23_2.to_json()));
+            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x23_2.serializeFull(), LogManager::jobj_toString(msg_0x23_2.to_json()));
 
             auto msg_0x24_2 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
@@ -585,12 +585,12 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
                       << std::endl << "\n";
 #endif
             sendMessage(msg_0x24_2.serializeFull());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP, msg_0x24_2.serializeFull(), LogManager::jobj_toString(msg_0x24_2.to_json()));
+            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24_2.serializeFull(), LogManager::jobj_toString(msg_0x24_2.to_json()));
             break;
         }
         case PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU: {
             auto msg_0x45 = reinterpret_cast<TcpMessage_0x45*>(parsed.get());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP, data, LogManager::jobj_toString(msg_0x45->to_json()));
+            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x45->to_json()));
             break;
         }
 
@@ -609,7 +609,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
         qDebug() << Qt::endl << "ETH Message:" << data.toHex(' ').toUpper();
 #endif
         LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "НЕИЗВЕСТНОЕ СООБЩЕНИЕ ПОЛУЧЕНО");
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::Trace, Protocol::TCP, data.toHex(' ').toUpper(), "");
+        LOG_PROTOCOL(CLASS_NAME, LogLevel::Trace, Protocol::TCP_BINARY, data.toHex(' ').toUpper(), "");
     }
 
     // Признак внешнего управления
@@ -631,9 +631,8 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
     qDebug() << Qt::endl << "RMO TCP Message:" << data.toHex(' ').toUpper();
 #endif
     if (data.size() < static_cast<int>(sizeof(int32_t))) return;
-    qDebug() << "processIncomingMessageRMO: data.size()=" << data.size();
-        QDataStream stream(data);
-    stream.setByteOrder(QDataStream::LittleEndian);
+    QDataStream stream(data);
+    stream.setByteOrder(Utils::ByteOrder);
     int32_t type = 0;
     stream >> type;
     qDebug() << "typeField received:" << type;
