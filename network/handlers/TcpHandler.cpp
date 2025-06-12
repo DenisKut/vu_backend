@@ -632,7 +632,7 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
 #endif
     if (data.size() < static_cast<int>(sizeof(int32_t))) return;
     QDataStream stream(data);
-    stream.setByteOrder(QDataStream::LittleEndian);
+    stream.setByteOrder(Utils::ByteOrder);
     int32_t type = 0;
     stream >> type;
 
@@ -694,6 +694,10 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                 static QByteArray ethResult;
                 if (typedMsg) {
                     typedMsg->info();
+                    //двойная мапа тип - подтип и serialize или функция для каждого типа,
+                    //внутри которой подтипы (ModulePPU_num_RLMN_1/2) (через кейсы или мапу)
+                    //или если ничем не отличаются кроме константы убрать константу и сделать объединннный класс
+                    //с передачей в конструктор
                     if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
                         auto ethMsgPPU1 = EthMessageFactory
                             ::create<EthMessage_PPU_RESET_1>();
