@@ -682,12 +682,31 @@ public:
     };
 
     /**
-     * @enum ModulePPU_controlMode
+     * @enum ModulePPU_modePPU
      * @brief Список режимов управления ППУ
      */
-    enum ModulePPU_controlMode {
-        ModulePPU_controlMode_point = 0,
-        ModulePPU_controlMode_speed = 1
+    enum ModulePPU_modePPU {
+        ModulePPU_modePPU_point = 0,
+        ModulePPU_modePPU_speed = 1,
+        ModulePPU_modePPU_request = 2
+    };
+
+    /**
+     * @enum ModulePPU_resetDst
+     * @brief Список устройств для команды перезапуска в Eth
+     */
+    enum ModulePPU_resetDst {
+        ModulePPU_resetDst_BS = 0,
+        ModulePPU_resetDst_PPU = 1
+    };
+
+    /**
+     * @enum ModulePPU_driverError
+     * @brief Список ошибок драйверов ППУ
+     */
+    enum class ModulePPU_driverError: uint32_t {
+        ModulePPU_driverError_Az = 0x31,
+        ModulePPU_driverError_An = 0x32
     };
 
     /**
@@ -741,7 +760,7 @@ public:
             anTarget(0),
             azTargetVel(0),
             anTargetVel(0),
-            controlMode(ModulePPU_controlMode_point),
+            controlMode(ModulePPU_modePPU_point),
             azC0(0),
             anC0(0),
             azC1(0),
@@ -813,7 +832,7 @@ public:
     }
 
     void setModulePPU_controlMode(ModulePPU_num moduleNum,
-                                  ModulePPU_controlMode value) {
+                                  AppConfig::ModulePPU_modePPU value) {
         QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->controlMode = value;
     }

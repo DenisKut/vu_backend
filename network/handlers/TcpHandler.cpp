@@ -499,7 +499,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data) {
 
             // Задать ЦУ для ППУ
             AppConfig::instance().setModulePPU_CU(
-                        AppConfig::instance().ModulePPU_num_RLMN_1,
+                        (AppConfig::ModulePPU_num)msg_0x641->numDrive,
                         static_cast<double>(msg_0x641->ceilAz),
                         static_cast<double>(msg_0x641->ceilElev),
                         static_cast<double>(msg_0x641->ceilVAz),
@@ -631,10 +631,12 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
     qDebug() << Qt::endl << "RMO TCP Message:" << data.toHex(' ').toUpper();
 #endif
     if (data.size() < static_cast<int>(sizeof(int32_t))) return;
-    QDataStream stream(data);
+    qDebug() << "processIncomingMessageRMO: data.size()=" << data.size();
+        QDataStream stream(data);
     stream.setByteOrder(QDataStream::LittleEndian);
     int32_t type = 0;
     stream >> type;
+    qDebug() << "typeField received:" << type;
 
     // Передаём ВСЮ data (включая type) в фабрику
     auto msg = RmoMessageFactory::instance().fromByteArray(type, data);
@@ -644,25 +646,13 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                 auto typedMsg = dynamic_cast<RmoMessage_TargetPPU*>(msg.get());
                 if (typedMsg) {
                     typedMsg->info();
-                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
-                        AppConfig::instance().setModulePPU_CU(
-                            AppConfig::ModulePPU_num_RLMN_1,
-                            typedMsg->azTarget, typedMsg->anTarget,
-                            typedMsg->azTargetVel, typedMsg->anTargetVel,
-                            typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
-                            typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
-                        );
-                    }
-                    else
-                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
-                        AppConfig::instance().setModulePPU_CU(
-                            AppConfig::ModulePPU_num_RLMN_2,
-                            typedMsg->azTarget, typedMsg->anTarget,
-                            typedMsg->azTargetVel, typedMsg->anTargetVel,
-                            typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
-                            typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
-                        );
-                    }
+                    AppConfig::instance().setModulePPU_CU(
+                        (AppConfig::ModulePPU_num)typedMsg->numPPU,
+                        typedMsg->azTarget, typedMsg->anTarget,
+                        typedMsg->azTargetVel, typedMsg->anTargetVel,
+                        typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
+                        typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
+                    );
                 }
                 break;
             }
@@ -671,7 +661,7 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                 static QByteArray ethResult;
                 if (typedMsg) {
                     typedMsg->info();
-                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
+                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
                         auto ethMsgPPU1 = EthMessageFactory
                             ::create<EthMessage_PPU_ENABLE_1>(typedMsg->state);
                         ethResult = ethMsgPPU1.serializeFull();
@@ -682,9 +672,10 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                             ::create<EthMessage_PPU_ENABLE_2>(typedMsg->state);
                         ethResult = ethMsgPPU2.serializeFull();
                     }
-                    // Отправка в EthHandler через лямбду-колбэк
-                    if(m_ethSendCallback && !ethResult.isEmpty()) {
+                    if (m_ethSendCallback && !ethResult.isEmpty()) {
                         m_ethSendCallback(ethResult);
+                    } else {
+                        delete typedMsg;
                     }
                 }
                 break;
@@ -694,20 +685,23 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                 static QByteArray ethResult;
                 if (typedMsg) {
                     typedMsg->info();
-                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
+                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
                         auto ethMsgPPU1 = EthMessageFactory
-                            ::create<EthMessage_PPU_RESET_1>();
+                            ::create<EthMessage_PPU_RESET_1>
+                                            (typedMsg->resetDst);
                         ethResult = ethMsgPPU1.serializeFull();
                     }
                     else
                     if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
                         auto ethMsgPPU2 = EthMessageFactory
-                            ::create<EthMessage_PPU_RESET_2>();
+                            ::create<EthMessage_PPU_RESET_2>
+                                            (typedMsg->resetDst);
                         ethResult = ethMsgPPU2.serializeFull();
                     }
-                    // Отправка в EthHandler через лямбду-колбэк
-                    if(m_ethSendCallback && !ethResult.isEmpty()) {
+                    if (m_ethSendCallback && !ethResult.isEmpty()) {
                         m_ethSendCallback(ethResult);
+                    } else {
+                        delete typedMsg;
                     }
                 }
                 break;
@@ -717,23 +711,71 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
                 static QByteArray ethResult;
                 if (typedMsg) {
                     typedMsg->info();
-                    if(typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
+                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
                         auto ethMsgPPU1 = EthMessageFactory
                             ::create<EthMessage_PPU_STOP_1>();
                         ethResult = ethMsgPPU1.serializeFull();
                     }
                     else
-                        if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
-                            auto ethMsgPPU2 = EthMessageFactory
-                                ::create<EthMessage_PPU_STOP_2>();
-                            ethResult = ethMsgPPU2.serializeFull();
-                        }
-                    // Отправка в EthHandler через лямбду-колбэк
+                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
+                        auto ethMsgPPU2 = EthMessageFactory
+                            ::create<EthMessage_PPU_STOP_2>();
+                        ethResult = ethMsgPPU2.serializeFull();
+                    }
                     if(m_ethSendCallback && !ethResult.isEmpty()) {
                         m_ethSendCallback(ethResult);
+                    } else {
+                        delete typedMsg;
                     }
                 }
                 break;
+            }
+            case static_cast<int32_t>(RmoMsgType::SET_MODE_PPU): {
+                auto typedMsg = dynamic_cast<RmoMessage_SetModePPU*>(msg.get());
+                static QByteArray ethResult;
+                if(typedMsg) {
+                    typedMsg->info();
+                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
+                        auto ethMsgPPU1 = EthMessageFactory
+                            ::create<EthMessage_PPU_SET_MODE_1>
+                                                (typedMsg->modePPU);
+                        ethResult = ethMsgPPU1.serializeFull();
+                    }
+                    else
+                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
+                        auto ethMsgPPU2 = EthMessageFactory
+                            ::create<EthMessage_PPU_SET_MODE_2>
+                                                (typedMsg->modePPU);
+                        ethResult = ethMsgPPU2.serializeFull();
+                    }
+                    if(m_ethSendCallback && !ethResult.isEmpty()) {
+                        m_ethSendCallback(ethResult);
+                    }
+                    else {
+                        delete typedMsg;
+                    }
+                }
+                break;
+            }
+            case static_cast<int32_t>(RmoMsgType::PPU_MSG): {
+                auto typedMsg = dynamic_cast<RmoMessage_MessagePPU*>(msg.get());
+                static QByteArray ethResult;
+                if(typedMsg) {
+                    typedMsg->info();
+                    static QByteArray command = typedMsg->direction == "up" ?
+                                ModulePPU_anUp :
+                                    typedMsg->direction == "down" ?
+                                        ModulePPU_anDown : "{}";
+                    auto ethMsg = EthMessageFactory
+                        ::create<EthMessage_PPU_MSG>(typedMsg->numPPU, command);
+                    ethResult = ethMsg.serializeFull();
+                    if(m_ethSendCallback && !ethResult.isEmpty()) {
+                        m_ethSendCallback(ethResult);
+                    }
+                    else {
+                        delete typedMsg;
+                    }
+                }
             }
             default:{
                 break;

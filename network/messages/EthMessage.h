@@ -32,9 +32,9 @@ enum class ETH_MessageNumbers: uint16_t {
     // Сообщения от БС на ВУ [ПРИВОД] (квитанции)
     // -----------------------------------------
     PPU_POSITION_1      = 0x010B,    ///< 11.1  - информация ориентации ППУ1 (таблица 4.4);
-    PPU_ANSWER_1        = 0x030B,    ///< 11.3  - ответ от ППУ1 (таблица 4.5);
+    PPU_ANSWER_1        = 0x150B,    ///< 11.21  - ответ от ППУ1 (таблица 4.9);
     PPU_POSITION_2      = 0x0B0B,    ///< 11.11 - информация ориентации ППУ2 (таблица 4.4);
-    PPU_ANSWER_2        = 0x0D0B,    ///< 11.13 - ответ от ППУ2 (таблица 4.5);
+    PPU_ANSWER_2        = 0x1F0B,    ///< 11.31 - ответ от ППУ2 (таблица 4.9);
 
     // -----------------------------------------
     // Сообщения от ВУ на БС [ПРИВОД] (команды)
@@ -53,6 +53,13 @@ enum class ETH_MessageNumbers: uint16_t {
     PPU_ENABLE_2        = 0x100B,    ///< 11.16 - команда включения ППУ2 (таблица 4.2);
     PPU_MOVE_2          = 0x120B,    ///< 11.18 - целеуказание ППУ2 (таблица 4.3);
 
+    PPU_SET_MODE_ANSWER_1   = 0x030B,    ///< 11.3  - ответ на команду установки режима от ППУ1 (таблица 4.7);
+    PPU_SET_MODE_ANSWER_2   = 0x0D0B,    ///< 11.13 - ответ на команду установки режима от ППУ2 (таблица 4.7);
+
+    PPU_ENABLE_ANSWER_1 = 0x070B,    ///< 11.7  - ответ на команду управления питанием ППУ 1;
+    PPU_ENABLE_ANSWER_2 = 0x110B,    ///< 11.17 - ответ на команду управления питанием ППУ 2;
+
+    PPU_MSG             = 0x140B,    ///< 11.20 - прямое обращение к ППУ;
     // -----------------------------------------
     // Сообщения от БС на ВУ [МЦФОС]
     // -----------------------------------------
@@ -74,6 +81,10 @@ enum class ETH_MessageNumbers: uint16_t {
     MCFS_STATUS_REQ     = 0x0A0C,    ///< 12.10 - запрос состояния МЦФОС;
     MCFS_RESET          = 0x120C     ///< 12.18 - сброс МЦФОС;
 };
+
+// Переменные для "доведения" привода по углу места
+static QByteArray ModulePPU_anUp = QByteArray("0M+3E");
+static QByteArray ModulePPU_anDown = QByteArray("0M-3E");
 
 // =========================================
 // 	Общий заголовок для сообщений
@@ -265,38 +276,118 @@ struct EthMessage_PPU_POSITION_1 : EthMessage<EthMessage_PPU_POSITION_1, ETH_Mes
     uint8_t     state;              ///< Состояние
     uint8_t     ispr;               ///< Исправность оборудования
     uint8_t     az[3];              ///< Текущая координата по азимуту, град
-    uint8_t     azDelay;            ///< Задержка измерения координаты по азимуту, мс
+    uint8_t     azDelay;            ///< Задержка измерения координаты по
+                                    ///< азимуту, мс
     uint8_t     an[3];              ///< Текущая координата по углу места, град
-    uint8_t     anDelay;            ///< Задержка измерения координаты по углу места, мс
+    uint8_t     anDelay;            ///< Задержка измерения координаты по углу
+                                    ///< места, мс
     uint8_t     borders;            ///< Состояние границ
     uint8_t     waitCommands;       ///< Время ожидания команд, мс
     uint8_t     waitTarget;         ///< Время ожидания целеуказаний, мс
+    uint8_t     driverError[3];     ///< Ошибки драйверов: 0х31-ошибка Аз,
+                                    ///< 0х32-ошибка Ум
+    uint8_t     signsSwithes[3];    ///< Признаки срабатывания концевых
+                                    ///< выключателей
+    uint8_t     operatingMode;      ///< Режим работы
 
     QJsonObject to_json() const {
         QJsonObject json = EthMessage::to_json();
-        json["timeReceive"] = QString(QByteArray(reinterpret_cast<const char*>(timeReceive), 5).toHex());
-        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["timeReceive"] = QString(QByteArray(reinterpret_cast<const char*>
+                                                    (timeReceive), 5).toHex());
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>
+                                                    (timeBeginTrans), 5).toHex());
         json["lastCommand"] = static_cast<qint64>(lastCommand);
         json["state"] = static_cast<qint64>(state);
         json["ispr"] = static_cast<qint64>(ispr);
-        json["az"] = QString(QByteArray(reinterpret_cast<const char*>(az), 3).toHex());
+        json["az"] = QString(QByteArray(reinterpret_cast<const char*>(az), 3)
+                                                                    .toHex());
         json["azDelay"] = static_cast<qint64>(azDelay);
-        json["an"] = QString(QByteArray(reinterpret_cast<const char*>(an), 3).toHex());
+        json["an"] = QString(QByteArray(reinterpret_cast<const char*>(an), 3)
+                                                                    .toHex());
         json["anDelay"] = static_cast<qint64>(anDelay);
         json["borders"] = static_cast<qint64>(borders);
         json["waitCommands"] = static_cast<qint64>(waitCommands);
         json["waitTarget"] = static_cast<qint64>(waitTarget);
+        json["driverError"] = QString(QByteArray(reinterpret_cast<const char*>
+                                                    (driverError), 3).toHex());
+        json["signsSwithes"] = QString(QByteArray(reinterpret_cast<const char*>
+                                                    (signsSwithes), 3).toHex());
+        json["operatingMode"] = static_cast<qint64>(operatingMode);
         return json;
     }
 };
 #pragma pack(pop)
 
-static_assert(sizeof(EthMessage_PPU_POSITION_1) == 24 + 29, "Invalid size [EthMessage_PPU_POSITION_1]");
+static_assert(sizeof(EthMessage_PPU_POSITION_1) == 24 + 36,
+                                "Invalid size [EthMessage_PPU_POSITION_1]");
+
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_MSG
+ * @brief прямое обращение к ППУ
+ */
+struct EthMessage_PPU_MSG : EthMessage<EthMessage_PPU_MSG, ETH_MessageNumbers::PPU_MSG> {
+    // Метки времени:
+    uint8_t     timeBeginTrans[5];      ///< Время начала передачи
+    // Данные:
+    uint8_t numPPU;                     ///< Номер ППУ для сообщения
+    QByteArray commandString; ///< Символьная строка команды ППУ
+
+    // Конструктор по умолчанию
+    EthMessage_PPU_MSG() {
+        memset(timeBeginTrans, 0, 5);
+        numPPU = AppConfig::ModulePPU_num_RLMN_1;
+    }
+    // Конструктор с параметрами
+    EthMessage_PPU_MSG(uint8_t ppuNum, const QByteArray& cmdStr)
+        : numPPU(ppuNum), commandString(cmdStr) {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5);
+    }
+    // Конструктор с параметрами (строка)
+    EthMessage_PPU_MSG(uint8_t ppuNum, const QString& cmdStr)
+        : numPPU(ppuNum), commandString(cmdStr.toUtf8()) {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5);
+    }
+
+    QByteArray serializeFull() const {
+        QByteArray data = EthHeader::serialize();
+        data.append(reinterpret_cast<const char*>(timeBeginTrans), 5);
+        data.append(numPPU); // Добавляем номер ППУ
+        data.append(commandString);
+        return data;
+    }
+
+    static EthMessage_PPU_MSG deserialize(const QByteArray& data) {
+        EthMessage_PPU_MSG msg;
+        if (data.size() >= static_cast<int>(sizeof(EthHeader) + 6)) {
+            memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
+            memcpy(msg.timeBeginTrans, data.constData() + sizeof(EthHeader), 5);
+            msg.numPPU = static_cast<uint8_t>(data.at(sizeof(EthHeader) + 5));
+            msg.commandString = data.mid(sizeof(EthHeader) + 6);
+        }
+        return msg;
+    }
+
+    bool isValid() const {
+        return !commandString.isEmpty();
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeBeginTrans"] = QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["numPPU"] = static_cast<qint64>(numPPU);
+        json["commandString"] = QString::fromUtf8(commandString);
+        return json;
+    }
+};
+#pragma pack(pop)
 
 #pragma pack(push, 1)
 /**
  * @struct EthMessage_PPU_ANSWER_1
- * @brief Ответ от ППУ №1 (11.3)
+ * @brief Ответ от ППУ №1 (11.21)
  * Символьная строка ответа ППУ, переменной длины
  */
 struct EthMessage_PPU_ANSWER_1 : EthMessage<EthMessage_PPU_ANSWER_1, ETH_MessageNumbers::PPU_ANSWER_1> {
@@ -308,6 +399,8 @@ struct EthMessage_PPU_ANSWER_1 : EthMessage<EthMessage_PPU_ANSWER_1, ETH_Message
 
     QByteArray serializeFull() const {
         QByteArray data = EthHeader::serialize();
+        data.append(reinterpret_cast<const char*>(timeReceive), 5);
+        data.append(reinterpret_cast<const char*>(timeBeginTrans), 5);
         data.append(answerString);
         return data;
     }
@@ -316,7 +409,10 @@ struct EthMessage_PPU_ANSWER_1 : EthMessage<EthMessage_PPU_ANSWER_1, ETH_Message
         EthMessage_PPU_ANSWER_1 msg;
         if (data.size() >= static_cast<int>(sizeof(EthHeader))) {
             memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
-            msg.answerString = data.mid(sizeof(EthHeader), data.size() - sizeof(EthHeader));
+
+            memcpy(msg.timeReceive, data.constData() + sizeof(EthHeader), 5);
+            memcpy(msg.timeBeginTrans, data.constData() + sizeof(EthHeader) + 5, 5);
+            msg.answerString = data.mid(sizeof(EthHeader) + 10);
         }
         return msg;
     }
@@ -327,14 +423,16 @@ struct EthMessage_PPU_ANSWER_1 : EthMessage<EthMessage_PPU_ANSWER_1, ETH_Message
 };
 #pragma pack(pop)
 
-static_assert(sizeof(EthMessage_PPU_ANSWER_1) == 18 + 29, "Invalid size [EthMessage_PPU_ANSWER_1]");
+static_assert(sizeof(EthMessage_PPU_ANSWER_1) == 18 + 29,
+                                    "Invalid size [EthMessage_PPU_ANSWER_1]");
 
 /**
  * @struct EthMessage_PPU_POSITION_2
  * @brief Информация ориентации ППУ №2 (11.11)
  */
 #pragma pack(push, 1)
-struct EthMessage_PPU_POSITION_2 : EthMessage<EthMessage_PPU_POSITION_2, ETH_MessageNumbers::PPU_POSITION_2> {
+struct EthMessage_PPU_POSITION_2 : EthMessage<EthMessage_PPU_POSITION_2,
+                                        ETH_MessageNumbers::PPU_POSITION_2> {
     // Метки времени:
     uint8_t     timeReceive[5];     ///< Время приёма
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
@@ -349,6 +447,12 @@ struct EthMessage_PPU_POSITION_2 : EthMessage<EthMessage_PPU_POSITION_2, ETH_Mes
     uint8_t     borders;            ///< Состояние границ
     uint8_t     waitCommands;       ///< Время ожидания команд, мс
     uint8_t     waitTarget;         ///< Время ожидания целеуказаний, мс
+    uint8_t     driverError[3];     ///< Ошибки драйверов: 0х31-ошибка Аз,
+                                    ///< 0х32-ошибка Ум
+    uint8_t     signsSwithes[3];    ///< Признаки срабатывания концевых
+                                    ///< выключателей
+    uint8_t     operatingMode;      ///< Режим работы
+
 
     QJsonObject to_json() const {
         QJsonObject json = EthMessage::to_json();
@@ -364,17 +468,23 @@ struct EthMessage_PPU_POSITION_2 : EthMessage<EthMessage_PPU_POSITION_2, ETH_Mes
         json["borders"] = static_cast<qint64>(borders);
         json["waitCommands"] = static_cast<qint64>(waitCommands);
         json["waitTarget"] = static_cast<qint64>(waitTarget);
+        json["driverError"] = QString(QByteArray(reinterpret_cast<const char*>
+                                                 (driverError), 3).toHex());
+        json["signsSwithes"] = QString(QByteArray(reinterpret_cast<const char*>
+                                                  (signsSwithes), 3).toHex());
+        json["operatingMode"] = static_cast<qint64>(operatingMode);
         return json;
     }
 };
 #pragma pack(pop)
 
-static_assert(sizeof(EthMessage_PPU_POSITION_2) == 24 + 29, "Invalid size [EthMessage_PPU_POSITION_2]");
+static_assert(sizeof(EthMessage_PPU_POSITION_2) == 24 + 36,
+                                "Invalid size [EthMessage_PPU_POSITION_2]");
 
 #pragma pack(push, 1)
 /**
  * @struct EthMessage_PPU_ANSWER_2
- * @brief Ответ от ППУ №2 (11.13)
+ * @brief Ответ от ППУ №2 (11.31)
  * Символьная строка ответа ППУ, переменной длины
  */
 struct EthMessage_PPU_ANSWER_2 : EthMessage<EthMessage_PPU_ANSWER_2, ETH_MessageNumbers::PPU_ANSWER_2> {
@@ -386,6 +496,8 @@ struct EthMessage_PPU_ANSWER_2 : EthMessage<EthMessage_PPU_ANSWER_2, ETH_Message
 
     QByteArray serializeFull() const {
         QByteArray data = EthHeader::serialize();
+        data.append(reinterpret_cast<const char*>(timeReceive), 5);
+        data.append(reinterpret_cast<const char*>(timeBeginTrans), 5);
         data.append(answerString);
         return data;
     }
@@ -394,7 +506,9 @@ struct EthMessage_PPU_ANSWER_2 : EthMessage<EthMessage_PPU_ANSWER_2, ETH_Message
         EthMessage_PPU_ANSWER_2 msg;
         if (data.size() >= static_cast<int>(sizeof(EthHeader))) {
             memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
-            msg.answerString = data.mid(sizeof(EthHeader), data.size() - sizeof(EthHeader));
+            memcpy(msg.timeReceive, data.constData() + sizeof(EthHeader), 5);
+            memcpy(msg.timeBeginTrans, data.constData() + sizeof(EthHeader) + 5, 5);
+            msg.answerString = data.mid(sizeof(EthHeader) + 10);
         }
         return msg;
     }
@@ -405,7 +519,180 @@ struct EthMessage_PPU_ANSWER_2 : EthMessage<EthMessage_PPU_ANSWER_2, ETH_Message
 };
 #pragma pack(pop)
 
-static_assert(sizeof(EthMessage_PPU_ANSWER_2) == 18 + 29, "Invalid size [EthMessage_PPU_ANSWER_2]");
+static_assert(sizeof(EthMessage_PPU_ANSWER_2) == 18 + 29,
+                                    "Invalid size [EthMessage_PPU_ANSWER_2]");
+
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_SET_MODE_ANSWER_1
+ * @brief Ответ от ППУ №1 (11.3)
+ * Символьная строка ответа ППУ, переменной длины
+ */
+struct EthMessage_PPU_SET_MODE_ANSWER_1 :
+                        EthMessage<EthMessage_PPU_SET_MODE_ANSWER_1,
+                                ETH_MessageNumbers::PPU_SET_MODE_ANSWER_1> {
+    // Метки времени:
+    uint8_t     timeReceive[5];     ///< Время приёма
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    QByteArray answerString; ///< Символьная строка ответа ППУ переменной длины
+
+    QByteArray serializeFull() const {
+        QByteArray data = EthHeader::serialize();
+        data.append(reinterpret_cast<const char*>(timeReceive), 5);
+        data.append(reinterpret_cast<const char*>(timeBeginTrans), 5);
+        data.append(answerString);
+        return data;
+    }
+
+    static EthMessage_PPU_SET_MODE_ANSWER_1 deserialize(const QByteArray& data) {
+        EthMessage_PPU_SET_MODE_ANSWER_1 msg;
+        if (data.size() >= static_cast<int>(sizeof(EthHeader))) {
+            memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
+            memcpy(msg.timeReceive, data.constData() + sizeof(EthHeader), 5);
+            memcpy(msg.timeBeginTrans, data.constData() + sizeof(EthHeader) + 5, 5);
+            msg.answerString = data.mid(sizeof(EthHeader) + 10);
+        }
+        return msg;
+    }
+
+    bool isValid() const {
+        return !answerString.isEmpty();
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(EthMessage_PPU_SET_MODE_ANSWER_1) == 18 + 29,
+              "Invalid size [EthMessage_PPU_SET_MODE_ANSWER_1]");
+
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_SET_MODE_ANSWER_2
+ * @brief Ответ от ППУ №1 (11.13)
+ * Символьная строка ответа ППУ, переменной длины
+ */
+struct EthMessage_PPU_SET_MODE_ANSWER_2 :
+                            EthMessage<EthMessage_PPU_SET_MODE_ANSWER_2,
+                                ETH_MessageNumbers::PPU_SET_MODE_ANSWER_2> {
+    // Метки времени:
+    uint8_t     timeReceive[5];     ///< Время приёма
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    QByteArray answerString; ///< Символьная строка ответа ППУ переменной длины
+
+    QByteArray serializeFull() const {
+        QByteArray data = EthHeader::serialize();
+        data.append(reinterpret_cast<const char*>(timeReceive), 5);
+        data.append(reinterpret_cast<const char*>(timeBeginTrans), 5);
+        data.append(answerString);
+        return data;
+    }
+
+    static EthMessage_PPU_SET_MODE_ANSWER_2 deserialize(const QByteArray& data) {
+        EthMessage_PPU_SET_MODE_ANSWER_2 msg;
+        if (data.size() >= static_cast<int>(sizeof(EthHeader))) {
+            memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
+            memcpy(msg.timeReceive, data.constData() + sizeof(EthHeader), 5);
+            memcpy(msg.timeBeginTrans, data.constData() + sizeof(EthHeader) + 5, 5);
+            msg.answerString = data.mid(sizeof(EthHeader) + 10);
+        }
+        return msg;
+    }
+
+    bool isValid() const {
+        return !answerString.isEmpty();
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(EthMessage_PPU_SET_MODE_ANSWER_2) == 18 + 29,
+              "Invalid size [EthMessage_PPU_SET_MODE_ANSWER_2]");
+
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_ENABLE_ANSWER_1
+ * @brief Ответ от ППУ №1 (11.7)
+ * Ответ на команду управления питанием ППУ
+ */
+struct EthMessage_PPU_ENABLE_ANSWER_1 :
+                        EthMessage<EthMessage_PPU_ENABLE_ANSWER_1,
+                                    ETH_MessageNumbers::PPU_ENABLE_ANSWER_1> {
+    // Метки времени:
+    uint8_t     timeReceive[5];     ///< Время приёма
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    QByteArray answerString; ///< Символьная строка ответа ППУ переменной длины
+
+    QByteArray serializeFull() const {
+        QByteArray data = EthHeader::serialize();
+        data.append(reinterpret_cast<const char*>(timeReceive), 5);
+        data.append(reinterpret_cast<const char*>(timeBeginTrans), 5);
+        data.append(answerString);
+        return data;
+    }
+
+    static EthMessage_PPU_ENABLE_ANSWER_1 deserialize(const QByteArray& data) {
+        EthMessage_PPU_ENABLE_ANSWER_1 msg;
+        if (data.size() >= static_cast<int>(sizeof(EthHeader))) {
+            memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
+            memcpy(msg.timeReceive, data.constData() + sizeof(EthHeader), 5);
+            memcpy(msg.timeBeginTrans, data.constData() + sizeof(EthHeader) + 5, 5);
+            msg.answerString = data.mid(sizeof(EthHeader) + 10);
+        }
+        return msg;
+    }
+
+    bool isValid() const {
+        return !answerString.isEmpty();
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(EthMessage_PPU_ENABLE_ANSWER_1) == 18 + 29,
+              "Invalid size [EthMessage_PPU_ENABLE_ANSWER_1]");
+
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_ENABLE_ANSWER_2
+ * @brief Ответ от ППУ №1 (11.17)
+ * Ответ на команду управления питанием ППУ
+ */
+struct EthMessage_PPU_ENABLE_ANSWER_2 :
+                        EthMessage<EthMessage_PPU_ENABLE_ANSWER_2,
+                                   ETH_MessageNumbers::PPU_ENABLE_ANSWER_2> {
+    // Метки времени:
+    uint8_t     timeReceive[5];     ///< Время приёма
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    QByteArray answerString; ///< Символьная строка ответа ППУ переменной длины
+
+    QByteArray serializeFull() const {
+        QByteArray data = EthHeader::serialize();
+        data.append(reinterpret_cast<const char*>(timeReceive), 5);
+        data.append(reinterpret_cast<const char*>(timeBeginTrans), 5);
+        data.append(answerString);
+        return data;
+    }
+
+    static EthMessage_PPU_ENABLE_ANSWER_2 deserialize(const QByteArray& data) {
+        EthMessage_PPU_ENABLE_ANSWER_2 msg;
+        if (data.size() >= static_cast<int>(sizeof(EthHeader))) {
+            memcpy(static_cast<EthHeader*>(&msg), data.constData(), sizeof(EthHeader));
+            memcpy(msg.timeReceive, data.constData() + sizeof(EthHeader), 5);
+            memcpy(msg.timeBeginTrans, data.constData() + sizeof(EthHeader) + 5, 5);
+            msg.answerString = data.mid(sizeof(EthHeader) + 10);
+        }
+        return msg;
+    }
+
+    bool isValid() const {
+        return !answerString.isEmpty();
+    }
+};
+#pragma pack(pop)
+
+static_assert(sizeof(EthMessage_PPU_ENABLE_ANSWER_2) == 18 + 29,
+              "Invalid size [EthMessage_PPU_ENABLE_ANSWER_2]");
 
 #pragma pack(push, 1)
 /**
@@ -420,12 +707,7 @@ struct EthMessage_PPU_STOP_1 : EthMessage<EthMessage_PPU_STOP_1, ETH_MessageNumb
 
     EthMessage_PPU_STOP_1() {
         uint64_t time = TimeProvider::instance().getBsPeriodTime();
-        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
-//        timeBeginTrans[0] = time & 0xFF;
-//        timeBeginTrans[1] = (time >> 8) & 0xFF;
-//        timeBeginTrans[2] = (time >> 16) & 0xFF;
-//        timeBeginTrans[3] = (time >> 24) & 0xFF;
-//        timeBeginTrans[4] = (time >> 32) & 0xFF;
+        memcpy(timeBeginTrans, &time, 5);
     }
 
     QJsonObject to_json() const {
@@ -478,7 +760,9 @@ struct EthMessage_PPU_RESET_1 : EthMessage<EthMessage_PPU_RESET_1, ETH_MessageNu
     // Метки времени:
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
     // Данные:
-    // Поле данных отсутствует
+    uint8_t     resetDst;           ///< Указание устройства для перезагрузки:
+                                    ///< 0 - перезагрузка БС; 1 - перезагрузка
+                                    ///< ППУ
 
     EthMessage_PPU_RESET_1() {
         uint64_t time = TimeProvider::instance().getBsPeriodTime();
@@ -490,9 +774,17 @@ struct EthMessage_PPU_RESET_1 : EthMessage<EthMessage_PPU_RESET_1, ETH_MessageNu
         //        timeBeginTrans[4] = (time >> 32) & 0xFF;
     }
 
+    EthMessage_PPU_RESET_1(uint8_t dst)
+        : resetDst(dst) {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
+    }
+
     QJsonObject to_json() const {
         QJsonObject json = EthMessage::to_json();
-        json["timeBeginTrans"] =QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["timeBeginTrans"] = QString(QByteArray(
+                    reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
+        json["resetDst"] = static_cast<qint64>(resetDst);
         return json;
     }
 };
@@ -507,7 +799,9 @@ struct EthMessage_PPU_RESET_2 : EthMessage<EthMessage_PPU_RESET_2, ETH_MessageNu
     // Метки времени:
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
     // Данные:
-    // Поле данных отсутствует
+    uint8_t     resetDst;           ///< Указание устройства для перезагрузки:
+                                    ///< 0 - перезагрузка БС; 1 - перезагрузка
+                                    ///< ППУ
 
     EthMessage_PPU_RESET_2() {
         uint64_t time = TimeProvider::instance().getBsPeriodTime();
@@ -519,6 +813,12 @@ struct EthMessage_PPU_RESET_2 : EthMessage<EthMessage_PPU_RESET_2, ETH_MessageNu
         //        timeBeginTrans[4] = (time >> 32) & 0xFF;
     }
 
+    EthMessage_PPU_RESET_2(uint8_t dst)
+        : resetDst(dst) {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
+    }
+
     QJsonObject to_json() const {
         QJsonObject json = EthMessage::to_json();
         json["timeBeginTrans"] =QString(QByteArray(reinterpret_cast<const char*>(timeBeginTrans), 5).toHex());
@@ -527,16 +827,85 @@ struct EthMessage_PPU_RESET_2 : EthMessage<EthMessage_PPU_RESET_2, ETH_MessageNu
 };
 #pragma pack(pop)
 
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_SET_MODE_1
+ * @brief Команда выставки режима движения ППУ №1 (11.2)
+ */
+struct EthMessage_PPU_SET_MODE_1 : EthMessage<EthMessage_PPU_SET_MODE_1, ETH_MessageNumbers::PPU_SET_MODE_1> {
+    // Метки времени:
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    uint8_t     modePPU;            ///< Режим ППУ:
+                                    ///< 0 – режим D, движение в точку;
+                                    ///< 1 – режим B, движение по скорости;
+                                    ///< 2 – запрос режима;
+    EthMessage_PPU_SET_MODE_1() {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
+    }
+
+    EthMessage_PPU_SET_MODE_1(uint8_t modePPU) : modePPU(modePPU) {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5);
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeBeginTrans"] = QString(QByteArray(
+                            reinterpret_cast<const char*>(timeBeginTrans),
+                                             5).toHex());
+        json["modePPU"] = static_cast<qint64>(modePPU);
+        return json;
+    }
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+/**
+ * @struct EthMessage_PPU_SET_MODE_2
+ * @brief Команда выставки режима движения ППУ №2 (11.12)
+ */
+struct EthMessage_PPU_SET_MODE_2 : EthMessage<EthMessage_PPU_SET_MODE_2, ETH_MessageNumbers::PPU_SET_MODE_2> {
+    // Метки времени:
+    uint8_t     timeBeginTrans[5];  ///< Время начала передачи
+    // Данные:
+    uint8_t     modePPU;            ///< Режим ППУ:
+                                    ///< 0 – режим D, движение в точку;
+                                    ///< 1 – режим B, движение по скорости;
+                                    ///< 2 – запрос режима;
+    EthMessage_PPU_SET_MODE_2() {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
+    }
+
+    EthMessage_PPU_SET_MODE_2(uint8_t modePPU) : modePPU(modePPU) {
+        uint64_t time = TimeProvider::instance().getBsPeriodTime();
+        memcpy(timeBeginTrans, &time, 5);
+    }
+
+    QJsonObject to_json() const {
+        QJsonObject json = EthMessage::to_json();
+        json["timeBeginTrans"] = QString(QByteArray(
+                                reinterpret_cast<const char*>(timeBeginTrans),
+                                5).toHex());
+        json["modePPU"] = static_cast<qint64>(modePPU);
+        return json;
+    }
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_PPU_ENABLE_1
  * @brief Команда включения ППУ №1 (11.6)
  */
-#pragma pack(push, 1)
 struct EthMessage_PPU_ENABLE_1 : EthMessage<EthMessage_PPU_ENABLE_1, ETH_MessageNumbers::PPU_ENABLE_1> {
     // Метки времени:
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
     // Данные:
-    uint8_t     state;              ///< Состояние ППУ (0 – выключить ППУ, 1 – включить ППУ)
+    uint8_t     state;              ///< Состояние ППУ (0 – выключить ППУ,
+                                    ///< 1 – включить ППУ, 2 – запрос питания)
 
 //    EthMessage_PPU_ENABLE(uint8_t _state) {
     EthMessage_PPU_ENABLE_1() {
@@ -567,11 +936,11 @@ struct EthMessage_PPU_ENABLE_1 : EthMessage<EthMessage_PPU_ENABLE_1, ETH_Message
 
 static_assert(sizeof(EthMessage_PPU_ENABLE_1) == 6 + 29, "Invalid size [EthMessage_PPU_ENABLE_1]");
 
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_PPU_ENABLE_2
  * @brief Команда включения ППУ №2 (11.16)
  */
-#pragma pack(push, 1)
 struct EthMessage_PPU_ENABLE_2 : EthMessage<EthMessage_PPU_ENABLE_2, ETH_MessageNumbers::PPU_ENABLE_2> {
     // Метки времени:
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
@@ -608,11 +977,11 @@ struct EthMessage_PPU_ENABLE_2 : EthMessage<EthMessage_PPU_ENABLE_2, ETH_Message
 
 static_assert(sizeof(EthMessage_PPU_ENABLE_2) == 6 + 29, "Invalid size [EthMessage_PPU_ENABLE_2]");
 
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_PPU_MOVE_1
  * @brief Целеуказание для ППУ №1 (11.8)
  */
-#pragma pack(push, 1)
 struct EthMessage_PPU_MOVE_1 : EthMessage<EthMessage_PPU_MOVE_1, ETH_MessageNumbers::PPU_MOVE_1> {
     // Метки времени:
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
@@ -657,11 +1026,11 @@ struct EthMessage_PPU_MOVE_1 : EthMessage<EthMessage_PPU_MOVE_1, ETH_MessageNumb
 
 static_assert(sizeof(EthMessage_PPU_MOVE_1) == 23 + 29, "Invalid size [EthMessage_PPU_MOVE_1]");
 
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_PPU_MOVE_2
  * @brief Целеуказание для ППУ №2 (11.18)
  */
-#pragma pack(push, 1)
 struct EthMessage_PPU_MOVE_2 : EthMessage<EthMessage_PPU_MOVE_2, ETH_MessageNumbers::PPU_MOVE_2> {
     // Метки времени:
     uint8_t     timeBeginTrans[5];  ///< Время начала передачи
@@ -706,11 +1075,11 @@ struct EthMessage_PPU_MOVE_2 : EthMessage<EthMessage_PPU_MOVE_2, ETH_MessageNumb
 
 static_assert(sizeof(EthMessage_PPU_MOVE_2) == 23 + 29, "Invalid size [EthMessage_PPU_MOVE_2]");
 
+#pragma pack(push, 1)
 /**
  * @struct MCFS_Object
  * @brief Обнаруженный объект (для сообщения EthMessage_MCFS_RESULT - 15.1)
  */
-#pragma pack(push, 1)
 struct MCFS_Object {
     uint8_t     doplerCh;   ///< Номер доплеровского канала объекта
     uint16_t    delay;      ///< Код времени задержки максимума сигнала
@@ -753,11 +1122,11 @@ struct MCFS_Object {
 
 static_assert(sizeof(MCFS_Object) == 23, "Invalid size [MCFS_Object]");
 
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_MCFS_RESULT
  * @brief Информация по обнаруженным объектам (15.1)
  */
-#pragma pack(push, 1)
 struct EthMessage_MCFS_RESULT : EthMessage<EthMessage_MCFS_RESULT, ETH_MessageNumbers::MCFS_RESULT> {
     // Метки времени:
     uint8_t     timeReceive[5];     ///< Время приёма
@@ -844,11 +1213,11 @@ struct EthMessage_MCFS_RESULT : EthMessage<EthMessage_MCFS_RESULT, ETH_MessageNu
 
 static_assert(sizeof(EthMessage_MCFS_RESULT) == 47 + sizeof(QVector<MCFS_Object>) + 29, "Invalid size [EthMessage_MCFS_RESULT]");
 
+#pragma pack(push, 1)
 /**
  * @struct MCFS_Sample
  * @brief Выборка сигнала (для сообщения EthMessage_MCFS_RESULT - 15.1)
  */
-#pragma pack(push, 1)
 struct MCFS_Sample {
     int16_t     re;        ///< Действительная составляющая комплексной амплитуды сигнала
     int16_t     im;        ///< Мнимая составляющая комплексной амплитуды сигнала
@@ -874,11 +1243,11 @@ struct MCFS_Sample {
 
 static_assert(sizeof(MCFS_Sample) == 4, "Invalid size [MCFS_Sample]");
 
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_MCFS_REG
  * @brief Информация регистрации (15.3)
  */
-#pragma pack(push, 1)
 struct EthMessage_MCFS_REG : EthMessage<EthMessage_MCFS_REG, ETH_MessageNumbers::MCFS_REG> {
     // Метки времени:
     uint8_t     timeReceive[5];     ///< Время приёма
@@ -985,11 +1354,11 @@ struct EthMessage_MCFS_REG : EthMessage<EthMessage_MCFS_REG, ETH_MessageNumbers:
 
 static_assert(sizeof(EthMessage_MCFS_REG) == 31 + sizeof(QVector<MCFS_Sample>) + 29, "Invalid size [EthMessage_MCFS_REG]");
 
+#pragma pack(push, 1)
 /**
  * @struct EthMessage_MCFS_STATUS
  * @brief Состояние устройства (12.11)
  */
-#pragma pack(push, 1)
 struct EthMessage_MCFS_STATUS : EthMessage<EthMessage_MCFS_STATUS, ETH_MessageNumbers::MCFS_STATUS> {
     // Метки времени:
     uint8_t     timeReceive[5];     ///< Время приёма

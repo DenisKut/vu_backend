@@ -21,7 +21,9 @@ enum class RmoMsgType : int {
     TARGET_PPU = 1,
     ENABLE_PPU = 2,
     RESET_PPU = 3,
-    STOP_PPU = 4
+    STOP_PPU = 4,
+    SET_MODE_PPU = 5,
+    PPU_MSG = 6
 };
 
 struct RmoBaseMessage {
@@ -44,7 +46,7 @@ struct RmoBaseMessage {
  */
 struct RmoMessage_TargetPPU : RmoBaseMessage {
     int32_t typeField = static_cast<int32_t>(RmoMsgType::TARGET_PPU);
-    int numPPU = AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1;
+    int numPPU = AppConfig::ModulePPU_num_RLMN_1;
     double azPPU = 0.0;
     double anPPU = 0.0;
     double azC0 = 0.0, azC1 = 0.0, azC2 = 0.0;
@@ -117,7 +119,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
     static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
         auto msg = QSharedPointer<RmoMessage_TargetPPU>::create();
         msg->numPPU = j.value("numPPU",
-                              AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
+                              AppConfig::ModulePPU_num_RLMN_1);
         msg->azPPU = j.value("azPPU", 0.0);
         msg->anPPU = j.value("anPPU", 0.0);
         msg->azC0 = j.value("azC0", 0.0);
@@ -137,7 +139,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
 
     // Конструктор по умолчанию
     RmoMessage_TargetPPU()
-        : RmoMessage_TargetPPU(AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1) {}
+        : RmoMessage_TargetPPU(AppConfig::ModulePPU_num_RLMN_1) {}
 
     RmoMessage_TargetPPU(AppConfig::ModulePPU_num numberPPU)
     {
@@ -196,7 +198,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage {
  */
 struct RmoMessage_EnablePPU : RmoBaseMessage {
     int32_t typeField = static_cast<int32_t>(RmoMsgType::ENABLE_PPU);
-    int numPPU = AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1;
+    int numPPU = AppConfig::ModulePPU_num_RLMN_1;
     // Состояние ВКЛ/ВЫКЛ
     int state = 0;
 
@@ -235,13 +237,13 @@ struct RmoMessage_EnablePPU : RmoBaseMessage {
     static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
         auto msg = QSharedPointer<RmoMessage_EnablePPU>::create();
         msg->numPPU = j.value("numPPU",
-                              AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
+                              AppConfig::ModulePPU_num_RLMN_1);
         msg->state = j.value("state", 0);
         return msg;
     }
 
     RmoMessage_EnablePPU()
-        : RmoMessage_EnablePPU(AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1) {}
+        : RmoMessage_EnablePPU(AppConfig::ModulePPU_num_RLMN_1) {}
 
     RmoMessage_EnablePPU(AppConfig::ModulePPU_num numberPPU)
     {
@@ -267,7 +269,8 @@ struct RmoMessage_EnablePPU : RmoBaseMessage {
  */
 struct RmoMessage_ResetPPU : RmoBaseMessage {
     int32_t typeField = static_cast<int32_t>(RmoMsgType::RESET_PPU);
-    int numPPU = AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1;
+    int numPPU = AppConfig::ModulePPU_num_RLMN_1;
+    int resetDst = AppConfig::ModulePPU_resetDst_PPU;
 
     int type() const override { return typeField; }
     static int typeStatic() { return static_cast<int>(RmoMsgType::RESET_PPU); }
@@ -277,7 +280,8 @@ struct RmoMessage_ResetPPU : RmoBaseMessage {
         QDataStream stream(&data, QIODevice::WriteOnly);
         stream.setByteOrder(QDataStream::LittleEndian);
         stream << typeField
-               << numPPU;
+               << numPPU
+               << resetDst;
         return data;
     }
 
@@ -286,29 +290,37 @@ struct RmoMessage_ResetPPU : RmoBaseMessage {
         QDataStream stream(data);
         stream.setByteOrder(QDataStream::LittleEndian);
         stream >> msg->typeField
-            >> msg->numPPU;
+            >> msg->numPPU
+            >> msg->resetDst;
         return msg;
     }
 
     nlohmann::json toJson() const override {
         return {
                 {"numPPU", numPPU},
+                {"resetDst", resetDst},
                 };
     }
 
     static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
         auto msg = QSharedPointer<RmoMessage_ResetPPU>::create();
-        msg->numPPU = j.value("numPPU",
-                              AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
+        msg->numPPU = j.value("numPPU", AppConfig::ModulePPU_num_RLMN_1);
+        msg->resetDst = j.value("resetDst", AppConfig::ModulePPU_resetDst_PPU);
+
         return msg;
     }
 
-    RmoMessage_ResetPPU()
-        : RmoMessage_ResetPPU(AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1) {}
+    RmoMessage_ResetPPU() {
+        RmoMessage_ResetPPU(AppConfig::ModulePPU_num_RLMN_1,
+                            AppConfig::ModulePPU_resetDst_PPU);
+    }
 
-    RmoMessage_ResetPPU(AppConfig::ModulePPU_num numberPPU)
-    {
+    RmoMessage_ResetPPU(
+        AppConfig::ModulePPU_num numberPPU,
+        AppConfig::ModulePPU_resetDst dst
+    ) {
         numPPU = numberPPU;
+        resetDst = dst;
     }
 
     static QSharedPointer<RmoMessage_ResetPPU> fromBaseConstructor()
@@ -319,6 +331,7 @@ struct RmoMessage_ResetPPU : RmoBaseMessage {
     void info() const override
     {
         qInfo() << "RmoMessage_ResetPPU # " << numPPU;
+        qInfo() << "resetDst" << resetDst;
     }
 };
 
@@ -328,7 +341,7 @@ struct RmoMessage_ResetPPU : RmoBaseMessage {
  */
 struct RmoMessage_StopPPU : RmoBaseMessage {
     int32_t typeField = static_cast<int32_t>(RmoMsgType::STOP_PPU);
-    int numPPU = AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1;
+    int numPPU = AppConfig::ModulePPU_num_RLMN_1;
 
     int type() const override { return typeField; }
     static int typeStatic() { return static_cast<int>(RmoMsgType::STOP_PPU); }
@@ -360,12 +373,12 @@ struct RmoMessage_StopPPU : RmoBaseMessage {
     static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
         auto msg = QSharedPointer<RmoMessage_StopPPU>::create();
         msg->numPPU = j.value("numPPU",
-                              AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
+                              AppConfig::ModulePPU_num_RLMN_1);
         return msg;
     }
 
     RmoMessage_StopPPU()
-        : RmoMessage_StopPPU(AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1) {}
+        : RmoMessage_StopPPU(AppConfig::ModulePPU_num_RLMN_1) {}
 
     RmoMessage_StopPPU(AppConfig::ModulePPU_num numberPPU)
     {
@@ -380,6 +393,149 @@ struct RmoMessage_StopPPU : RmoBaseMessage {
     void info() const override
     {
         qInfo() << "RmoMessage_StopPPU # " << numPPU;
+    }
+};
+
+/**
+ * @struct RmoMessage_SetModePPU
+ * @brief Сообщение выставления режима движения ППУ
+ */
+struct RmoMessage_SetModePPU : RmoBaseMessage {
+    int32_t typeField = static_cast<int32_t>(RmoMsgType::SET_MODE_PPU);
+    int numPPU = AppConfig::ModulePPU_num_RLMN_1;
+    int modePPU = AppConfig::ModulePPU_modePPU_speed;
+
+    int type() const override { return typeField; }
+    static int typeStatic() { return static_cast<int>(RmoMsgType::SET_MODE_PPU); }
+
+    QByteArray toByteArray() const override {
+        QByteArray data;
+        QDataStream stream(&data, QIODevice::WriteOnly);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream << typeField
+               << numPPU
+               << modePPU;
+        return data;
+    }
+
+    static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
+        auto msg = QSharedPointer<RmoMessage_SetModePPU>::create();
+        QDataStream stream(data);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream >> msg->typeField
+            >> msg->numPPU
+            >> msg->modePPU;
+        return msg;
+    }
+
+    nlohmann::json toJson() const override {
+        return {
+                {"numPPU", numPPU},
+                {"modePPU", modePPU}
+                };
+    }
+
+    static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
+        auto msg = QSharedPointer<RmoMessage_SetModePPU>::create();
+        msg->numPPU = j.value("numPPU",
+                              AppConfig::ModulePPU_num_RLMN_1);
+        msg->modePPU = j.value("modePPU",
+                              AppConfig::ModulePPU_modePPU_speed);
+        return msg;
+    }
+
+    RmoMessage_SetModePPU()
+        : RmoMessage_SetModePPU(AppConfig::ModulePPU_num_RLMN_1,
+                                AppConfig::ModulePPU_modePPU_speed) {}
+
+    RmoMessage_SetModePPU(
+        AppConfig::ModulePPU_num numberPPU,
+        AppConfig::ModulePPU_modePPU mode
+    ) {
+        numPPU = numberPPU;
+        modePPU = mode;
+    }
+
+    static QSharedPointer<RmoMessage_SetModePPU> fromBaseConstructor()
+    {
+        return QSharedPointer<RmoMessage_SetModePPU>::create();
+    }
+
+    void info() const override
+    {
+        qInfo() << "RmoMessage_SetModePPU # " << numPPU;
+        qInfo() << "modePPU = " << modePPU;
+    }
+};
+
+/**
+ * @struct RmoMessage_MessagePPU
+ * @brief Циклически отправляемые сообщения для доведения привода
+ */
+struct RmoMessage_MessagePPU : RmoBaseMessage {
+    int32_t typeField = static_cast<int32_t>(RmoMsgType::PPU_MSG);
+    int numPPU = AppConfig::ModulePPU_num_RLMN_1;
+    QString direction = "up";
+
+    int type() const override { return typeField; }
+    static int typeStatic() { return static_cast<int>(RmoMsgType::PPU_MSG); }
+
+    QByteArray toByteArray() const override {
+        QByteArray data;
+        QDataStream stream(&data, QIODevice::WriteOnly);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream << typeField << numPPU;
+        QByteArray dirBytes = direction.toUtf8();
+        stream.writeRawData(dirBytes.constData(), qMin(dirBytes.size(), 16));
+        if (dirBytes.size() < 16) {
+            QByteArray padding(16 - dirBytes.size(), '\0');
+            stream.writeRawData(padding.constData(), padding.size());
+        }
+        return data;
+    }
+
+    static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
+        auto msg = QSharedPointer<RmoMessage_MessagePPU>::create();
+        QDataStream stream(data);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream >> msg->typeField >> msg->numPPU;
+        QByteArray dirBytes(16, 0);
+        stream.readRawData(dirBytes.data(), 16);
+        int realLen = strnlen(dirBytes.constData(), 16);
+        msg->direction = QString::fromUtf8(dirBytes.constData(), realLen);
+        return msg;
+    }
+
+    nlohmann::json toJson() const override {
+        return {
+            {"numPPU", numPPU},
+            {"direction", direction.toStdString()}
+        };
+    }
+
+    static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
+        auto msg = QSharedPointer<RmoMessage_MessagePPU>::create();
+        msg->numPPU = j.value("numPPU", AppConfig::ModulePPU_num_RLMN_1);
+        msg->direction = QString::fromStdString(j.value("direction", "up"));
+        return msg;
+    }
+
+    RmoMessage_MessagePPU()
+        : RmoMessage_MessagePPU(AppConfig::ModulePPU_num_RLMN_1, "up") {}
+
+    RmoMessage_MessagePPU(AppConfig::ModulePPU_num numberPPU, QString dir)
+    {
+        numPPU = numberPPU;
+        direction = dir;
+    }
+
+    static QSharedPointer<RmoMessage_MessagePPU> fromBaseConstructor() {
+        return QSharedPointer<RmoMessage_MessagePPU>::create();
+    }
+
+    void info() const override {
+        qDebug() << "RmoMessage_MessagePPU # " << numPPU;
+        qDebug() << "direction = " << direction;
     }
 };
 
@@ -556,38 +712,12 @@ private:
 
 
     RmoMessageFactory() {
-        // Регистрация типов сообщений
-        registerType(
-            RmoMsgType::TARGET_PPU,
-            RmoMessage_TargetPPU::fromByteArray,
-            RmoMessage_TargetPPU::fromJson,
-            RmoMessage_TargetPPU::fromBaseConstructor
-        );
-        registerType(
-            RmoMsgType::ENABLE_PPU,
-            RmoMessage_EnablePPU::fromByteArray,
-            RmoMessage_EnablePPU::fromJson,
-            RmoMessage_EnablePPU::fromBaseConstructor
-        );
-        registerType(
-            RmoMsgType::RESET_PPU,
-            RmoMessage_ResetPPU::fromByteArray,
-            RmoMessage_ResetPPU::fromJson,
-            RmoMessage_ResetPPU::fromBaseConstructor
-        );
-        registerType(
-            RmoMsgType::STOP_PPU,
-            RmoMessage_StopPPU::fromByteArray,
-            RmoMessage_StopPPU::fromJson,
-            RmoMessage_StopPPU::fromBaseConstructor
-        );
-
         registerType<RmoMessage_TargetPPU>();
         registerType<RmoMessage_EnablePPU>();
         registerType<RmoMessage_ResetPPU>();
         registerType<RmoMessage_StopPPU>();
-
-        // registerType(...); // Для новых сообщений
+        registerType<RmoMessage_SetModePPU>();
+        registerType<RmoMessage_MessagePPU>();
     }
 
 };
