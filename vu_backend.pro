@@ -36,11 +36,18 @@ QMAKE_CLEAN += \
 
 # Общие для всех платформ настройки
 SOURCES += \
+    common/logger/LogFactory.cpp \
+    common/logger/LogManager.cpp \
+    common/logger/LogSession.cpp \
+    common/logger/LogStorage.cpp \
+    common/logger/messageLogs/InitLog.cpp \
+    common/logger/messageLogs/InternalMessageLog.cpp \
+    common/logger/messageLogs/LogHeader.cpp \
+    common/logger/messageLogs/ProtocolMessageLog.cpp \
     main.cpp \
     pch.cpp \
     common/CoreManager.cpp \
     common/calculator/calculator.cpp \
-    common/logger/Logger.cpp \
     network/NetworkManager.cpp \
     network/handlers/EthHandler.cpp \
     network/handlers/TcpConnectionHandler.cpp \
@@ -53,16 +60,26 @@ SOURCES += \
 HEADERS += \
     common/CoreManager.h \
     common/calculator/calculator.h \
-    common/logger/Logger.h \
+    common/logger/LogFactory.h \
+    common/logger/LogManager.h \
+    common/logger/LogSession.h \
+    common/logger/LogStorage.h \
+    common/logger/LoggerMacros.h \
+    common/logger/messageLogs/InitLog.h \
+    common/logger/messageLogs/InternalMessageLog.h \
+    common/logger/messageLogs/LogEnums.h \
+    common/logger/messageLogs/LogHeader.h \
+    common/logger/messageLogs/ProtocolMessageLog.h \
+    common/logger/messageLogs/PrtUtils.h \
     network/NetworkManager.h \
     network/handlers/EthHandler.h \
     network/handlers/TcpConnectionHandler.h \
     network/handlers/TcpHandler.h \
     network/handlers/UdpHandler.h \
     network/messages/EthMessage.h \
-    network/messages/Message.h \
     network/messages/RmoMessage.h \
     network/messages/TcpMessage.h \
+    network/messages/UdpMessage.h \
     utils/AppConfig.h \
     utils/time_provider/TimeProvider.h \
     utils/env_loader/EnvLoader.h \
@@ -91,6 +108,19 @@ win32 {
     }
 
     DEFINES += WPCAP HAVE_REMOTE
+}
+
+# FFTW library
+# Windows
+win32 {
+    INCLUDEPATH += $$PWD/libs/fftw
+    LIBS += -L$$PWD/libs/fftw -lfftw3-3
+}
+# Linux
+unix:!macx {
+    # Используем системную версию FFTW
+    INCLUDEPATH += /usr/include
+    LIBS += -lfftw3
 }
 
 #-------------------------------
@@ -133,7 +163,7 @@ DISTFILES += \
 # 5. Копирование .env в выходную директорию
 #-------------------------------
 
-# Копирование .env, config.ini, database/init_db.sql
+# Копирование .env, settings.ini, init_db.sql и FFTW DLL
 win32 {
     isEmpty(QMAKE_SH) {
         QMAKE_POST_LINK = if not exist "$$shell_path($$DESTDIR)" mkdir "$$shell_path($$DESTDIR)"
@@ -148,9 +178,9 @@ win32 {
     }
 } else {
     QMAKE_POST_LINK += $$quote(mkdir -p $$DESTDIR && \
-        cp -f $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) && \
-        cp -f $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) && \
-        cp -f $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR))
+        cp -f $$PWD/.env $$DESTDIR && \
+        cp -f $$PWD/settings.ini $$DESTDIR && \
+        cp -f $$PWD/database/init_db.sql $$DESTDIR)
 }
 
 win32 {
@@ -178,6 +208,11 @@ QMAKE_DISTCLEAN += \
     Makefile.Release \
     object_script.*.Debug \
     object_script.*.Release
+
+win32 {
+		QMAKE_DISTCLEAN += \
+		$$DESTDIR/libfftw3-3.dll 
+}
 
 # Для рекурсивного удаления директорий
 win32 {

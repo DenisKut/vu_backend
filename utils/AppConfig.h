@@ -616,6 +616,16 @@ public:
         initBase();
     }
 
+    /// Увеличение счётчика сообщений на РМО
+    uint32_t increaseRmoCounter() {
+        _rmoCounter++;
+        return _rmoCounter;
+    }
+
+    uint32_t getRmoCounter() {
+        return _rmoCounter;
+    }
+
     // *******************************************
     //  Текущее состояние ППУ
     // *******************************************
@@ -648,6 +658,7 @@ public:
      * @brief Перечень состояний ППУ
      */
     enum ModulePPU_state {
+        ModulePPU_state_TurnedOff       = 0, ///< ППУ выключено
         ModulePPU_state_TurnedOn        = 1, ///< ППУ включено
         ModulePPU_state_TurnOff         = 2, ///< Выполняется отключение ППУ
         ModulePPU_state_Targeting       = 4, ///< Выполняется отработка ЦУ
@@ -668,6 +679,34 @@ public:
         ModulePPU_isRemote_support      = 2     ///< Выполняется сопровождение
                                                 ///< цели по команде
                                                 ///< «Целеуказание»
+    };
+
+    /**
+     * @enum ModulePPU_modePPU
+     * @brief Список режимов управления ППУ
+     */
+    enum ModulePPU_modePPU {
+        ModulePPU_modePPU_point = 0,
+        ModulePPU_modePPU_speed = 1,
+        ModulePPU_modePPU_request = 2
+    };
+
+    /**
+     * @enum ModulePPU_resetDst
+     * @brief Список устройств для команды перезапуска в Eth
+     */
+    enum ModulePPU_resetDst {
+        ModulePPU_resetDst_BS = 0,
+        ModulePPU_resetDst_PPU = 1
+    };
+
+    /**
+     * @enum ModulePPU_driverError
+     * @brief Список ошибок драйверов ППУ
+     */
+    enum class ModulePPU_driverError: uint32_t {
+        ModulePPU_driverError_Az = 0x31,
+        ModulePPU_driverError_An = 0x32
     };
 
     /**
@@ -696,6 +735,10 @@ public:
         double      azTargetVel;
         double      anTargetVel;
 
+        uint8_t     controlMode;
+
+        double azC0, anC0, azC1, anC1, azC2, anC2;
+
         /// ===========================
         /// Поля для сообщений о состояниях с ПБУ
         /// ===========================
@@ -717,6 +760,13 @@ public:
             anTarget(0),
             azTargetVel(0),
             anTargetVel(0),
+            controlMode(ModulePPU_modePPU_point),
+            azC0(0),
+            anC0(0),
+            azC1(0),
+            anC1(0),
+            azC2(0),
+            anC2(0),
             isRemote(0)
         {};
     };
@@ -781,15 +831,29 @@ public:
         ModulePPU_mas[moduleNum]->isRemote = to_uint8(value);
     }
 
+    void setModulePPU_controlMode(ModulePPU_num moduleNum,
+                                  AppConfig::ModulePPU_modePPU value) {
+        QMutexLocker lock(&m_mutex);
+        ModulePPU_mas[moduleNum]->controlMode = value;
+    }
+
     /// ЦУ для ППУ
     void setModulePPU_CU(ModulePPU_num moduleNum,
                          double azTarget,    double anTarget,
-                         double azTargetVel, double anTargetVel) {
+                         double azTargetVel, double anTargetVel,
+                         double azC0, double anC0, double azC1,
+                         double anC1, double azC2, double anC2) {
         QMutexLocker lock(&m_mutex);
         ModulePPU_mas[moduleNum]->azTarget = azTarget;
         ModulePPU_mas[moduleNum]->anTarget = anTarget;
         ModulePPU_mas[moduleNum]->azTargetVel = azTargetVel;
         ModulePPU_mas[moduleNum]->anTargetVel = anTargetVel;
+        ModulePPU_mas[moduleNum]->azC0 = azC0;
+        ModulePPU_mas[moduleNum]->azC1 = azC1;
+        ModulePPU_mas[moduleNum]->azC2 = azC2;
+        ModulePPU_mas[moduleNum]->anC0 = anC0;
+        ModulePPU_mas[moduleNum]->anC1 = anC1;
+        ModulePPU_mas[moduleNum]->anC2 = anC2;
     }
     /// @}
 
@@ -875,6 +939,41 @@ public:
         QMutexLocker lock(&m_mutex);
         return ModulePPU_mas[moduleNum]->anTargetVel;
     }
+
+    uint8_t getModulePPU_controlMode(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->controlMode;
+    }
+
+    double getModulePPU_azC0(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->azC0;
+    }
+
+    double getModulePPU_anC0(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->anC0;
+    }
+
+    double getModulePPU_azC1(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->azC1;
+    }
+
+    double getModulePPU_anC1(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->anC1;
+    }
+
+    double getModulePPU_azC2(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->azC2;
+    }
+
+    double getModulePPU_anC2(ModulePPU_num moduleNum) {
+        QMutexLocker lock(&m_mutex);
+        return ModulePPU_mas[moduleNum]->anC2;
+    }
     /// @}
 
 
@@ -886,13 +985,7 @@ private:
     /// @{
     std::string _tcpHostIP;         ///< IP адрес TCP сервера
                                     ///
-    int _tcpHostPort;               ///< Порт TCP сервера
-                                    ///
-    int _udpPort;                   ///< Порт UDP
-                                    ///
     std::string _ethInterfaceName;  ///< Имя сетевого интерфейса
-                                    ///
-    int _ethSocketBuffSize;         ///< Размер буфера MAC сокета
     /// @}
 
     /// @name Версии протоколов
@@ -1003,6 +1096,9 @@ private:
     uint64_t _ethProtoMacSrc: 48;       ///< MAC отправителя Ethernet-пакетов
     uint16_t _ethProtoEtherType;        ///< Тип протокола Ethernet-пакетов
     /// @}
+
+    /// Счётчик сообщений на РМО (для отладки):
+    uint32_t _rmoCounter = 0;
 
     /// @name Объекты для хранения текущих состояний ППУ
     /// @{

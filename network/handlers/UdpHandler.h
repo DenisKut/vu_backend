@@ -7,6 +7,7 @@
 #include <atomic>
 #include <thread>
 #include "utils/time_provider/TimeProvider.h"
+#include "../messages/UdpMessage.h"
 
 class UdpHandler : public QObject {
     Q_OBJECT
@@ -73,6 +74,11 @@ public slots:
      */
     Q_INVOKABLE void sendMessage(const QByteArray& data);
 
+    /**
+     * @brief Тестовая отправка пакетов на МЦФОС
+     */
+    void testMCFOS();
+
 private slots:
     void onReadyRead();
 
@@ -81,4 +87,21 @@ private:
     QPointer<QUdpSocket> m_socket;
     QHostAddress m_targetAddr;
     quint16 m_targetPort = 0;
+
+    QVector<quint32> vecSignalDAC_Re, vecSignalDAC_Im; // numBuf: 1, 2
+    QVector<quint32> vecSignalREF_Re, vecSignalREF_Im; // numBuf: 3, 4
+    void writeSignalToMCFOS(UdpMessage_MCFOS_Cmd *mes,
+                            QVector<quint32> vecSignalDAC[]);
+
+    quint8 m_mode = 0; ///< Режим работы МЦФОС
+    /// 0 - ожидание
+    /// 1 - очистка буферов ЦАП и Ref
+    /// 2 - запись сигнала в буфер ЦАП
+    /// 3 - запись сигнала в буфер REF
+    /// 4 - излучение и приём
+    /// 5 - проверка на наличие ошибок записи результата в DDR
+    /// 6 - чтение результата из DDR
+
+    quint8 m_step = 0; ///< Текущий шаг взаимодействия с МЦФОС
+                       ///< в текущем режиме работы
 };

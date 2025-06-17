@@ -156,9 +156,14 @@ docker compose up -d
 
 - Для подробностей по каждому модулю см. соответствующие файлы в папке `docs/`.
 - Для работы с WebSocket в Qt5 установите пакет:
-  ```powershell
+  ```
   sudo apt-get install libqt5websockets5-dev
   ```
+
+- Для работы с FFTW-библиотекой на Linux, достаточно установить пакет:
+  ```
+	sudo apt-get install libfftw3-dev
+	```
 - Для вопросов по структуре, сборке или запуску — смотрите [dev_info.md](./docs/dev_info.md) и [docker_man.md](./docs/docker_man.md).
 
 ---

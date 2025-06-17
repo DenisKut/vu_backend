@@ -41,17 +41,6 @@ static inline uint16_t calculateChecksum(const uint8_t* data, size_t size) {
     return checksum;
 }
 
-/**
- * @brief Преобразует enum class в базовый целочисленный тип
- * @tparam E Тип перечисления
- * @param e Значение перечисления
- * @return Базовое целочисленное значение
- */
-template <typename E>
-constexpr auto to_underlying(E e) -> typename std::underlying_type<E>::type {
-    return static_cast<typename std::underlying_type<E>::type>(e);
-}
-
 // =========================================
 // Номера сообщений по протоколу связи с ПБУ
 // =========================================
@@ -3299,6 +3288,7 @@ struct TcpMessage_0x25 : TcpMessage<TcpMessage_0x25,
 #pragma pack(pop)
 
 static_assert(sizeof(TcpMessage_0x25) == 16 + 20, "Wrong size 0x25");
+//static_assert(sizeof(TcpMessage_0x25) == 32, "Wrong size 0x25");
 
 #pragma pack(push, 1)
 /**
@@ -3631,6 +3621,7 @@ struct TcpMessage_0x45 : TcpMessage<TcpMessage_0x45,
 #pragma pack(pop)
 
 static_assert(sizeof(TcpMessage_0x45) == 16 + 16, "Wrong size 0x45");
+//static_assert(sizeof(TcpMessage_0x45) == 28, "Wrong size 0x45");
 
 /**
  * @class MessageFactory
