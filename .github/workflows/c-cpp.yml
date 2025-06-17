@@ -1,0 +1,42 @@
+name: CI Build (qmake + make)
+
+on:
+  push: {}
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-ubuntu-22_04:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies (Ubuntu) 
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y qtbase5-dev qt5-qmake qtchooser make g++ libqt5websockets5-dev libfftw3-dev
+      - name: Build project
+        shell: bash
+        run: |
+          qmake -version
+          qmake
+          make
+
+  build-windows-latest:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Установка Qt
+        run: |
+          choco install qt5-default -y --params "/InstallDir:C:\Qt"
+      - name: Настройка среды Qt
+        run: |
+          echo "QT_DIR=C:\Qt\5.15.2\mingw81_64" >> $env:GITHUB_ENV
+          echo "C:\Qt\5.15.2\mingw81_64\bin" >> $env:GITHUB_PATH
+          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" >> $env:GITHUB_PATH
+          echo "QMAKESPEC=win32-g++" >> $env:GITHUB_ENV
+      - name: Build project
+        shell: cmd
+        run: |
+          qmake -version
+          qmake
+          mingw32-make
