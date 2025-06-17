@@ -165,14 +165,18 @@ DISTFILES += \
 
 # Копирование .env, settings.ini, init_db.sql и FFTW DLL
 win32 {
-    QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR \
-        & copy /Y $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) \
-        & copy /Y $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) \
-        & copy /Y $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR) \
-        & copy /Y $$shell_path($$PWD/libs/fftw/libfftw3-3.dll) $$shell_path($$DESTDIR))
-}
-# Копирование .env, settings.ini, init_db.sql для Linux
-unix:!macx {
+    isEmpty(QMAKE_SH) {
+        QMAKE_POST_LINK = if not exist "$$shell_path($$DESTDIR)" mkdir "$$shell_path($$DESTDIR)"
+        QMAKE_POST_LINK += && copy /Y "$$shell_path($$PWD/.env)" "$$shell_path($$DESTDIR)"
+        QMAKE_POST_LINK += && copy /Y "$$shell_path($$PWD/settings.ini)" "$$shell_path($$DESTDIR)"
+        QMAKE_POST_LINK += && copy /Y "$$shell_path($$PWD/database/init_db.sql)" "$$shell_path($$DESTDIR)"
+    } else {
+        QMAKE_POST_LINK = mkdir -p $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/.env) $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/settings.ini) $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/database/init_db.sql) $$shell_quote($$DESTDIR)
+    }
+} else {
     QMAKE_POST_LINK += $$quote(mkdir -p $$DESTDIR && \
         cp -f $$PWD/.env $$DESTDIR && \
         cp -f $$PWD/settings.ini $$DESTDIR && \
