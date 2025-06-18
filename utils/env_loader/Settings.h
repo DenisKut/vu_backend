@@ -2,8 +2,8 @@
 #include <QSettings>
 enum class AppMode
 {
-    VU_LOCALHOST,
-    VU_REMOTE_ALMAZ
+	VU_LOCALHOST,
+	VU_REMOTE_ALMAZ
 };
 /// @brief функция получение объекта с параметрами из settings.ini
 /// @return QSettings - объект с параметрами настроек
@@ -22,4 +22,3 @@ void checkGroupEmptiness(QVariantMap &checkable, const QString &groupName = QStr
 /// @brief Чтение режима работы из настроек
 /// @return enum AppMode - режим работы программы
 AppMode currentMode();
-

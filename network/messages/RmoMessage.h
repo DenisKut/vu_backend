@@ -876,9 +876,8 @@ private:
 		registerType<RmoMessage_EnablePPU>();
 		registerType<RmoMessage_ResetPPU>();
 		registerType<RmoMessage_StopPPU>();
-        registerType<RmoMessage_MCFOS_Write_DAC_REF>();
-        registerType<RmoMessage_MCFOS_Start>();
-
+		registerType<RmoMessage_MCFOS_Write_DAC_REF>();
+		registerType<RmoMessage_MCFOS_Start>();
 
 		// registerType(...); // Для новых сообщений
 	}

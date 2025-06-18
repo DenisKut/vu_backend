@@ -9,157 +9,157 @@
 #include <QMutex>
 #include <sstream>
 
-
-class TimeProvider : public QObject {
-    Q_OBJECT
+class TimeProvider : public QObject
+{
+	Q_OBJECT
 public:
-    // Удаляем копирование и присваивание
-    TimeProvider(const TimeProvider&) = delete;
-    TimeProvider& operator=(const TimeProvider&) = delete;
-    // Получить экземпляр синглтона:
-    static TimeProvider& instance();
+	// Удаляем копирование и присваивание
+	TimeProvider(const TimeProvider &) = delete;
+	TimeProvider &operator=(const TimeProvider &) = delete;
+	// Получить экземпляр синглтона:
+	static TimeProvider &instance();
 
-    // Функции получения системного времени и времени ПБУ:
-    //----------------------------------------------------------------------
-    // Получить время с точностью до миллисекунд:
-    int64_t getMs() const;
+	// Функции получения системного времени и времени ПБУ:
+	//----------------------------------------------------------------------
+	// Получить время с точностью до миллисекунд:
+	int64_t getMs() const;
 
-    // Получить время с точностью до микросекунд:
-    int64_t getMks() const;
+	// Получить время с точностью до микросекунд:
+	int64_t getMks() const;
 
-    // Получить время с точностью до наносекунд:
-    int64_t getNs() const;
+	// Получить время с точностью до наносекунд:
+	int64_t getNs() const;
 
-    std::string msToDateTime(uint64_t millisecondsSinceEpoch);
+	std::string msToDateTime(uint64_t millisecondsSinceEpoch);
 
-    // Получить дату в текстовом виде:
-    std::string currentDateString();
+	// Получить дату в текстовом виде:
+	std::string currentDateString();
 
-    // Получить время в текстовом виде:
-    std::string currentTimeString();
-    //----------------------------------------------------------------------
+	// Получить время в текстовом виде:
+	std::string currentTimeString();
+	//----------------------------------------------------------------------
 
-    // Функции записи и чтения разницы во времени
-    // между ВУ и ПБУ, а также задержки сообщений
-    // при передачи по TCP/IP между ВУ и ПБУ:
-    //----------------------------------------------------------------------
-    void setSysOnTimeReq(const int64_t time);
-    void setPbuTimeDelta(const int64_t time);
-    void setPbuTimeKorr(const int64_t time);
-    int64_t getSysOnTimeReq() const;
-    int64_t getPbuTimeDelta() const;
-    int64_t getPbuTimeKorr() const;
-    //----------------------------------------------------------------------
+	// Функции записи и чтения разницы во времени
+	// между ВУ и ПБУ, а также задержки сообщений
+	// при передачи по TCP/IP между ВУ и ПБУ:
+	//----------------------------------------------------------------------
+	void setSysOnTimeReq(const int64_t time);
+	void setPbuTimeDelta(const int64_t time);
+	void setPbuTimeKorr(const int64_t time);
+	int64_t getSysOnTimeReq() const;
+	int64_t getPbuTimeDelta() const;
+	int64_t getPbuTimeKorr() const;
+	//----------------------------------------------------------------------
 
-    // Функции периода БС:
-    //----------------------------------------------------------------------
-    // Установить номер текущего периода БС:
-    void setBsPeriodNumber(const uint32_t value);
+	// Функции периода БС:
+	//----------------------------------------------------------------------
+	// Установить номер текущего периода БС:
+	void setBsPeriodNumber(const uint32_t value);
 
-    // Установить время текущего приода БС:
-    void setBsPeriodTime(const uint8_t *value);
+	// Установить время текущего приода БС:
+	void setBsPeriodTime(const uint8_t *value);
 
-    // Установить значение периода синхронизации БС:
-    void setBsPeriodWidth(const uint32_t value);
+	// Установить значение периода синхронизации БС:
+	void setBsPeriodWidth(const uint32_t value);
 
-    // Установить значение разницы во времени между ВУ и БС:
-    void setBsTimeDelta(const int64_t value);
+	// Установить значение разницы во времени между ВУ и БС:
+	void setBsTimeDelta(const int64_t value);
 
-    // Установить значение времени БС по приходу сообщения 11.1:
-    void setBsTimePPU(const int64_t value);
+	// Установить значение времени БС по приходу сообщения 11.1:
+	void setBsTimePPU(const int64_t value);
 
-    int64_t getBsTimePPU() const;
+	int64_t getBsTimePPU() const;
 
-    // Получить номер текущего периода БС:
-    uint32_t getBsPeriodNumber() const;
+	// Получить номер текущего периода БС:
+	uint32_t getBsPeriodNumber() const;
 
-    // Получить время текущего приода БС:
-    int64_t getBsPeriodTime() const;
+	// Получить время текущего приода БС:
+	int64_t getBsPeriodTime() const;
 
-    // Получить значение периода синхронизации БС:
-    int64_t getBsPeriodWidth() const;
+	// Получить значение периода синхронизации БС:
+	int64_t getBsPeriodWidth() const;
 
-    // Получить значение разницы во времени между ВУ и БС:
-    int64_t getBsTimeDelta() const;
+	// Получить значение разницы во времени между ВУ и БС:
+	int64_t getBsTimeDelta() const;
 
-    // Получить значение разницы во времени между предыдущим
-    // сообщением 11.1 и текущим временем БС:
-    int64_t getBsDeltaPPU() const;
+	// Получить значение разницы во времени между предыдущим
+	// сообщением 11.1 и текущим временем БС:
+	int64_t getBsDeltaPPU() const;
 
-    void initTimes();
+	void initTimes();
 
-    // Синхронизировать время с БС:
-    void syncTimeBS();
+	// Синхронизировать время с БС:
+	void syncTimeBS();
 
-    // Синхронизировать время с ПБУ:
-    void syncTimePBU(uint32_t timeRequest1,
-                     uint32_t timeRequest2,
-                     uint32_t timeAnswer1,
-                     uint32_t timeAnswer2);
+	// Синхронизировать время с ПБУ:
+	void syncTimePBU(uint32_t timeRequest1,
+					 uint32_t timeRequest2,
+					 uint32_t timeAnswer1,
+					 uint32_t timeAnswer2);
 
-    // Запрос времени ПБУ для отправки сообщения на ПБУ:
-    uint64_t getTimeForRequestPBU();
+	// Запрос времени ПБУ для отправки сообщения на ПБУ:
+	uint64_t getTimeForRequestPBU();
 
-    // Запрос времени БС для отправки сообщения на БС:
-    uint64_t getTimeForRequestBS();
-    //----------------------------------------------------------------------
+	// Запрос времени БС для отправки сообщения на БС:
+	uint64_t getTimeForRequestBS();
+	//----------------------------------------------------------------------
 
-
-    /**
-     * @brief структуры, содержащая разбор временно отметки
-     * , в human-readable формат
-     */
-    struct HumanReadableTimestamp{
-        QString data;    ///< дата в формате ГГГГ-ММ-ДД
+	/**
+	 * @brief структуры, содержащая разбор временно отметки
+	 * , в human-readable формат
+	 */
+	struct HumanReadableTimestamp
+	{
+		QString data; ///< дата в формате ГГГГ-ММ-ДД
 #ifdef _WIN32
-        uchar hrs;      ///< час(ы) (0-23)
-        uchar minutes;  ///< минута(ы) (0-59)
-        uchar sec;      ///< секунда(ы) (0-59)
-        ushort m_sec;    ///< только миллисекунды (10^-3) (0-999)
+		uchar hrs;	   ///< час(ы) (0-23)
+		uchar minutes; ///< минута(ы) (0-59)
+		uchar sec;	   ///< секунда(ы) (0-59)
+		ushort m_sec;  ///< только миллисекунды (10^-3) (0-999)
 #else
-        u_char hrs;      ///< час(ы) (0-23)
-        u_char minutes;  ///< минута(ы) (0-59)
-        u_char sec;      ///< секунда(ы) (0-59)
-        u_short m_sec;    ///< только миллисекунды (10^-3) (0-999)
+		u_char hrs;		///< час(ы) (0-23)
+		u_char minutes; ///< минута(ы) (0-59)
+		u_char sec;		///< секунда(ы) (0-59)
+		u_short m_sec;	///< только миллисекунды (10^-3) (0-999)
 #endif
-        uint mk_sec;   ///< только микросекунды (10^-6) (0-999999)
-    };
+		uint mk_sec; ///< только микросекунды (10^-6) (0-999999)
+	};
 
-    /// @brief конвертация временной отметки в структуру
-    /// @param timestamp 
-    /// @return структура с подробным разбором временной отметки 
-    HumanReadableTimestamp to_HR_Fmt(uint64_t timestamp);
+	/// @brief конвертация временной отметки в структуру
+	/// @param timestamp
+	/// @return структура с подробным разбором временной отметки
+	HumanReadableTimestamp to_HR_Fmt(uint64_t timestamp);
 
-    private :
-    // Приватный конструктор:
-    TimeProvider() = default;
+private:
+	// Приватный конструктор:
+	TimeProvider() = default;
 
-    // QMutexLocker m_mutexLocker(QMutex&);
+	// QMutexLocker m_mutexLocker(QMutex&);
 
-    mutable QMutex m_mutex{QMutex::Recursive};
+	mutable QMutex m_mutex{QMutex::Recursive};
 
-    // Переменные периода БС:
-    //----------------------------------------------------------------------
-    int32_t bsPeriodNumber = 0;     ///< Порядковый номер нового периода
-    int64_t bsPeriodTime : 40;      ///< Время начала нового периода
-    int32_t bsPeriodWidth = 0;      ///< Значение периода синхронизации
-    int64_t bsTimeDelta = 0;        ///< Разница времени между
-                                    ///< нашим системным временем (нс)
-                                    ///< и временем БС (0.1 мкс)
-    int64_t bsTimePPU = 0;          ///< Время приёма последнего сообщения
-                                    ///< 11.1 от ППУ
-    //----------------------------------------------------------------------
+	// Переменные периода БС:
+	//----------------------------------------------------------------------
+	int32_t bsPeriodNumber = 0; ///< Порядковый номер нового периода
+	int64_t bsPeriodTime : 40;	///< Время начала нового периода
+	int32_t bsPeriodWidth = 0;	///< Значение периода синхронизации
+	int64_t bsTimeDelta = 0;	///< Разница времени между
+								///< нашим системным временем (нс)
+								///< и временем БС (0.1 мкс)
+	int64_t bsTimePPU = 0;		///< Время приёма последнего сообщения
+								///< 11.1 от ППУ
+	//----------------------------------------------------------------------
 
-    int64_t sysOnTimeReq = 0;       ///< Время на момент отправки
-                                    ///< пакета "Запрос времени"
-                                    ///< (мс)
+	int64_t sysOnTimeReq = 0; ///< Время на момент отправки
+							  ///< пакета "Запрос времени"
+							  ///< (мс)
 
-    int64_t pbuTimeKorr = 0;        ///< Задержка распространения
-                                    ///< до ПБУ (мс)
+	int64_t pbuTimeKorr = 0; ///< Задержка распространения
+							 ///< до ПБУ (мс)
 
-    int64_t pbuTimeDelta = 0;       ///< Разница времени между
-                                    ///< временем ПБУ и нашим
-                                    ///< системным временем (мс)
+	int64_t pbuTimeDelta = 0; ///< Разница времени между
+							  ///< временем ПБУ и нашим
+							  ///< системным временем (мс)
 };
 
 #endif // TIMEPROVIDER_H

@@ -7,14 +7,15 @@
 #include <QObject>
 #include "network/NetworkManager.h"
 
-class CoreManager : public QObject {
-    Q_OBJECT
+class CoreManager : public QObject
+{
+	Q_OBJECT
 public:
-    explicit CoreManager(QObject* parent = nullptr);
-    void initialize();
+	explicit CoreManager(QObject *parent = nullptr);
+	void initialize();
 
 private:
-    NetworkManager* m_networkManager;
+	NetworkManager *m_networkManager;
 };
 
 #endif // COREMANAGER_H

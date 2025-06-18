@@ -2,5 +2,4 @@
 
 Calculator::Calculator()
 {
-
 }
