@@ -394,6 +394,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage {
     float amlitude;
     float f0;
     float df;
+    quint32 pulseSize;
     quint32 windowType;
 
     int type() const override { return typeField; }
@@ -403,7 +404,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage {
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
         stream.setByteOrder(QDataStream::LittleEndian);
-        stream << typeField << amlitude << f0 << df << windowType;
+        stream << typeField << amlitude << f0 << df << pulseSize << windowType;
         return data;
     }
     static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
@@ -411,7 +412,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage {
         QDataStream stream(data);
         stream.setByteOrder(QDataStream::LittleEndian);
         stream >> msg->typeField >> msg->amlitude >> msg->f0
-            >> msg->df >> msg->windowType;
+            >> msg->df >> msg->pulseSize >> msg->windowType;
         return msg;
     }
     nlohmann::json toJson() const override {
@@ -419,6 +420,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage {
         j["amlitude"] = amlitude;
         j["f0"] = f0;
         j["df"] = df;
+        j["pulseSize"] = pulseSize;
         j["windowType"] = windowType;
         return j;
     }
@@ -428,6 +430,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage {
         msg->amlitude = j.value("amlitude", 0);
         msg->f0 = j.value("f0", 0);
         msg->df = j.value("df", 0);
+        msg->pulseSize = j.value("pulseSize", 0);
         msg->windowType = j.value("windowType", 0);
         return msg;
     }
@@ -437,6 +440,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage {
         qInfo() << "amlitude = " << amlitude;
         qInfo() << "f0 = " << f0;
         qInfo() << "df = " << df;
+        qInfo() << "pulseSize = " << pulseSize;
         qInfo() << "windowType = " << windowType;
     }
 
@@ -451,15 +455,17 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage {
  */
 struct RmoMessage_MCFOS_Start : RmoBaseMessage {
     int32_t typeField = static_cast<int32_t>(RmoMsgType::MCFOS_START);
-    quint32 pulseSize;
+    quint32 periodSize;
     quint32 periodCount;
+    quint32 ampOff;
     quint32 pulseOn;
     quint32 pulseOff;
-    quint32 ampOff;
     quint32 procDelay;
     quint32 procDelta;
-    quint32 periodSize;
     quint32 windowType;
+    quint32 isCorrelation;
+    quint32 isSignalFromDAC;
+    quint32 isWriteFile;
 
     int type() const override { return typeField; }
     static int typeStatic() { return static_cast<int>(RmoMsgType::MCFOS_START); }
@@ -468,48 +474,58 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage {
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
         stream.setByteOrder(QDataStream::LittleEndian);
-        stream << typeField << pulseSize << periodCount << pulseOn
-               << pulseOff
+        stream << typeField
+               << periodSize
+               << periodCount
                << ampOff
+               << pulseOn
+               << pulseOff
                << procDelay
                << procDelta
-               << periodSize
-               << windowType;
+               << windowType
+               << isCorrelation
+               << isSignalFromDAC
+               << isWriteFile;
         return data;
     }
     static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray& data) {
         auto msg = QSharedPointer<RmoMessage_MCFOS_Start>::create();
         QDataStream stream(data);
         stream.setByteOrder(QDataStream::LittleEndian);
-        stream >> msg->typeField >> msg->pulseSize >> msg->periodCount
-            >> msg->pulseOn >> msg->pulseOff >> msg->ampOff >> msg->procDelay
-            >> msg->procDelta >> msg->periodSize >> msg->windowType;
+        stream >> msg->typeField >> msg->periodSize >> msg->periodCount
+            >> msg->ampOff >> msg->pulseOn >> msg->pulseOff >> msg->procDelay
+            >> msg->procDelta >> msg->windowType >> msg->isCorrelation
+            >> msg->isSignalFromDAC >> msg->isWriteFile;
         return msg;
     }
     nlohmann::json toJson() const override {
         nlohmann::json j;
-        j["pulseSize"] = pulseSize;
+        j["periodSize"] = periodSize;
         j["periodCount"] = periodCount;
+        j["ampOff"] = ampOff;
         j["pulseOn"] = pulseOn;
         j["pulseOff"] = pulseOff;
-        j["ampOff"] = ampOff;
         j["procDelay"] = procDelay;
         j["procDelta"] = procDelta;
-        j["periodSize"] = periodSize;
         j["windowType"] = windowType;
+        j["isCorrelation"] = isCorrelation;
+        j["isSignalFromDAC"] = isSignalFromDAC;
+        j["isWriteFile"] = isWriteFile;
         return j;
     }
     static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json& j) {
         auto msg = QSharedPointer<RmoMessage_MCFOS_Start>::create();
-        msg->pulseSize = j.value("pulseSize", 0);
+        msg->periodSize = j.value("periodSize", 0);
         msg->periodCount = j.value("periodCount", 0);
+        msg->ampOff = j.value("ampOff", 0);
         msg->pulseOn = j.value("pulseOn", 0);
         msg->pulseOff = j.value("pulseOff", 0);
-        msg->ampOff = j.value("ampOff", 0);
         msg->procDelay = j.value("procDelay", 0);
         msg->procDelta = j.value("procDelta", 0);
-        msg->periodSize = j.value("periodSize", 0);
         msg->windowType = j.value("windowType", 0);
+        msg->isCorrelation = j.value("isCorrelation", 0);
+        msg->isSignalFromDAC = j.value("isSignalFromDAC", 0);
+        msg->isWriteFile = j.value("isWriteFile", 0);
         return msg;
     }
     static QSharedPointer<RmoMessage_MCFOS_Start> fromBaseConstructor() {
@@ -517,16 +533,17 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage {
     }
     void info() const override {
         qInfo() << "RmoMessage_MCFOS_Start:";
-        qInfo() << "pulseSize = " << pulseSize;
+        qInfo() << "periodSize = " << periodSize;
         qInfo() << "periodCount = " << periodCount;
+        qInfo() << "ampOff = " << ampOff;
         qInfo() << "pulseOn = " << pulseOn;
         qInfo() << "pulseOff = " << pulseOff;
-        qInfo() << "ampOff = " << ampOff;
         qInfo() << "procDelay = " << procDelay;
         qInfo() << "procDelta = " << procDelta;
-        qInfo() << "periodSize = " << periodSize;
-        qInfo() << "pulseSize = " << pulseSize;
         qInfo() << "windowType = " << windowType;
+        qInfo() << "isCorrelation = " << isCorrelation;
+        qInfo() << "isSignalFromDAC = " << isSignalFromDAC;
+        qInfo() << "isWriteFile = " << isWriteFile;
     }
 };
 

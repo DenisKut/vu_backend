@@ -31,7 +31,7 @@ public:
     /**
      * @brief Запуск чтения DDR из МЦФОС при поолучении пакета
      */
-    Q_INVOKABLE void mcfosReadDDR();
+    Q_INVOKABLE void mcfosReadDDR(const QByteArray& data);
 
     /**
      * @brief Разобрать входящий пакет (вызывается из onReadyRead)
@@ -47,9 +47,14 @@ public:
                                 const QHostAddress& addr,
                                 quint16 port);
 
+    // Генерация окна Натталла (4-терм)
+    float* getWindowNuttall(int length);
 
-    void resetMcfosAdressDDR();
-    void incrementMcfosAdressDDR();
+    // Генерация окна Блэкмана-Харриса (4-терм)
+    float* getWindowBlackmanHarris(int length);
+
+    // Генерация окна Блэкмана (3-терм)
+    float* getWindowBlackman(int length);
 
 signals:
     /**
@@ -104,7 +109,10 @@ private:
     quint16 m_targetPort = 0;
     QHostAddress m_targetAddr;
 
-    quint32 mcfosAdressDDR = 0;
+    quint32 mcfosAddrDDR = 0;        // Текущий адрес блока памяти в DDR
+    quint32 mcfosAddrMaxDDR = 0;     // Максимальный адрес памяти в DDR
+    quint32 mcfosAddrSizeDDR = 1024; // Размер блока для одного канала в DDR
+    QByteArray recDDR;               // Буфер, содержащий результат чтения DDR
 
     QVector<quint32> vecSignalDAC_Re, vecSignalDAC_Im; // numBuf: 1, 2
     QVector<quint32> vecSignalREF_Re, vecSignalREF_Im; // numBuf: 3, 4
@@ -122,4 +130,15 @@ private:
 
     quint8 m_step = 0; ///< Текущий шаг взаимодействия с МЦФОС
                        ///< в текущем режиме работы
+
+    /**
+     * @enum MCFOS_WindowType
+     * @brief Тип окна, используемого в МЦФОС,
+     *        а также для БПФ на backend
+     */
+    enum MCFOS_WindowType {
+        MCFOS_WindowType_Nuttall = 0,
+        MCFOS_WindowType_BlackmanHarris = 1,
+        MCFOS_WindowType_Blackman = 2
+    };
 };
