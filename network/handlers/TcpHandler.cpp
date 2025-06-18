@@ -4,841 +4,945 @@
 #include <QDebug>
 
 TcpHandler::TcpHandler(QObject *parent)
-    : QObject(parent)
+	: QObject(parent)
 {
-    // ...инициализация в initialize()...
+	// ...инициализация в initialize()...
 }
 
 void TcpHandler::initialize()
 {
-    m_socket = new QTcpSocket(this);
-    m_serverRMO = new QTcpServer(this);
-    m_wsServer = new QWebSocketServer(QStringLiteral("RMO WebSocket Server"), QWebSocketServer::NonSecureMode, this);
-    m_registrationTimer = new QTimer(this);
-    m_periodicTimer = new QTimer(this);
-    m_reconnectTimer = new QTimer(this);
+	m_socket = new QTcpSocket(this);
+	m_serverRMO = new QTcpServer(this);
+	m_wsServer = new QWebSocketServer(QStringLiteral("RMO WebSocket Server"), QWebSocketServer::NonSecureMode, this);
+	m_registrationTimer = new QTimer(this);
+	m_periodicTimer = new QTimer(this);
+	m_reconnectTimer = new QTimer(this);
 
-    Q_ASSERT_X(m_socket, "TcpHandler", "Failed to create TCP socket");
-    Q_ASSERT_X(m_serverRMO, "TcpHandler", "Failed to create TCP server");
-    Q_ASSERT_X(m_wsServer, "TcpHandler", "Failed to create WebSocket server");
+	Q_ASSERT_X(m_socket, "TcpHandler", "Failed to create TCP socket");
+	Q_ASSERT_X(m_serverRMO, "TcpHandler", "Failed to create TCP server");
+	Q_ASSERT_X(m_wsServer, "TcpHandler", "Failed to create WebSocket server");
 
-    m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+	m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
-    // --- TCP сервер ---
-    if (!initServer()) {
-        qFatal("Failed to initialize TCP server");
-    }
-    connect(m_serverRMO, &QTcpServer::newConnection, this,
-            &TcpHandler::incomingConnection,
-            Qt::QueuedConnection);
+	// --- TCP сервер ---
+	if (!initServer())
+	{
+		qFatal("Failed to initialize TCP server");
+	}
+	connect(m_serverRMO, &QTcpServer::newConnection, this,
+			&TcpHandler::incomingConnection,
+			Qt::QueuedConnection);
 
-    // --- WebSocket сервер ---
-    if (!initWebSocketServer()) {
-        qWarning() << "WebSocket server not started";
-    } else {
-        connect(m_wsServer, &QWebSocketServer::newConnection, this,
-                &TcpHandler::onWebSocketNewConnection);
-    }
+	// --- WebSocket сервер ---
+	if (!initWebSocketServer())
+	{
+		qWarning() << "WebSocket server not started";
+	}
+	else
+	{
+		connect(m_wsServer, &QWebSocketServer::newConnection, this,
+				&TcpHandler::onWebSocketNewConnection);
+	}
 
-    // --- Основное TCP-подключение ---
-    m_mainSocketThread = new QThread(this);
-    QTcpSocket* mainSocket = new QTcpSocket();
-    m_mainConnection = new TcpConnectionHandler(mainSocket);
-    mainSocket->moveToThread(m_mainSocketThread);
-    m_mainConnection->moveToThread(m_mainSocketThread);
-    connect(m_mainSocketThread, &QThread::finished, mainSocket,
-            &QObject::deleteLater);
-    connect(m_mainSocketThread, &QThread::finished, m_mainConnection,
-            &QObject::deleteLater);
-    connect(m_mainSocketThread, &QThread::finished, m_mainSocketThread,
-            &QObject::deleteLater);
-    connect(m_mainConnection, &TcpConnectionHandler::finished,
-            m_mainSocketThread,
-            &QThread::quit);
-    connect(m_mainConnection, &TcpConnectionHandler::messageReceived,
-            this, [this]
-            (const QByteArray& data){
-                processIncomingMessage(data);
-            });
-    m_mainSocketThread->start();
+	// --- Основное TCP-подключение ---
+	m_mainSocketThread = new QThread(this);
+	QTcpSocket *mainSocket = new QTcpSocket();
+	m_mainConnection = new TcpConnectionHandler(mainSocket);
+	mainSocket->moveToThread(m_mainSocketThread);
+	m_mainConnection->moveToThread(m_mainSocketThread);
+	connect(m_mainSocketThread, &QThread::finished, mainSocket,
+			&QObject::deleteLater);
+	connect(m_mainSocketThread, &QThread::finished, m_mainConnection,
+			&QObject::deleteLater);
+	connect(m_mainSocketThread, &QThread::finished, m_mainSocketThread,
+			&QObject::deleteLater);
+	connect(m_mainConnection, &TcpConnectionHandler::finished,
+			m_mainSocketThread,
+			&QThread::quit);
+	connect(m_mainConnection, &TcpConnectionHandler::messageReceived,
+			this, [this](const QByteArray &data)
+			{ processIncomingMessage(data); });
+	m_mainSocketThread->start();
 
-    // --- Основной клиентский сокет ---
-    connect(m_socket, &QTcpSocket::connected, this,
-            &TcpHandler::onConnected);
-    connect(m_socket, &QTcpSocket::disconnected, this,
-            &TcpHandler::onDisconnected);
-    connect(m_socket, &QTcpSocket::readyRead, this,
-                                                &TcpHandler::onReadyRead);
+	// --- Основной клиентский сокет ---
+	connect(m_socket, &QTcpSocket::connected, this,
+			&TcpHandler::onConnected);
+	connect(m_socket, &QTcpSocket::disconnected, this,
+			&TcpHandler::onDisconnected);
+	connect(m_socket, &QTcpSocket::readyRead, this,
+			&TcpHandler::onReadyRead);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    // Для Qt 5.15 и новее используем новый сигнал errorOccurred
-    connect(m_socket, &QAbstractSocket::errorOccurred,
-            this, &TcpHandler::onError);
+	// Для Qt 5.15 и новее используем новый сигнал errorOccurred
+	connect(m_socket, &QAbstractSocket::errorOccurred,
+			this, &TcpHandler::onError);
 #else
-    // Для старых версий используем старый сигнал error с приведением типа
-    connect(m_socket, static_cast<void (QAbstractSocket::*)
-                                  (QAbstractSocket::SocketError)>
-            (&QAbstractSocket::error),
-            this, &TcpHandler::onError);
+	// Для старых версий используем старый сигнал error с приведением типа
+	connect(m_socket, static_cast<void (QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error),
+			this, &TcpHandler::onError);
 #endif
 
+	m_reconnectTimer->setInterval(800);
+	connect(m_reconnectTimer, &QTimer::timeout, this,
+			&TcpHandler::reconnect);
 
-    m_reconnectTimer->setInterval(800);
-    connect(m_reconnectTimer, &QTimer::timeout, this,
-            &TcpHandler::reconnect);
-
-    connect(m_registrationTimer, &QTimer::timeout, this,
-            &TcpHandler::handleRegistration);
-    connect(m_periodicTimer, &QTimer::timeout, this,
-            &TcpHandler::sendPeriodicMessages);
+	connect(m_registrationTimer, &QTimer::timeout, this,
+			&TcpHandler::handleRegistration);
+	connect(m_periodicTimer, &QTimer::timeout, this,
+			&TcpHandler::sendPeriodicMessages);
 }
 
-TcpHandler::~TcpHandler() {
-    disconnect();
-    delete m_socket;
-    delete m_serverRMO;
-    delete m_registrationTimer;
-    delete m_periodicTimer;
-    delete m_reconnectTimer;
-    delete m_wsServer;
-    // Клиенты удаляются автоматически через deleteLater()
+TcpHandler::~TcpHandler()
+{
+	disconnect();
+	delete m_socket;
+	delete m_serverRMO;
+	delete m_registrationTimer;
+	delete m_periodicTimer;
+	delete m_reconnectTimer;
+	delete m_wsServer;
+	// Клиенты удаляются автоматически через deleteLater()
 }
 
-void TcpHandler::startTimers() {
-    m_reconnectTimer->start(1000);
+void TcpHandler::startTimers()
+{
+	m_reconnectTimer->start(1000);
 }
 
-void TcpHandler::stopTimers() {
-    m_registrationTimer->stop();
-    m_periodicTimer->stop();
-    m_reconnectTimer->stop();
+void TcpHandler::stopTimers()
+{
+	m_registrationTimer->stop();
+	m_periodicTimer->stop();
+	m_reconnectTimer->stop();
 }
 
-bool TcpHandler::initServer() {
-    constexpr quint16 startPort = 23458;
-    constexpr quint16 maxAttempts = 10;
-    for (quint16 port = startPort; port < startPort + maxAttempts; ++port) {
-        if (m_serverRMO->listen(QHostAddress::Any, port)) {
-            qInfo() << "TCP server started on port" << port;
-            return true;
-        }
-    }
-    qCritical() << "Failed to start TCP server after" << maxAttempts
-                << "attempts";
-    return false;
+bool TcpHandler::initServer()
+{
+	constexpr quint16 startPort = 23458;
+	constexpr quint16 maxAttempts = 10;
+	for (quint16 port = startPort; port < startPort + maxAttempts; ++port)
+	{
+		if (m_serverRMO->listen(QHostAddress::Any, port))
+		{
+			qInfo() << "TCP server started on port" << port;
+			return true;
+		}
+	}
+	qCritical() << "Failed to start TCP server after" << maxAttempts
+				<< "attempts";
+	return false;
 }
 
-bool TcpHandler::initWebSocketServer() {
-    constexpr quint16 wsPort = 23457;
-    if (m_wsServer->listen(QHostAddress::Any, wsPort)) {
-        qInfo() << "WebSocket server started on port" << wsPort;
-        return true;
-    }
-    return false;
+bool TcpHandler::initWebSocketServer()
+{
+	constexpr quint16 wsPort = 23457;
+	if (m_wsServer->listen(QHostAddress::Any, wsPort))
+	{
+		qInfo() << "WebSocket server started on port" << wsPort;
+		return true;
+	}
+	return false;
 }
 
-void TcpHandler::connectToHost(const QString& host, quint16 port) {
-    m_host = host;
-    m_port = port;
-    qInfo() << "Connecting to" << host << ":" << port;
-    m_socket->connectToHost(host, port, QIODevice::ReadWrite,
-                            QAbstractSocket::AnyIPProtocol);
+void TcpHandler::connectToHost(const QString &host, quint16 port)
+{
+	m_host = host;
+	m_port = port;
+	qInfo() << "Connecting to" << host << ":" << port;
+	m_socket->connectToHost(host, port, QIODevice::ReadWrite,
+							QAbstractSocket::AnyIPProtocol);
 }
 
-void TcpHandler::disconnect() {
-    if (m_socket->state() != QAbstractSocket::UnconnectedState) {
-        m_socket->disconnectFromHost();
-    }
-    m_registrationTimer->stop();
-    m_periodicTimer->stop();
+void TcpHandler::disconnect()
+{
+	if (m_socket->state() != QAbstractSocket::UnconnectedState)
+	{
+		m_socket->disconnectFromHost();
+	}
+	m_registrationTimer->stop();
+	m_periodicTimer->stop();
 }
 
-void TcpHandler::onConnected() {
-    std::cout << "Connected to TCP host" << std::endl;
-    int timer = 800;
-    m_reconnectTimer->stop();
-    m_registrationTimer->start(timer); // Отправка 0x01
-    LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", QString("ПОДКЛЮЧЁН, отправка раз в %1 мсек.").arg(timer));
+void TcpHandler::onConnected()
+{
+	std::cout << "Connected to TCP host" << std::endl;
+	int timer = 800;
+	m_reconnectTimer->stop();
+	m_registrationTimer->start(timer); // Отправка 0x01
+	LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", QString("ПОДКЛЮЧЁН, отправка раз в %1 мсек.").arg(timer));
 }
 
-void TcpHandler::onDisconnected() {
+void TcpHandler::onDisconnected()
+{
 
-    std::cout << "Disconnected from TCP host" << std::endl;
-    m_isRegistered = false;
-    m_registrationTimer->stop();
-    m_periodicTimer->stop();
-    if (!m_reconnectTimer->isActive()) { // Защита от повторного запуска
-        m_reconnectTimer->start();
-    }
-    LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "ОТКЛЮЧЁН");
+	std::cout << "Disconnected from TCP host" << std::endl;
+	m_isRegistered = false;
+	m_registrationTimer->stop();
+	m_periodicTimer->stop();
+	if (!m_reconnectTimer->isActive())
+	{ // Защита от повторного запуска
+		m_reconnectTimer->start();
+	}
+	LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "ОТКЛЮЧЁН");
 }
 
-void TcpHandler::reconnect() {
-    if (!m_socket || m_socket->state() == QAbstractSocket::ConnectedState)
-        return;
+void TcpHandler::reconnect()
+{
+	if (!m_socket || m_socket->state() == QAbstractSocket::ConnectedState)
+		return;
 
-    // Сбрасываем соединение если не в состоянии Unconnected
-    if (m_socket->state() != QAbstractSocket::UnconnectedState) {
-        m_socket->abort();
-    }
+	// Сбрасываем соединение если не в состоянии Unconnected
+	if (m_socket->state() != QAbstractSocket::UnconnectedState)
+	{
+		m_socket->abort();
+	}
 
-    qInfo() << "Reconnecting to" << m_host << ":" << m_port;
-    m_socket->connectToHost(m_host, m_port);
+	qInfo() << "Reconnecting to" << m_host << ":" << m_port;
+	m_socket->connectToHost(m_host, m_port);
 }
 
-void TcpHandler::onRmoDisconnected(TcpConnectionHandler* handler) {
-    int idx = m_rmoConnections.indexOf(handler);
-    if (idx != -1) {
-        QTcpSocket* sock = handler->getSocket();
-        if (sock) {
-            qDebug() << "RMO TCP disconnected, descriptor:"
-                     << sock->socketDescriptor()
-                     << "total clients:" << m_rmoConnections.size() - 1;
-        } else {
-            qDebug() << "RMO TCP disconnected (unknown descriptor)";
-        }
-        m_rmoConnections.remove(idx);
-        handler->deleteLater();
-    }
+void TcpHandler::onRmoDisconnected(TcpConnectionHandler *handler)
+{
+	int idx = m_rmoConnections.indexOf(handler);
+	if (idx != -1)
+	{
+		QTcpSocket *sock = handler->getSocket();
+		if (sock)
+		{
+			qDebug() << "RMO TCP disconnected, descriptor:"
+					 << sock->socketDescriptor()
+					 << "total clients:" << m_rmoConnections.size() - 1;
+		}
+		else
+		{
+			qDebug() << "RMO TCP disconnected (unknown descriptor)";
+		}
+		m_rmoConnections.remove(idx);
+		handler->deleteLater();
+	}
 }
 
-void TcpHandler::incomingConnection() {
-    // Этот слот вызывается в потоке m_rmoThread!
-    while (m_serverRMO->hasPendingConnections()) {
-        QTcpSocket* client = m_serverRMO->nextPendingConnection();
-        if (client) {
-            // ВАЖНО: не перемещаем сокет между потоками!
-            // Создаём обработчик в этом же потоке:
-            TcpConnectionHandler* handler = new TcpConnectionHandler(client,
-                                                                     nullptr);
+void TcpHandler::incomingConnection()
+{
+	// Этот слот вызывается в потоке m_rmoThread!
+	while (m_serverRMO->hasPendingConnections())
+	{
+		QTcpSocket *client = m_serverRMO->nextPendingConnection();
+		if (client)
+		{
+			// ВАЖНО: не перемещаем сокет между потоками!
+			// Создаём обработчик в этом же потоке:
+			TcpConnectionHandler *handler = new TcpConnectionHandler(client,
+																	 nullptr);
 
-            connect(handler, &TcpConnectionHandler::finished, this, [this,
-                                                                     handler](){
-                onRmoDisconnected(handler);
-            });
+			connect(handler, &TcpConnectionHandler::finished, this, [this, handler]()
+					{ onRmoDisconnected(handler); });
 
-            connect(handler, &TcpConnectionHandler::messageReceived, this,
-                    [this](const QByteArray& data) {
-                        processIncomingMessageRMO(data);
-                    });
+			connect(handler, &TcpConnectionHandler::messageReceived, this,
+					[this](const QByteArray &data)
+					{
+						processIncomingMessageRMO(data);
+					});
 
-            m_rmoConnections.append(handler);
+			m_rmoConnections.append(handler);
 
-            qDebug() << "RMO TCP connected, descriptor:"
-                     << client->socketDescriptor()
-                     << "total clients:" << m_rmoConnections.size();
-        }
-    }
+			qDebug() << "RMO TCP connected, descriptor:"
+					 << client->socketDescriptor()
+					 << "total clients:" << m_rmoConnections.size();
+		}
+	}
 }
 
-void TcpHandler::onError(QAbstractSocket::SocketError error) {
-    if(error) {
-        emit errorOccurred(m_socket->errorString());
-        LOG_INTERNAL(CLASS_NAME, LogLevel::Error, "NOTIFY NOT SENDED", "ERROR OCCURED WHILE SENDING MESSAGE; REASON LISTED BELOW:\n"
-                                                                           + m_socket->errorString());
-    }
+void TcpHandler::onError(QAbstractSocket::SocketError error)
+{
+	if (error)
+	{
+		emit errorOccurred(m_socket->errorString());
+		LOG_INTERNAL(CLASS_NAME, LogLevel::Error, "NOTIFY NOT SENDED", "ERROR OCCURED WHILE SENDING MESSAGE; REASON LISTED BELOW:\n" + m_socket->errorString());
+	}
 }
 
-void TcpHandler::onReadyRead() {
-    LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "Готов считывать сообщения");
-    m_buffer.append(m_socket->readAll());
-    processBuffer(m_buffer, [this](const QByteArray& data) {
-        processIncomingMessage(data);
-    });
+void TcpHandler::onReadyRead()
+{
+	LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "Готов считывать сообщения");
+	m_buffer.append(m_socket->readAll());
+	processBuffer(m_buffer, [this](const QByteArray &data)
+				  { processIncomingMessage(data); });
 }
 
-template<typename F>
-void TcpHandler::processBuffer(QByteArray& buffer, F processFunc) {
-    int pos = 0;
-    const int minHeader = static_cast<int>(sizeof(TcpHeader));
-    const int maxPacket = 4096; // Максимальный допустимый размер пакета
+template <typename F>
+void TcpHandler::processBuffer(QByteArray &buffer, F processFunc)
+{
+	int pos = 0;
+	const int minHeader = static_cast<int>(sizeof(TcpHeader));
+	const int maxPacket = 4096; // Максимальный допустимый размер пакета
 
-    while (buffer.size() - pos >= minHeader) {
-        // 1. Пробуем прочитать заголовок с текущей позиции
-        TcpHeader header;
-        memcpy(&header, buffer.constData() + pos, minHeader);
+	while (buffer.size() - pos >= minHeader)
+	{
+		// 1. Пробуем прочитать заголовок с текущей позиции
+		TcpHeader header;
+		memcpy(&header, buffer.constData() + pos, minHeader);
 
-        // 2. Проверяем контрольную сумму
-        if (!header.isValid()) {
-            // Не валидный заголовок — сдвигаем окно поиска на 1 байт
-            ++pos;
-            continue;
-        }
+		// 2. Проверяем контрольную сумму
+		if (!header.isValid())
+		{
+			// Не валидный заголовок — сдвигаем окно поиска на 1 байт
+			++pos;
+			continue;
+		}
 
-        // 3. Проверяем размер пакета
-        uint32_t fullMessageSize = minHeader + header.sizeData;
-        if (header.sizeData > maxPacket) {
-            // sizeData неадекватен — сдвигаем окно поиска на 1 байт
-            ++pos;
-            continue;
-        }
+		// 3. Проверяем размер пакета
+		uint32_t fullMessageSize = minHeader + header.sizeData;
+		if (header.sizeData > maxPacket)
+		{
+			// sizeData неадекватен — сдвигаем окно поиска на 1 байт
+			++pos;
+			continue;
+		}
 
-        if (buffer.size() - pos < static_cast<int>(fullMessageSize)) {
-            // Ждём остальные байты
-            break;
-        }
+		if (buffer.size() - pos < static_cast<int>(fullMessageSize))
+		{
+			// Ждём остальные байты
+			break;
+		}
 
-        // 4. Всё ок — извлекаем пакет
-        QByteArray messageData = buffer.mid(pos, fullMessageSize);
+		// 4. Всё ок — извлекаем пакет
+		QByteArray messageData = buffer.mid(pos, fullMessageSize);
 
-        // qDebug() << "Buffer size:" << buffer.size()
-        //          << "\n\tpos:" << pos << "\n";
-        // qDebug() << "Header type:" << header.typePack
-        //          << "\n\tsizeData:" << header.sizeData
-        //          << "\n\tchecksum:" << header.checkSum
-        //          << "\n\tisValid:" << header.isValid() << "\n";
-        processFunc(messageData);
+		// qDebug() << "Buffer size:" << buffer.size()
+		//          << "\n\tpos:" << pos << "\n";
+		// qDebug() << "Header type:" << header.typePack
+		//          << "\n\tsizeData:" << header.sizeData
+		//          << "\n\tchecksum:" << header.checkSum
+		//          << "\n\tisValid:" << header.isValid() << "\n";
+		processFunc(messageData);
 
-        // 5. Сдвигаем позицию на размер пакета
-        pos += fullMessageSize;
-    }
+		// 5. Сдвигаем позицию на размер пакета
+		pos += fullMessageSize;
+	}
 
-    // 6. Удаляем обработанные байты из буфера
-    if (pos > 0)
-        buffer.remove(0, pos);
+	// 6. Удаляем обработанные байты из буфера
+	if (pos > 0)
+		buffer.remove(0, pos);
 }
 
-void TcpHandler::sendMessage(const QByteArray& data) {
-    if (m_socket->state() == QAbstractSocket::ConnectedState) {
-        m_socket->write(data);
-    }
+void TcpHandler::sendMessage(const QByteArray &data)
+{
+	if (m_socket->state() == QAbstractSocket::ConnectedState)
+	{
+		m_socket->write(data);
+	}
 }
 
-void TcpHandler::sendRmoMessage(int idx, QSharedPointer<RmoBaseMessage> msg) {
-    if (idx >= 0 && idx < m_rmoConnections.size()) {
-        m_rmoConnections[idx]->sendData(msg->toByteArray());
-    }
+void TcpHandler::sendRmoMessage(int idx, QSharedPointer<RmoBaseMessage> msg)
+{
+	if (idx >= 0 && idx < m_rmoConnections.size())
+	{
+		m_rmoConnections[idx]->sendData(msg->toByteArray());
+	}
 }
 
-void TcpHandler::sendRmoMessageToAll(QSharedPointer<RmoBaseMessage> msg) {
-    for (auto* handler : m_rmoConnections) {
-        handler->sendData(msg->toByteArray());
-    }
+void TcpHandler::sendRmoMessageToAll(QSharedPointer<RmoBaseMessage> msg)
+{
+	for (auto *handler : m_rmoConnections)
+	{
+		handler->sendData(msg->toByteArray());
+	}
 }
 
-void TcpHandler::handleRegistration() {
-    if (!m_isRegistered) {
-        auto msg_0x01 = MessageFactory::create<TcpMessage_0x01>();
-        QByteArray data = msg_0x01.serializeFull();
-        sendMessage(data);
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x01.to_json()));
-    }
+void TcpHandler::handleRegistration()
+{
+	if (!m_isRegistered)
+	{
+		auto msg_0x01 = MessageFactory::create<TcpMessage_0x01>();
+		QByteArray data = msg_0x01.serializeFull();
+		sendMessage(data);
+		LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x01.to_json()));
+	}
 }
 
-void TcpHandler::sendPeriodicMessages() {
-    if (m_isRegistered) {
-        // Отправка 0x03 (Запрос времени)
-        auto msg_0x03 = MessageFactory::create<TcpMessage_0x03>();
+void TcpHandler::sendPeriodicMessages()
+{
+	if (m_isRegistered)
+	{
+		// Отправка 0x03 (Запрос времени)
+		auto msg_0x03 = MessageFactory::create<TcpMessage_0x03>();
 #ifdef QT_DEBUG
-        std::cout << "Sent message 0x03:\n";
+		std::cout << "Sent message 0x03:\n";
 #endif
 #ifdef TRACE
-        qDebug() << "time_now =" << TimeProvider::instance().getMs();
-        std::cout << msg_0x03.toString()
-                  << std::endl << "\n";
+		qDebug() << "time_now =" << TimeProvider::instance().getMs();
+		std::cout << msg_0x03.toString()
+				  << std::endl
+				  << "\n";
 #endif
-        sendMessage(msg_0x03.serializeFull());
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x03.serializeFull(), LogManager::jobj_toString(msg_0x03.to_json()));
-        // !!!!Отправка 0x24 (Статус модуля)
-        auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
+		sendMessage(msg_0x03.serializeFull());
+		LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x03.serializeFull(), LogManager::jobj_toString(msg_0x03.to_json()));
+		// !!!!Отправка 0x24 (Статус модуля)
+		auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
-        std::cout << "Sent message 0x24:\n";
+		std::cout << "Sent message 0x24:\n";
 #endif
 #ifdef TRACE
-        std::cout << msg_0x24.toString()
-                  << std::endl << "\n";
+		std::cout << msg_0x24.toString()
+				  << std::endl
+				  << "\n";
 #endif
-        sendMessage(msg_0x24.serializeFull());
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
-        // TcpHandler::sendModuleStatus();
+		sendMessage(msg_0x24.serializeFull());
+		LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
+		// TcpHandler::sendModuleStatus();
 
-        // Отправка 0x1021 (Текущее состояние РЛС-Н)
-        auto msg_0x1021_1 = MessageFactory
-            ::create<TcpMessage_0x1021>(AppConfig::ModulePPU_num
-                                        ::ModulePPU_num_RLMN_1),
-            msg_0x1021_2 = MessageFactory
-            ::create<TcpMessage_0x1021>(AppConfig::ModulePPU_num
-                                        ::ModulePPU_num_RLMN_2);
+		// Отправка 0x1021 (Текущее состояние РЛС-Н)
+		auto msg_0x1021_1 = MessageFactory ::create<TcpMessage_0x1021>(AppConfig::ModulePPU_num ::ModulePPU_num_RLMN_1),
+			 msg_0x1021_2 = MessageFactory ::create<TcpMessage_0x1021>(AppConfig::ModulePPU_num ::ModulePPU_num_RLMN_2);
 #ifdef QT_DEBUG
-        std::cout << "Sent message 0x1021_1:\n";
-        std::cout << "Sent message 0x1021_2:\n";
+		std::cout << "Sent message 0x1021_1:\n";
+		std::cout << "Sent message 0x1021_2:\n";
 #endif
 #ifdef TRACE
-        std::cout << msg_0x1021_1.toString()
-                  << std::endl << "\n";
+		std::cout << msg_0x1021_1.toString()
+				  << std::endl
+				  << "\n";
 
-        std::cout << msg_0x1021_2.toString()
-                  << std::endl << "\n";
+		std::cout << msg_0x1021_2.toString()
+				  << std::endl
+				  << "\n";
 #endif
-        sendMessage(msg_0x1021_1.serializeFull());
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1021_1.serializeFull(), LogManager::jobj_toString(msg_0x1021_1.to_json()));
+		sendMessage(msg_0x1021_1.serializeFull());
+		LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1021_1.serializeFull(), LogManager::jobj_toString(msg_0x1021_1.to_json()));
 
-        sendMessage(msg_0x1021_2.serializeFull());
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1021_2.serializeFull(), LogManager::jobj_toString(msg_0x1021_2.to_json()));
-    }
+		sendMessage(msg_0x1021_2.serializeFull());
+		LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1021_2.serializeFull(), LogManager::jobj_toString(msg_0x1021_2.to_json()));
+	}
 }
 
-void TcpHandler::processIncomingMessage(const QByteArray &data) {
-    static int isRemoteCnt = 1;
-    auto parsed = MessageFactory::parse(data);
-    if (parsed) {
+void TcpHandler::processIncomingMessage(const QByteArray &data)
+{
+	static int isRemoteCnt = 1;
+	auto parsed = MessageFactory::parse(data);
+	if (parsed)
+	{
 #ifdef QT_DEBUG
-        std::cout << "Received message.\n";
+		std::cout << "Received message.\n";
 #endif
 #ifdef TRACE
-        std::cout << MessageFactory::messageToString(parsed)
-                  << "\n" << std::endl << "\n";
+		std::cout << MessageFactory::messageToString(parsed)
+				  << "\n"
+				  << std::endl
+				  << "\n";
 #endif
-        switch (static_cast<PBU_MessageNumbers>(parsed->typePack)) {
-        case PBU_MessageNumbers::RES_REGISTRATION: {
-            auto msg_0x02 = reinterpret_cast<TcpMessage_0x02*>(parsed.get());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x02->to_json()));
-            if (msg_0x02->errorConnect == 0) {
+		switch (static_cast<PBU_MessageNumbers>(parsed->typePack))
+		{
+		case PBU_MessageNumbers::RES_REGISTRATION:
+		{
+			auto msg_0x02 = reinterpret_cast<TcpMessage_0x02 *>(parsed.get());
+			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x02->to_json()));
+			if (msg_0x02->errorConnect == 0)
+			{
 #ifdef QT_DEBUG
-                std::cout << "Module registered using message 0x02."
-                          << std::endl << "\n";
+				std::cout << "Module registered using message 0x02."
+						  << std::endl
+						  << "\n";
 #endif
-                AppConfig::instance()
-                    .SET_PBU_PROTO_HEAD_IDX_MODULE(msg_0x02->idxModule);
+				AppConfig::instance()
+					.SET_PBU_PROTO_HEAD_IDX_MODULE(msg_0x02->idxModule);
 
-                m_isRegistered = true;
-                m_registrationTimer->stop();
+				m_isRegistered = true;
+				m_registrationTimer->stop();
 
-                auto msg_0x05 = MessageFactory::create<TcpMessage_0x05>();
+				auto msg_0x05 = MessageFactory::create<TcpMessage_0x05>();
 
-                sendMessage(msg_0x05.serializeFull());
-                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x05.serializeFull(), LogManager::jobj_toString(msg_0x05.to_json()));
+				sendMessage(msg_0x05.serializeFull());
+				LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x05.serializeFull(), LogManager::jobj_toString(msg_0x05.to_json()));
 #ifdef QT_DEBUG
-                std::cout << "Sent message 0x05:\n";
+				std::cout << "Sent message 0x05:\n";
 #endif
 #ifdef TRACE
-                std::cout << msg_0x05.toString()
-                          << std::endl << "\n";
+				std::cout << msg_0x05.toString()
+						  << std::endl
+						  << "\n";
 #endif
-                std::vector<TcpMessage_0x1023::ModuleCapability> capabilities {
-                    TcpMessage_0x1023::ModuleCapability(AppConfig::ModulePPU_num
-                                                        ::ModulePPU_num_RLMN_1),
-                    TcpMessage_0x1023::ModuleCapability(AppConfig::ModulePPU_num
-                                                        ::ModulePPU_num_RLMN_2),
-                };
-                auto msg_0x1023 = MessageFactory
-                    ::create<TcpMessage_0x1023>(capabilities);
+				std::vector<TcpMessage_0x1023::ModuleCapability> capabilities{
+					TcpMessage_0x1023::ModuleCapability(AppConfig::ModulePPU_num ::ModulePPU_num_RLMN_1),
+					TcpMessage_0x1023::ModuleCapability(AppConfig::ModulePPU_num ::ModulePPU_num_RLMN_2),
+				};
+				auto msg_0x1023 = MessageFactory ::create<TcpMessage_0x1023>(capabilities);
 
-                sendMessage(msg_0x1023.serializeFull());
-                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1023.serializeFull(), LogManager::jobj_toString(msg_0x1023.to_json()));
+				sendMessage(msg_0x1023.serializeFull());
+				LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1023.serializeFull(), LogManager::jobj_toString(msg_0x1023.to_json()));
 #ifdef QT_DEBUG
-                std::cout << "Sent message 0x1023:\n";
+				std::cout << "Sent message 0x1023:\n";
 #endif
 #ifdef TRACE
-                std::cout << msg_0x1023.toString()
-                          << std::endl << "\n";
+				std::cout << msg_0x1023.toString()
+						  << std::endl
+						  << "\n";
 #endif
-                m_periodicTimer->start(900); // Периодическая отправка сообщений
-            }
-            break;
-        }
-        case PBU_MessageNumbers::TIMESTAMP: {
-            auto msg_0x04 = reinterpret_cast<TcpMessage_0x04*>(parsed.get());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x04->to_json()));
-            TimeProvider::instance().syncTimePBU(msg_0x04->timeRequest1,
-                                                 msg_0x04->timeRequest2,
-                                                 msg_0x04->timeAnswer1,
-                                                 msg_0x04->timeAnswer2);
+				m_periodicTimer->start(900); // Периодическая отправка сообщений
+			}
+			break;
+		}
+		case PBU_MessageNumbers::TIMESTAMP:
+		{
+			auto msg_0x04 = reinterpret_cast<TcpMessage_0x04 *>(parsed.get());
+			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x04->to_json()));
+			TimeProvider::instance().syncTimePBU(msg_0x04->timeRequest1,
+												 msg_0x04->timeRequest2,
+												 msg_0x04->timeAnswer1,
+												 msg_0x04->timeAnswer2);
 #ifdef QT_DEBUG
-            std::cout << "Time synchronized using message 0x04."
-                      << std::endl << "\n";
+			std::cout << "Time synchronized using message 0x04."
+					  << std::endl
+					  << "\n";
 #endif
 #ifdef TRACE
-            qDebug() << "0x04. time_now =" << TimeProvider::instance().getMs();
-#endif \
-    // Инкремент счётчика для отмены признака внешнего уравления
-            isRemoteCnt++;
-            break;
-        }
-        case PBU_MessageNumbers::TARGET_DESIGNATION: {
-            auto msg_0x641 = reinterpret_cast<TcpMessage_0x641*>(parsed.get());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x641->to_json()));
+			qDebug() << "0x04. time_now =" << TimeProvider::instance().getMs();
+#endif
+			// Инкремент счётчика для отмены признака внешнего уравления
+			isRemoteCnt++;
+			break;
+		}
+		case PBU_MessageNumbers::TARGET_DESIGNATION:
+		{
+			auto msg_0x641 = reinterpret_cast<TcpMessage_0x641 *>(parsed.get());
+			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x641->to_json()));
 
-            AppConfig::instance().SET_PBU_PROTO_0X24_MODE(1024);
-            AppConfig::instance().SET_PBU_PROTO_0X23_ID_COM(
-                to_underlying(PBU_MessageNumbers::TARGET_DESIGNATION));
-            AppConfig::instance().SET_PBU_PROTO_0X23_CODE(
-                to_underlying(AppConfig::ReceiptCodes::IN_PROGRESS));
+			AppConfig::instance().SET_PBU_PROTO_0X24_MODE(1024);
+			AppConfig::instance().SET_PBU_PROTO_0X23_ID_COM(
+				to_underlying(PBU_MessageNumbers::TARGET_DESIGNATION));
+			AppConfig::instance().SET_PBU_PROTO_0X23_CODE(
+				to_underlying(AppConfig::ReceiptCodes::IN_PROGRESS));
 
-            // Если пришла отмена ЦУ, то сбросить
-            // признак внешнего управления
-            if (msg_0x641->typeCeil == 3) {
-                isRemoteCnt = 100;
-                AppConfig::instance().setModulePPU_isRemote(
-                    AppConfig::instance().ModulePPU_num_RLMN_1,
-                    AppConfig::instance().ModulePPU_isRemote_defaulted);
-            } else {
-                isRemoteCnt = 0;
-            }
+			// Если пришла отмена ЦУ, то сбросить
+			// признак внешнего управления
+			if (msg_0x641->typeCeil == 3)
+			{
+				isRemoteCnt = 100;
+				AppConfig::instance().setModulePPU_isRemote(
+					AppConfig::instance().ModulePPU_num_RLMN_1,
+					AppConfig::instance().ModulePPU_isRemote_defaulted);
+			}
+			else
+			{
+				isRemoteCnt = 0;
+			}
 
-            auto msg_0x23 = MessageFactory::create<TcpMessage_0x23>();
+			auto msg_0x23 = MessageFactory::create<TcpMessage_0x23>();
 #ifdef QT_DEBUG
-            std::cout << "Sent message 0x23:\n";
+			std::cout << "Sent message 0x23:\n";
 #endif
 #ifdef TRACE
-            std::cout << msg_0x23.toString()
-                      << std::endl << "\n";
+			std::cout << msg_0x23.toString()
+					  << std::endl
+					  << "\n";
 #endif
-            sendMessage(msg_0x23.serializeFull());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x23.serializeFull(), LogManager::jobj_toString(msg_0x23.to_json()));
+			sendMessage(msg_0x23.serializeFull());
+			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x23.serializeFull(), LogManager::jobj_toString(msg_0x23.to_json()));
 
-            auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
+			auto msg_0x24 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
-            std::cout << "Sent message 0x24:\n";
+			std::cout << "Sent message 0x24:\n";
 #endif
 #ifdef TRACE
-            std::cout << msg_0x24.toString()
-                      << std::endl << "\n";
+			std::cout << msg_0x24.toString()
+					  << std::endl
+					  << "\n";
 #endif
-            sendMessage(msg_0x24.serializeFull());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
+			sendMessage(msg_0x24.serializeFull());
+			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
 
-            // Задать ЦУ для ППУ
-            AppConfig::instance().setModulePPU_CU(
-                        (AppConfig::ModulePPU_num)msg_0x641->numDrive,
-                        static_cast<double>(msg_0x641->ceilAz),
-                        static_cast<double>(msg_0x641->ceilElev),
-                        static_cast<double>(msg_0x641->ceilVAz),
-                        static_cast<double>(msg_0x641->ceilVElev),
-                        0, 0, 0, 0, 0, 0
-                );
+			// Задать ЦУ для ППУ
+			AppConfig::instance().setModulePPU_CU(
+				(AppConfig::ModulePPU_num)msg_0x641->numDrive,
+				static_cast<double>(msg_0x641->ceilAz),
+				static_cast<double>(msg_0x641->ceilElev),
+				static_cast<double>(msg_0x641->ceilVAz),
+				static_cast<double>(msg_0x641->ceilVElev),
+				0, 0, 0, 0, 0, 0);
 
-            // Определяем, насколько текущие координаты ППУ отличаются от ЦУ
-            double dAz = AppConfig::instance().getModulePPU_az(
-                             AppConfig::instance().ModulePPU_num_RLMN_1)
-                         - static_cast<double>(msg_0x641->ceilAz);
-            double dAn = AppConfig::instance().getModulePPU_an(
-                             AppConfig::instance().ModulePPU_num_RLMN_1)
-                         - static_cast<double>(msg_0x641->ceilElev);
+			// Определяем, насколько текущие координаты ППУ отличаются от ЦУ
+			double dAz = AppConfig::instance().getModulePPU_az(
+							 AppConfig::instance().ModulePPU_num_RLMN_1) -
+						 static_cast<double>(msg_0x641->ceilAz);
+			double dAn = AppConfig::instance().getModulePPU_an(
+							 AppConfig::instance().ModulePPU_num_RLMN_1) -
+						 static_cast<double>(msg_0x641->ceilElev);
 
-            // Если координаты отличаются незначительно, то отправляем ответ
-            if (abs(dAz) < 0.6 && abs(dAn) < 0.6)
-            {
-                auto msg_0x1022 = MessageFactory::
-                    create<TcpMessage_0x1022>(nullptr, 0, 0);
-                // auto msg_0x1022 = MessageFactory::
-                //          create<TcpMessage_0x1022>(nullptr);
+			// Если координаты отличаются незначительно, то отправляем ответ
+			if (abs(dAz) < 0.6 && abs(dAn) < 0.6)
+			{
+				auto msg_0x1022 = MessageFactory::
+					create<TcpMessage_0x1022>(nullptr, 0, 0);
+				// auto msg_0x1022 = MessageFactory::
+				//          create<TcpMessage_0x1022>(nullptr);
 
-                msg_0x1022.trackStatus = 0;
-                msg_0x1022.isExtra = 0;
-                msg_0x1022.isTest = 0;
-                msg_0x1022.snrSum = 0;
-                msg_0x1022.epr = 0;
-                msg_0x1022.maxRange = 20;
-                msg_0x1022.numbTrack = msg_0x641->idxCeilVOI;
-                msg_0x1022.rangeCnt = 0;
-                msg_0x1022.speedCnt = 0;
-                msg_0x1022.chanCnt = 1; /// Всегда один канал!
-                msg_0x1022.rangeStart = 0;
-                msg_0x1022.rangeStep = 0.1;
-                msg_0x1022.vradStart = 0;
-                msg_0x1022.vradStep = 0.1;
+				msg_0x1022.trackStatus = 0;
+				msg_0x1022.isExtra = 0;
+				msg_0x1022.isTest = 0;
+				msg_0x1022.snrSum = 0;
+				msg_0x1022.epr = 0;
+				msg_0x1022.maxRange = 20;
+				msg_0x1022.numbTrack = msg_0x641->idxCeilVOI;
+				msg_0x1022.rangeCnt = 0;
+				msg_0x1022.speedCnt = 0;
+				msg_0x1022.chanCnt = 1; /// Всегда один канал!
+				msg_0x1022.rangeStart = 0;
+				msg_0x1022.rangeStep = 0.1;
+				msg_0x1022.vradStart = 0;
+				msg_0x1022.vradStep = 0.1;
 
-                msg_0x1022.numDrive = msg_0x641->numDrive;
-                msg_0x1022.azimuth = msg_0x641->ceilAz;
-                msg_0x1022.range = msg_0x641->ceilRange;
-                msg_0x1022.eps = msg_0x641->ceilElev;
-                msg_0x1022.vel = msg_0x641->ceilVr;
-                msg_0x1022.velAz = msg_0x641->ceilVAz;
-                msg_0x1022.velEps = msg_0x641->ceilVElev;
-                msg_0x1022.sigAz = msg_0x641->sigAz;
-                msg_0x1022.sigEps = msg_0x641->sigElev;
-                msg_0x1022.sigD = msg_0x641->sigRange;
-                msg_0x1022.sigVr = msg_0x641->sigVr;
-                msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
-                msg_0x1022.typeTrack =
-                    static_cast<uint8_t>(msg_0x641->typeCeil);
+				msg_0x1022.numDrive = msg_0x641->numDrive;
+				msg_0x1022.azimuth = msg_0x641->ceilAz;
+				msg_0x1022.range = msg_0x641->ceilRange;
+				msg_0x1022.eps = msg_0x641->ceilElev;
+				msg_0x1022.vel = msg_0x641->ceilVr;
+				msg_0x1022.velAz = msg_0x641->ceilVAz;
+				msg_0x1022.velEps = msg_0x641->ceilVElev;
+				msg_0x1022.sigAz = msg_0x641->sigAz;
+				msg_0x1022.sigEps = msg_0x641->sigElev;
+				msg_0x1022.sigD = msg_0x641->sigRange;
+				msg_0x1022.sigVr = msg_0x641->sigVr;
+				msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
+				msg_0x1022.typeTrack =
+					static_cast<uint8_t>(msg_0x641->typeCeil);
 #ifdef QT_DEBUG
-                std::cout << "Sent message 0x1022:";
+				std::cout << "Sent message 0x1022:";
 #endif
 #ifdef TRACE
-                std::cout << " " << msg_0x1022.toString() << std::endl;
+				std::cout << " " << msg_0x1022.toString() << std::endl;
 #endif
-                sendMessage(msg_0x1022.serializeFull());
-                LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1022.serializeFull(), LogManager::jobj_toString(msg_0x1022.to_json()));
-            }
+				sendMessage(msg_0x1022.serializeFull());
+				LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1022.serializeFull(), LogManager::jobj_toString(msg_0x1022.to_json()));
+			}
 
-            AppConfig::instance().SET_PBU_PROTO_0X24_MODE(0);
-            AppConfig::instance().SET_PBU_PROTO_0X23_CODE(
-                to_underlying(AppConfig::ReceiptCodes::EXECUTED_WITHOUT_ERROR));
-            auto msg_0x23_2 = MessageFactory::create<TcpMessage_0x23>();
+			AppConfig::instance().SET_PBU_PROTO_0X24_MODE(0);
+			AppConfig::instance().SET_PBU_PROTO_0X23_CODE(
+				to_underlying(AppConfig::ReceiptCodes::EXECUTED_WITHOUT_ERROR));
+			auto msg_0x23_2 = MessageFactory::create<TcpMessage_0x23>();
 #ifdef QT_DEBUG
-            std::cout << "Sent message 0x23:\n";
+			std::cout << "Sent message 0x23:\n";
 #endif
 #ifdef TRACE
-            std::cout << msg_0x23_2.toString()
-                      << std::endl << "\n";
+			std::cout << msg_0x23_2.toString()
+					  << std::endl
+					  << "\n";
 #endif
-            sendMessage(msg_0x23_2.serializeFull());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x23_2.serializeFull(), LogManager::jobj_toString(msg_0x23_2.to_json()));
+			sendMessage(msg_0x23_2.serializeFull());
+			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x23_2.serializeFull(), LogManager::jobj_toString(msg_0x23_2.to_json()));
 
-            auto msg_0x24_2 = MessageFactory::create<TcpMessage_0x24>();
+			auto msg_0x24_2 = MessageFactory::create<TcpMessage_0x24>();
 #ifdef QT_DEBUG
-            std::cout << "Sent message 0x24:\n";
+			std::cout << "Sent message 0x24:\n";
 #endif
 #ifdef TRACE
-            std::cout << msg_0x24_2.toString()
-                      << std::endl << "\n";
+			std::cout << msg_0x24_2.toString()
+					  << std::endl
+					  << "\n";
 #endif
-            sendMessage(msg_0x24_2.serializeFull());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24_2.serializeFull(), LogManager::jobj_toString(msg_0x24_2.to_json()));
-            break;
-        }
-        case PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU: {
-            auto msg_0x45 = reinterpret_cast<TcpMessage_0x45*>(parsed.get());
-            LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x45->to_json()));
-            break;
-        }
+			sendMessage(msg_0x24_2.serializeFull());
+			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24_2.serializeFull(), LogManager::jobj_toString(msg_0x24_2.to_json()));
+			break;
+		}
+		case PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU:
+		{
+			auto msg_0x45 = reinterpret_cast<TcpMessage_0x45 *>(parsed.get());
+			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageReceived, Protocol::TCP_BINARY, data, LogManager::jobj_toString(msg_0x45->to_json()));
+			break;
+		}
 
-        default:
+		default:
 #ifdef QT_DEBUG
-            qDebug() << "Unknown message type received:"
-                     << parsed->typePack << "\n";
+			qDebug() << "Unknown message type received:"
+					 << parsed->typePack << "\n";
 #endif
-            break;
-        }
-    } else {
+			break;
+		}
+	}
+	else
+	{
 #ifdef QT_DEBUG
-        qDebug() << "Invalid or unknown message\n";
+		qDebug() << "Invalid or unknown message\n";
 #endif
 #ifdef TRACE
-        qDebug() << Qt::endl << "ETH Message:" << data.toHex(' ').toUpper();
+		qDebug() << Qt::endl
+				 << "ETH Message:" << data.toHex(' ').toUpper();
 #endif
-        LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "НЕИЗВЕСТНОЕ СООБЩЕНИЕ ПОЛУЧЕНО");
-        LOG_PROTOCOL(CLASS_NAME, LogLevel::Trace, Protocol::TCP_BINARY, data.toHex(' ').toUpper(), "");
-    }
+		LOG_INTERNAL(CLASS_NAME, "СОКЕТ TCP", "НЕИЗВЕСТНОЕ СООБЩЕНИЕ ПОЛУЧЕНО");
+		LOG_PROTOCOL(CLASS_NAME, LogLevel::Trace, Protocol::TCP_BINARY, data.toHex(' ').toUpper(), "");
+	}
 
-    // Признак внешнего управления
-    if (isRemoteCnt == 0) {
-        AppConfig::instance().setModulePPU_isRemote(
-            AppConfig::instance().ModulePPU_num_RLMN_1,
-            AppConfig::instance().ModulePPU_isRemote_search);
-    }
-    if (isRemoteCnt > 10) {
-        AppConfig::instance().setModulePPU_isRemote(
-            AppConfig::instance().ModulePPU_num_RLMN_1,
-            AppConfig::instance().ModulePPU_isRemote_defaulted);
-    }
+	// Признак внешнего управления
+	if (isRemoteCnt == 0)
+	{
+		AppConfig::instance().setModulePPU_isRemote(
+			AppConfig::instance().ModulePPU_num_RLMN_1,
+			AppConfig::instance().ModulePPU_isRemote_search);
+	}
+	if (isRemoteCnt > 10)
+	{
+		AppConfig::instance().setModulePPU_isRemote(
+			AppConfig::instance().ModulePPU_num_RLMN_1,
+			AppConfig::instance().ModulePPU_isRemote_defaulted);
+	}
 }
 
 // Универсальная обработка сообщений от РМО (TCP)
-void TcpHandler::processIncomingMessageRMO(const QByteArray &data) {
+void TcpHandler::processIncomingMessageRMO(const QByteArray &data)
+{
 #ifdef TRACE
-    qDebug() << Qt::endl << "RMO TCP Message:" << data.toHex(' ').toUpper();
+	qDebug() << Qt::endl
+			 << "RMO TCP Message:" << data.toHex(' ').toUpper();
 #endif
-    if (data.size() < static_cast<int>(sizeof(int32_t))) return;
-    QDataStream stream(data);
-    stream.setByteOrder(Utils::ByteOrder);
-    int32_t type = 0;
-    stream >> type;
-    qDebug() << "typeField received:" << type;
+	if (data.size() < static_cast<int>(sizeof(int32_t)))
+		return;
+	QDataStream stream(data);
+	stream.setByteOrder(Utils::ByteOrder);
+	int32_t type = 0;
+	stream >> type;
+	qDebug() << "typeField received:" << type;
 
-    // Передаём ВСЮ data (включая type) в фабрику
-    auto msg = RmoMessageFactory::instance().fromByteArray(type, data);
-    if (msg) {
-        switch (type) {
-            case static_cast<int32_t>(RmoMsgType::TARGET_PPU): {
-                auto typedMsg = dynamic_cast<RmoMessage_TargetPPU*>(msg.get());
-                if (typedMsg) {
-                    typedMsg->info();
-                    AppConfig::instance().setModulePPU_CU(
-                        (AppConfig::ModulePPU_num)typedMsg->numPPU,
-                        typedMsg->azTarget, typedMsg->anTarget,
-                        typedMsg->azTargetVel, typedMsg->anTargetVel,
-                        typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
-                        typedMsg->anC1, typedMsg->azC2, typedMsg->anC2
-                    );
-                }
-                break;
-            }
-            case static_cast<int32_t>(RmoMsgType::ENABLE_PPU): {
-                auto typedMsg = dynamic_cast<RmoMessage_EnablePPU*>(msg.get());
-                static QByteArray ethResult;
-                if (typedMsg) {
-                    typedMsg->info();
-                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
-                        auto ethMsgPPU1 = EthMessageFactory
-                            ::create<EthMessage_PPU_ENABLE_1>(typedMsg->state);
-                        ethResult = ethMsgPPU1.serializeFull();
-                    }
-                    else
-                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
-                        auto ethMsgPPU2 = EthMessageFactory
-                            ::create<EthMessage_PPU_ENABLE_2>(typedMsg->state);
-                        ethResult = ethMsgPPU2.serializeFull();
-                    }
-                    if (m_ethSendCallback && !ethResult.isEmpty()) {
-                        m_ethSendCallback(ethResult);
-                    } else {
-                        delete typedMsg;
-                    }
-                }
-                break;
-            }
-            case static_cast<int32_t>(RmoMsgType::RESET_PPU): {
-                auto typedMsg = dynamic_cast<RmoMessage_ResetPPU*>(msg.get());
-                static QByteArray ethResult;
-                if (typedMsg) {
-                    typedMsg->info();
-                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
-                        auto ethMsgPPU1 = EthMessageFactory
-                            ::create<EthMessage_PPU_RESET_1>
-                                            (typedMsg->resetDst);
-                        ethResult = ethMsgPPU1.serializeFull();
-                    }
-                    else
-                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
-                        auto ethMsgPPU2 = EthMessageFactory
-                            ::create<EthMessage_PPU_RESET_2>
-                                            (typedMsg->resetDst);
-                        ethResult = ethMsgPPU2.serializeFull();
-                    }
-                    if (m_ethSendCallback && !ethResult.isEmpty()) {
-                        m_ethSendCallback(ethResult);
-                    } else {
-                        delete typedMsg;
-                    }
-                }
-                break;
-            }
-            case static_cast<int32_t>(RmoMsgType::STOP_PPU): {
-                auto typedMsg = dynamic_cast<RmoMessage_StopPPU*>(msg.get());
-                static QByteArray ethResult;
-                if (typedMsg) {
-                    typedMsg->info();
-                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
-                        auto ethMsgPPU1 = EthMessageFactory
-                            ::create<EthMessage_PPU_STOP_1>();
-                        ethResult = ethMsgPPU1.serializeFull();
-                    }
-                    else
-                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
-                        auto ethMsgPPU2 = EthMessageFactory
-                            ::create<EthMessage_PPU_STOP_2>();
-                        ethResult = ethMsgPPU2.serializeFull();
-                    }
-                    if(m_ethSendCallback && !ethResult.isEmpty()) {
-                        m_ethSendCallback(ethResult);
-                    } else {
-                        delete typedMsg;
-                    }
-                }
-                break;
-            }
-            case static_cast<int32_t>(RmoMsgType::SET_MODE_PPU): {
-                auto typedMsg = dynamic_cast<RmoMessage_SetModePPU*>(msg.get());
-                static QByteArray ethResult;
-                if(typedMsg) {
-                    typedMsg->info();
-                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1) {
-                        auto ethMsgPPU1 = EthMessageFactory
-                            ::create<EthMessage_PPU_SET_MODE_1>
-                                                (typedMsg->modePPU);
-                        ethResult = ethMsgPPU1.serializeFull();
-                    }
-                    else
-                    if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2) {
-                        auto ethMsgPPU2 = EthMessageFactory
-                            ::create<EthMessage_PPU_SET_MODE_2>
-                                                (typedMsg->modePPU);
-                        ethResult = ethMsgPPU2.serializeFull();
-                    }
-                    if(m_ethSendCallback && !ethResult.isEmpty()) {
-                        m_ethSendCallback(ethResult);
-                    }
-                    else {
-                        delete typedMsg;
-                    }
-                }
-                break;
-            }
-            case static_cast<int32_t>(RmoMsgType::PPU_MSG): {
-                auto typedMsg = dynamic_cast<RmoMessage_MessagePPU*>(msg.get());
-                static QByteArray ethResult;
-                if(typedMsg) {
-                    typedMsg->info();
-                    static QByteArray command = typedMsg->direction == "up" ?
-                                ModulePPU_anUp :
-                                    typedMsg->direction == "down" ?
-                                        ModulePPU_anDown : "{}";
-                    auto ethMsg = EthMessageFactory
-                        ::create<EthMessage_PPU_MSG>(typedMsg->numPPU, command);
-                    ethResult = ethMsg.serializeFull();
-                    if(m_ethSendCallback && !ethResult.isEmpty()) {
-                        m_ethSendCallback(ethResult);
-                    }
-                    else {
-                        delete typedMsg;
-                    }
-                }
-            }
-            default:{
-                break;
-            }
-        }
-    }
+	// Передаём ВСЮ data (включая type) в фабрику
+	auto msg = RmoMessageFactory::instance().fromByteArray(type, data);
+	if (msg)
+	{
+		switch (type)
+		{
+		case static_cast<int32_t>(RmoMsgType::TARGET_PPU):
+		{
+			auto typedMsg = dynamic_cast<RmoMessage_TargetPPU *>(msg.get());
+			if (typedMsg)
+			{
+				typedMsg->info();
+				AppConfig::instance().setModulePPU_CU(
+					(AppConfig::ModulePPU_num)typedMsg->numPPU,
+					typedMsg->azTarget, typedMsg->anTarget,
+					typedMsg->azTargetVel, typedMsg->anTargetVel,
+					typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
+					typedMsg->anC1, typedMsg->azC2, typedMsg->anC2);
+			}
+			break;
+		}
+		case static_cast<int32_t>(RmoMsgType::ENABLE_PPU):
+		{
+			auto typedMsg = dynamic_cast<RmoMessage_EnablePPU *>(msg.get());
+			static QByteArray ethResult;
+			if (typedMsg)
+			{
+				typedMsg->info();
+				if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1)
+				{
+					auto ethMsgPPU1 = EthMessageFactory ::create<EthMessage_PPU_ENABLE_1>(typedMsg->state);
+					ethResult = ethMsgPPU1.serializeFull();
+				}
+				else if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2)
+				{
+					auto ethMsgPPU2 = EthMessageFactory ::create<EthMessage_PPU_ENABLE_2>(typedMsg->state);
+					ethResult = ethMsgPPU2.serializeFull();
+				}
+				if (m_ethSendCallback && !ethResult.isEmpty())
+				{
+					m_ethSendCallback(ethResult);
+				}
+				else
+				{
+					delete typedMsg;
+				}
+			}
+			break;
+		}
+		case static_cast<int32_t>(RmoMsgType::RESET_PPU):
+		{
+			auto typedMsg = dynamic_cast<RmoMessage_ResetPPU *>(msg.get());
+			static QByteArray ethResult;
+			if (typedMsg)
+			{
+				typedMsg->info();
+				if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1)
+				{
+					auto ethMsgPPU1 = EthMessageFactory ::create<EthMessage_PPU_RESET_1>(typedMsg->resetDst);
+					ethResult = ethMsgPPU1.serializeFull();
+				}
+				else if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2)
+				{
+					auto ethMsgPPU2 = EthMessageFactory ::create<EthMessage_PPU_RESET_2>(typedMsg->resetDst);
+					ethResult = ethMsgPPU2.serializeFull();
+				}
+				if (m_ethSendCallback && !ethResult.isEmpty())
+				{
+					m_ethSendCallback(ethResult);
+				}
+				else
+				{
+					delete typedMsg;
+				}
+			}
+			break;
+		}
+		case static_cast<int32_t>(RmoMsgType::STOP_PPU):
+		{
+			auto typedMsg = dynamic_cast<RmoMessage_StopPPU *>(msg.get());
+			static QByteArray ethResult;
+			if (typedMsg)
+			{
+				typedMsg->info();
+				if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1)
+				{
+					auto ethMsgPPU1 = EthMessageFactory ::create<EthMessage_PPU_STOP_1>();
+					ethResult = ethMsgPPU1.serializeFull();
+				}
+				else if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2)
+				{
+					auto ethMsgPPU2 = EthMessageFactory ::create<EthMessage_PPU_STOP_2>();
+					ethResult = ethMsgPPU2.serializeFull();
+				}
+				if (m_ethSendCallback && !ethResult.isEmpty())
+				{
+					m_ethSendCallback(ethResult);
+				}
+				else
+				{
+					delete typedMsg;
+				}
+			}
+			break;
+		}
+		case static_cast<int32_t>(RmoMsgType::SET_MODE_PPU):
+		{
+			auto typedMsg = dynamic_cast<RmoMessage_SetModePPU *>(msg.get());
+			static QByteArray ethResult;
+			if (typedMsg)
+			{
+				typedMsg->info();
+				if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1)
+				{
+					auto ethMsgPPU1 = EthMessageFactory ::create<EthMessage_PPU_SET_MODE_1>(typedMsg->modePPU);
+					ethResult = ethMsgPPU1.serializeFull();
+				}
+				else if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2)
+				{
+					auto ethMsgPPU2 = EthMessageFactory ::create<EthMessage_PPU_SET_MODE_2>(typedMsg->modePPU);
+					ethResult = ethMsgPPU2.serializeFull();
+				}
+				if (m_ethSendCallback && !ethResult.isEmpty())
+				{
+					m_ethSendCallback(ethResult);
+				}
+				else
+				{
+					delete typedMsg;
+				}
+			}
+			break;
+		}
+		case static_cast<int32_t>(RmoMsgType::PPU_MSG):
+		{
+			auto typedMsg = dynamic_cast<RmoMessage_MessagePPU *>(msg.get());
+			static QByteArray ethResult;
+			if (typedMsg)
+			{
+				typedMsg->info();
+				static QByteArray command = typedMsg->direction == "up" ? ModulePPU_anUp : typedMsg->direction == "down" ? ModulePPU_anDown
+																														 : "{}";
+				auto ethMsg = EthMessageFactory ::create<EthMessage_PPU_MSG>(typedMsg->numPPU, command);
+				ethResult = ethMsg.serializeFull();
+				if (m_ethSendCallback && !ethResult.isEmpty())
+				{
+					m_ethSendCallback(ethResult);
+				}
+				else
+				{
+					delete typedMsg;
+				}
+			}
+		}
+		case static_cast<int32_t>(RmoMsgType::MCFOS_WRITE_DAC_REF):
+		{
+			emit mcfosWriteRequested(msg);
+			break;
+		}
+		case static_cast<int32_t>(RmoMsgType::MCFOS_START):
+		{
+			emit mcfosStartRequested(msg);
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+	}
 }
 
 // --- WebSocket (браузерные РМО) ---
 
-void TcpHandler::onWebSocketNewConnection() {
-    QWebSocket* ws = m_wsServer->nextPendingConnection();
-    if (!ws) return;
-    m_wsClients.append(ws);
-    qDebug() << "RMO WebSocket connected:" << ws->peerAddress().toString();
+void TcpHandler::onWebSocketNewConnection()
+{
+	QWebSocket *ws = m_wsServer->nextPendingConnection();
+	if (!ws)
+		return;
+	m_wsClients.append(ws);
+	qDebug() << "RMO WebSocket connected:" << ws->peerAddress().toString();
 
-    connect(ws, &QWebSocket::textMessageReceived, this,
-            [this, ws](const QString& message) {
-                onWebSocketTextMessageReceived(message, ws);
-            });
-    connect(ws, &QWebSocket::disconnected, this, [this, ws]() {
+	connect(ws, &QWebSocket::textMessageReceived, this,
+			[this, ws](const QString &message)
+			{
+				onWebSocketTextMessageReceived(message, ws);
+			});
+	connect(ws, &QWebSocket::disconnected, this, [this, ws]()
+			{
         m_wsClients.removeOne(ws);
         ws->deleteLater();
-        qDebug() << "RMO WebSocket disconnected";
-    });
+        qDebug() << "RMO WebSocket disconnected"; });
 }
 
-void TcpHandler::onWebSocketTextMessageReceived(const QString& message,
-                                                QWebSocket* ws) {
-    Q_UNUSED(message);
-    Q_UNUSED(ws);
-    // try {
-    //     auto obj = nlohmann::json::parse(message.toStdString());
-    //     double azTarget = obj.value("azTarget", 0.0);
-    //     double anTarget = obj.value("anTarget", 0.0);
-    //     double azTargetVel = obj.value("azTargetVel", 0.0);
-    //     double anTargetVel = obj.value("anTargetVel", 0.0);
-    //     AppConfig::instance().setModulePPU_CU(
-    //         AppConfig::instance().ModulePPU_num_RLMN_1,
-    //         azTarget, anTarget, azTargetVel, anTargetVel);
+void TcpHandler::onWebSocketTextMessageReceived(const QString &message,
+												QWebSocket *ws)
+{
+	Q_UNUSED(message);
+	Q_UNUSED(ws);
+	// try {
+	//     auto obj = nlohmann::json::parse(message.toStdString());
+	//     double azTarget = obj.value("azTarget", 0.0);
+	//     double anTarget = obj.value("anTarget", 0.0);
+	//     double azTargetVel = obj.value("azTargetVel", 0.0);
+	//     double anTargetVel = obj.value("anTargetVel", 0.0);
+	//     AppConfig::instance().setModulePPU_CU(
+	//         AppConfig::instance().ModulePPU_num_RLMN_1,
+	//         azTarget, anTarget, azTargetVel, anTargetVel);
 
-    //     nlohmann::json reply = {{"status", "ok"}};
-    //     sendRmoMessageJSON(ws, reply);
-    // } catch (const std::exception& e) {
-    //     nlohmann::json reply = {{"status", "error"}, {"reason", e.what()}};
-    //     sendRmoMessageJSON(ws, reply);
-    // }
+	//     nlohmann::json reply = {{"status", "ok"}};
+	//     sendRmoMessageJSON(ws, reply);
+	// } catch (const std::exception& e) {
+	//     nlohmann::json reply = {{"status", "error"}, {"reason", e.what()}};
+	//     sendRmoMessageJSON(ws, reply);
+	// }
 }
 
-void TcpHandler::sendRmoMessageJSON(QWebSocket* ws, QSharedPointer<RmoBaseMessage> msg) {
-    if (ws && ws->state() == QAbstractSocket::ConnectedState) {
-        ws->sendTextMessage(QString::fromStdString(msg->toJson().dump()));
-    }
+void TcpHandler::sendRmoMessageJSON(QWebSocket *ws, QSharedPointer<RmoBaseMessage> msg)
+{
+	if (ws && ws->state() == QAbstractSocket::ConnectedState)
+	{
+		ws->sendTextMessage(QString::fromStdString(msg->toJson().dump()));
+	}
 }
 
-void TcpHandler::sendRmoMessageToAllJSON(QSharedPointer<RmoBaseMessage> msg) {
-    QString msg_string = QString::fromStdString(msg->toJson().dump());
-    for (QWebSocket* ws : m_wsClients) {
-        if (ws->state() == QAbstractSocket::ConnectedState) {
-            ws->sendTextMessage(msg_string);
-        }
-    }
+void TcpHandler::sendRmoMessageToAllJSON(QSharedPointer<RmoBaseMessage> msg)
+{
+	QString msg_string = QString::fromStdString(msg->toJson().dump());
+	for (QWebSocket *ws : m_wsClients)
+	{
+		if (ws->state() == QAbstractSocket::ConnectedState)
+		{
+			ws->sendTextMessage(msg_string);
+		}
+	}
 }
 
-void TcpHandler::setEthSendCallback(std::function<void(const QByteArray&)> cb) {
-    m_ethSendCallback = std::move(cb);
+void TcpHandler::setEthSendCallback(std::function<void(const QByteArray &)> cb)
+{
+	m_ethSendCallback = std::move(cb);
+}
+
+void TcpHandler::setUdpSendCallback(std::function<void(const QByteArray &)> cb)
+{
+	m_udpSendCallback = std::move(cb);
 }

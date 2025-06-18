@@ -4,9 +4,7 @@
 #include <QHostAddress>
 #include <QUdpSocket>
 #include <QPointer>
-#include <atomic>
-#include <thread>
-#include "utils/time_provider/TimeProvider.h"
+#include "network/messages/RmoMessage.h"
 #include "../messages/UdpMessage.h"
 
 class UdpHandler : public QObject {
@@ -23,11 +21,17 @@ public:
     /**
      * @brief Запустить UDP-сокет на указанном IP и порту
      */
-    Q_INVOKABLE void start(const QString& ip, int port);
+    Q_INVOKABLE void start(const QString& my_ip, int my_port,
+                           const QString &target_ip, int target_port);
     /**
      * @brief Остановить UDP-сокет
      */
     void stop();
+
+    /**
+     * @brief Запуск чтения DDR из МЦФОС при поолучении пакета
+     */
+    Q_INVOKABLE void mcfosReadDDR(const QByteArray& data);
 
     /**
      * @brief Разобрать входящий пакет (вызывается из onReadyRead)
@@ -42,6 +46,15 @@ public:
     Q_INVOKABLE void sendCustomPacket(const QByteArray& payload,
                                 const QHostAddress& addr,
                                 quint16 port);
+
+    // Генерация окна Натталла (4-терм)
+    float* getWindowNuttall(int length);
+
+    // Генерация окна Блэкмана-Харриса (4-терм)
+    float* getWindowBlackmanHarris(int length);
+
+    // Генерация окна Блэкмана (3-терм)
+    float* getWindowBlackman(int length);
 
 signals:
     /**
@@ -75,9 +88,16 @@ public slots:
     Q_INVOKABLE void sendMessage(const QByteArray& data);
 
     /**
-     * @brief Тестовая отправка пакетов на МЦФОС
+     * @brief Генерация и запись сигналов
+     *        в буферы ЦАП и REF МЦФОС
      */
-    void testMCFOS();
+    void mcfosWrite_DAC_REF(QSharedPointer<RmoBaseMessage> msg);
+
+    /**
+     * @brief Отправка команды на излучение
+     *        и приём, и чтение памяти МЦФОС
+     */
+    void mcfosStart(QSharedPointer<RmoBaseMessage> msg);
 
 private slots:
     void onReadyRead();
@@ -85,8 +105,14 @@ private slots:
 private:
     quint16 m_port = 0;
     QPointer<QUdpSocket> m_socket;
-    QHostAddress m_targetAddr;
+    QHostAddress m_addr;
     quint16 m_targetPort = 0;
+    QHostAddress m_targetAddr;
+
+    quint32 mcfosAddrDDR = 0;        // Текущий адрес блока памяти в DDR
+    quint32 mcfosAddrMaxDDR = 0;     // Максимальный адрес памяти в DDR
+    quint32 mcfosAddrSizeDDR = 1024; // Размер блока для одного канала в DDR
+    QByteArray recDDR;               // Буфер, содержащий результат чтения DDR
 
     QVector<quint32> vecSignalDAC_Re, vecSignalDAC_Im; // numBuf: 1, 2
     QVector<quint32> vecSignalREF_Re, vecSignalREF_Im; // numBuf: 3, 4
@@ -104,4 +130,15 @@ private:
 
     quint8 m_step = 0; ///< Текущий шаг взаимодействия с МЦФОС
                        ///< в текущем режиме работы
+
+    /**
+     * @enum MCFOS_WindowType
+     * @brief Тип окна, используемого в МЦФОС,
+     *        а также для БПФ на backend
+     */
+    enum MCFOS_WindowType {
+        MCFOS_WindowType_Nuttall = 0,
+        MCFOS_WindowType_BlackmanHarris = 1,
+        MCFOS_WindowType_Blackman = 2
+    };
 };

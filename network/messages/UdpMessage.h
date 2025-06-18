@@ -34,15 +34,15 @@ struct UdpMessage_MCFOS_Cmd {
 
     uint32_t DDR_ADDR;              ///< Адрес начала записи в DDR
     uint32_t DDR_LEN;               ///< Кол-во записываемых данных (байтов)
-    uint32_t PERIOD_COUNT : 16;     ///< Кол-во периодов в пачке
-    uint32_t PERIOD_LENGTH : 16;    ///< Длительность одного периода в 10 нс
-    uint32_t AMP;                   ///< Длительность сигнала разрешения
+    uint32_t PERIOD_SIZE : 16;      ///< Кол-во периодов в пачке
+    uint32_t PERIOD_COUNT : 16;     ///< Длительность одного периода в 10 нс
+    uint32_t AMP_OFF;               ///< Длительность сигнала разрешения
                                     ///<   от начала периода
-    uint32_t PULSE_END : 16;        ///< Задержка окончания выдачи сигнала после
+    uint32_t PULSE_ON : 16;         ///< Задержка окончания выдачи сигнала после
                                     ///<   начала периода
-    uint32_t PULSE_BEGIN : 16;      ///< Задержка выдачи сигнала после начала периода
-    uint32_t PROC_PERIOD : 16;      ///< Задержка старта следующего коррелятора
-    uint32_t PROC_BEGIN : 16;       ///< Задержка старта корреляционной обработки
+    uint32_t PULSE_OFF : 16;        ///< Задержка выдачи сигнала после начала периода
+    uint32_t PROC_DELAY : 16;       ///< Задержка старта следующего коррелятора
+    uint32_t PROC_DELTA : 16;       ///< Задержка старта корреляционной обработки
     uint32_t BUF_SIZE;              ///< Количество дополнительных слов в данном пакете,
                                     ///<   которые являются отсчетами для ЦАП
     UdpMessage_MCFOS_Cmd() :
@@ -57,13 +57,13 @@ struct UdpMessage_MCFOS_Cmd {
         CMD_ADC_S(0),
         DDR_ADDR(0),
         DDR_LEN(0),
+        PERIOD_SIZE(0),
         PERIOD_COUNT(0),
-        PERIOD_LENGTH(0),
-        AMP(0),
-        PULSE_END(0),
-        PULSE_BEGIN(0),
-        PROC_PERIOD(0),
-        PROC_BEGIN(0),
+        AMP_OFF(0),
+        PULSE_ON(0),
+        PULSE_OFF(0),
+        PROC_DELAY(0),
+        PROC_DELTA(0),
         BUF_SIZE(0) {}
 
     // Методы для сериализации/десериализации
@@ -86,21 +86,21 @@ struct UdpMessage_MCFOS_Cmd {
                 (static_cast<quint32>(CMD_C_SH) << 8) |
                 (static_cast<quint32>(reserv) << 12);
         const quint32 period =
-                 static_cast<quint32>(PERIOD_COUNT) |
-                (static_cast<quint32>(PERIOD_LENGTH) << 16);
+                 static_cast<quint32>(PERIOD_SIZE) |
+                (static_cast<quint32>(PERIOD_COUNT) << 16);
         const quint32 pulse =
-                 static_cast<quint32>(PULSE_END) |
-                (static_cast<quint32>(PULSE_BEGIN) << 16);
+                 static_cast<quint32>(PULSE_ON) |
+                (static_cast<quint32>(PULSE_OFF) << 16);
         const quint32 proc =
-                 static_cast<quint32>(PROC_PERIOD) |
-                (static_cast<quint32>(PROC_BEGIN) << 16);
+                 static_cast<quint32>(PROC_DELAY) |
+                (static_cast<quint32>(PROC_DELTA) << 16);
 
         // Сериализация с little-endian
         qToLittleEndian<quint32>(cmd,       data.data() + 0 * sizeof(quint32));
         qToLittleEndian<quint32>(DDR_ADDR,  data.data() + 1 * sizeof(quint32));
         qToLittleEndian<quint32>(DDR_LEN,   data.data() + 2 * sizeof(quint32));
         qToLittleEndian<quint32>(period,    data.data() + 3 * sizeof(quint32));
-        qToLittleEndian<quint32>(AMP,       data.data() + 4 * sizeof(quint32));
+        qToLittleEndian<quint32>(AMP_OFF,   data.data() + 4 * sizeof(quint32));
         qToLittleEndian<quint32>(pulse,     data.data() + 5 * sizeof(quint32));
         qToLittleEndian<quint32>(proc,      data.data() + 6 * sizeof(quint32));
         qToLittleEndian<quint32>(BUF_SIZE,  data.data() + 7 * sizeof(quint32));

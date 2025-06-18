@@ -31,9 +31,6 @@ public:
     // Потокобезопасная отправка TCP (для RMO)
     void sendTcpRmo(QSharedPointer<RmoBaseMessage> msg);
 
-signals:
-    void testMCFOS(); // Тестовая отправка пакетов на МЦФОС
-
 private:
     QTimer m_ethTimer;
 
