@@ -568,7 +568,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data)
 						 static_cast<double>(msg_0x641->ceilElev);
 
 			// Если координаты отличаются незначительно, то отправляем ответ
-			if (abs(dAz) < 0.6 && abs(dAn) < 0.6)
+            if (std::abs(dAz) < 0.6 && std::abs(dAn) < 0.6)
 			{
 				auto msg_0x1022 = MessageFactory::
 					create<TcpMessage_0x1022>(nullptr, 0, 0);
@@ -853,6 +853,7 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data)
 					delete typedMsg;
 				}
 			}
+            break;
 		}
 		case static_cast<int32_t>(RmoMsgType::MCFOS_WRITE_DAC_REF):
 		{

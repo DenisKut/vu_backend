@@ -155,6 +155,7 @@ void UdpHandler::mcfosStart(QSharedPointer<RmoBaseMessage> msg)
 	quint32 isSignalFromDAC = m->isSignalFromDAC;
 	quint32 isWriteFile = m->isWriteFile;
 
+    Q_UNUSED(isWriteFile);
 	// Формирование заголовка сообщения на МЦФОС:
 	//--------------------------------------------------------------------
 	UdpMessage_MCFOS_Cmd mes;
