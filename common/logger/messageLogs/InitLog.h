@@ -2,12 +2,33 @@
 #define INITLOG_H
 #include "LogHeader.h"
 
+/**
+ * @struct InitLog
+ * @brief Лог инициализации приложения/компонентов
+ */
 struct InitLog : public LogHeader {
-    StatusInit status;
+    StatusInit status;   ///< Сообщение инициализации компонента
 
+    /**
+     * @brief конструктор сообщения инициализации
+     * @param source компонент - источник сообщения
+     * @param status StatusInit - enum, одно из вероятных состояний компонента
+     */
     InitLog(const QString& source, const StatusInit& status);
+       
+    /**
+     * @brief конструктор сообщения инициализации
+     * @param source компонент - источник сообщения
+     * @param logLevel - Уровень логирования
+     * @param status StatusInit - enum, одно из вероятных состояний компонента
+     */
     InitLog(const QString& source, const LogLevel& logLevel, const StatusInit& status);
 
+    /**
+     * @brief конструктор сообщения инициализации
+     * @param header - подготовленный заголовок LogHeader сообщения 
+     * @param status StatusInit - enum, одно из вероятных состояний компонента
+     */
     InitLog(const LogHeader& header, StatusInit status);
 
 

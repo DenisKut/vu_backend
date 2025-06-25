@@ -4,26 +4,55 @@
 #include <QDataStream>
 #include "LogHeader.h"
 
+/**
+ * @struct InternalMessageLog
+ * @brief Лог внутренних сообщений между компонентами
+ * @brief или это могут быть любые подписи
+ */
 struct InternalMessageLog : public LogHeader {
-    QString messageType;
-    QString parsedData;
+    QString messageType;      ///< Тип сообщения
+    QString parsedData;       ///< Содержимое сообщения
 
+    /**
+     * @brief конструктор внутренних сообщений
+     * @param source источник сообщения
+     * @param messageType тип соообщения / заголовок
+     * @param parsedData расшифровка сообщения / детальная информация
+     */
     InternalMessageLog(const QString& source,
                        const QString& messageType,
                        const QString& parsedData);
 
 
+    /**
+     * @brief конструктор внутренних сообщений
+     * @param source источник сообщения
+     * @param logLevel enum LogLevel - уровень логирования
+     * @param messageType тип соообщения / заголовок
+     * @param parsedData расшифровка сообщения / детальная информация
+     */
     InternalMessageLog(const QString& source,
                        const LogLevel& logLevel,
                        const QString& messageType,
                        const QString& parsedData);
 
+
+    /**
+     * @brief конструктор внутренних сообщений
+     * @param header подготовленный заголовок сообщения
+     * @param messageType тип соообщения / заголовок
+     * @param parsedData расшифровка сообщения / детальная информация
+     */
     InternalMessageLog(const LogHeader& header,
                        const QString& messageType,
                        const QString& parsedData);
 
     InternalMessageLog() : LogHeader("", LogLevel::MessageReceived) {}
 
+
+    /**
+     * @brief конвертирует тип лога в строковое представление
+     */
     LogType logType() const override { return LogType::InternalMessage; }
 
 

@@ -3,23 +3,50 @@
 #include <QDataStream>
 #include "LogHeader.h"
 
+/**
+ * @struct ProtocolMessageLog
+ * @brief Лог протокольных сообщений. кидаемых вовне / принимаемых извне
+ */
 struct ProtocolMessageLog : public LogHeader {
-    Protocol protocol;
-    QByteArray rawData;
-    QString parsedData;
+    Protocol protocol;     ///< Тип сообщения/протокола
+    QByteArray rawData;    ///< Сырые данные сообщения
+    QString parsedData;    ///< Распарсенные данные (может быть пустой)(может быть удалена)
 
+
+    /**
+     * @brief констурктор 
+     * @param source - источник отправляемого сообщения
+     * @param protocol - тип сообщения/протокола (важный параметр, не перепутайте тип)
+     * @param data - сырые данные в формате QBinaryData
+     * @param jsonData - данные в формате json
+     */
     ProtocolMessageLog(const QString& source,
                        const Protocol protocol,
                        const QByteArray& data,
                        const QString& jsonData);
 
+    /**
+     * @brief констурктор 
+     * @param source - источник отправляемого сообщения
+     * @param logLevel - уровень логирования
+     * @param protocol - тип сообщения/протокола (важный параметр, не перепутайте тип)
+     * @param data - сырые данные в формате QBinaryData
+     * @param jsonData - данные в формате json
+     */
     ProtocolMessageLog(const QString& source,
                        const LogLevel& logLevel,
                        const Protocol& protocol,
                        const QByteArray& data,
                        const QString& jsonData);
 
-    //
+   
+    /**
+     * @brief констурктор 
+     * @param header - заготовленный заголовок сообщения
+     * @param protocol - тип сообщения/протокола (важный параметр, не перепутайте тип)
+     * @param data - сырые данные в формате QBinaryData
+     * @param jsonData - данные в формате json
+     */
     ProtocolMessageLog(const LogHeader& header,
                        Protocol proto,
                        const QByteArray& data,
