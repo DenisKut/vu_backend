@@ -20,9 +20,30 @@ jobs:
           qmake -version
           qmake
           make
+      - name: Start program (Linux)
+        run: |
+          if [ -f ./bin/debug/vu_backend ]; then
+            timeout 10s sudo ./bin/debug/vu_backend > output.log 2>&1 &
+            echo $! > pid.txt
+          elif [ -f ./bin/release/vu_backend ]; then
+            timeout 10s sudo ./bin/release/vu_backend > output.log 2>&1 &
+            echo $! > pid.txt
+          else
+            echo "Executable not found!" && exit 1
+          fi
+      - name: Keep program running (Linux)
+        run: |
+          sleep 10
+      - name: Stop program and check output (Linux)
+        run: |
+          kill $(cat pid.txt) || true
+          cat output.log
+          grep -q "▐▀▄▀▌ Загружена версия протокола: 2 . 2" output.log
 
   build-windows-latest:
     runs-on: windows-latest
+    env:
+      BUILD_TYPE: release
     steps:
       - uses: actions/checkout@v4
       - name: Установка Qt
@@ -36,7 +57,20 @@ jobs:
           echo "QMAKESPEC=win32-g++" >> $env:GITHUB_ENV
       - name: Build project
         shell: cmd
+        working-directory: ${{ github.workspace }}
         run: |
           qmake -version
           qmake
           mingw32-make
+
+      - name: Run application with 10s timeout, no logs
+        shell: pwsh
+        working-directory: ${{ github.workspace }}\bin\${{ env.BUILD_TYPE }}
+        run: |
+          $p = Start-Process -FilePath "./vu_backend.exe" -NoNewWindow -PassThru
+          Start-Sleep -Seconds 10
+          if (-not $p.HasExited) {
+            Write-Host "Timeout reached, killing vu_backend.exe"
+            $p.Kill()
+          }
+        

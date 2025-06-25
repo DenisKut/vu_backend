@@ -166,17 +166,21 @@ DISTFILES += \
 # Копирование .env, settings.ini, init_db.sql и FFTW DLL
 win32 {
     isEmpty(QMAKE_SH) {
-    QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR \
+        QMAKE_POST_LINK += $$quote(cmd /c if not exist $$DESTDIR md $$DESTDIR \
             & copy /Y $$shell_path($$PWD/.env) $$shell_path($$DESTDIR) \
             & copy /Y $$shell_path($$PWD/settings.ini) $$shell_path($$DESTDIR) \
             & copy /Y $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR) \
-            & copy /Y $$shell_path($$PWD/libs/fftw/libfftw3-3.dll) $$shell_path($$DESTDIR))
+            & copy /Y $$shell_path($$PWD/libs/fftw/libfftw3-3.dll) $$shell_path($$DESTDIR) \
+            & copy /Y $$shell_path($$PWD/libs/wpdpack/Lib/x64/Packet.lib) $$shell_path($$DESTDIR) \
+            & copy /Y $$shell_path($$PWD/libs/wpdpack/Lib/x64/wpcap.lib) $$shell_path($$DESTDIR))
     } else {
-    QMAKE_POST_LINK = mkdir -p $$shell_quote($$DESTDIR)
-           QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/.env) $$shell_quote($$DESTDIR)
-           QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/settings.ini) $$shell_quote($$DESTDIR)
-           QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/database/init_db.sql) $$shell_quote($$DESTDIR)
-           QNAKE_POST_LINK += && cp -f $$shell_quote($$PWD/libs/fftw/libfftw3-3.dll) $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK = mkdir -p $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/.env) $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/settings.ini) $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/database/init_db.sql) $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/libs/fftw/libfftw3-3.dll) $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/libs/wpdpack/Lib/x64/Packet.lib) $$shell_quote($$DESTDIR)
+        QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/libs/wpdpack/Lib/x64/wpcap.lib) $$shell_quote($$DESTDIR)
     }
 
 } else {
