@@ -16,6 +16,10 @@ public:
 	explicit NetworkManager(QObject *parent = nullptr);
 	~NetworkManager();
 
+	TcpHandler *m_tcpHandler;
+	UdpHandler *m_udpHandler;
+	EthHandler *m_ethHandler;
+
 	void start();
 	void stop();
 
@@ -33,10 +37,6 @@ public slots:
 
 private:
 	QTimer m_ethTimer;
-
-	TcpHandler *m_tcpHandler;
-	UdpHandler *m_udpHandler;
-	EthHandler *m_ethHandler;
 
 	QThread *m_tcpThread;
 	QThread *m_udpThread;
