@@ -172,7 +172,7 @@ win32 {
             & copy /Y $$shell_path($$PWD/database/init_db.sql) $$shell_path($$DESTDIR) \
             & copy /Y $$shell_path($$PWD/libs/fftw/libfftw3-3.dll) $$shell_path($$DESTDIR))
     } else {
-    QMAKE_POST_LINK = mkdir -p $$shell_quote($$DESTDIR)Add commentMore actions
+    QMAKE_POST_LINK = mkdir -p $$shell_quote($$DESTDIR)
            QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/.env) $$shell_quote($$DESTDIR)
            QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/settings.ini) $$shell_quote($$DESTDIR)
            QMAKE_POST_LINK += && cp -f $$shell_quote($$PWD/database/init_db.sql) $$shell_quote($$DESTDIR)
