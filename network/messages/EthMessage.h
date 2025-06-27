@@ -61,9 +61,9 @@ enum class ETH_MessageNumbers : uint16_t
 	PPU_ENABLE_ANSWER_2 = 0x110B, ///< 11.17 - ответ на команду управления питанием ППУ 2;
 
 	PPU_MSG = 0x140B, ///< 11.20 - прямое обращение к ППУ;
-	// -----------------------------------------
-	// Сообщения от БС на ВУ [МЦФОС]
-	// -----------------------------------------
+					  // -----------------------------------------
+					  // Сообщения от БС на ВУ [МЦФОС]
+					  // -----------------------------------------
 	MCFS_RESULT = 0x010F, ///< 15.1  - информация по обнаруженным объектам;
 	MCFS_REG = 0x030F,	  ///< 15.3  - информация регистрации;
 	MCFS_STATUS = 0x0B0C, ///< 12.11 - состояние устройства;
@@ -77,7 +77,7 @@ enum class ETH_MessageNumbers : uint16_t
 
 	// -------НЕ ИСПОЛЬЗОВАТЬ-------
 	MCFS_CHL_CAL = 0x040C, ///< 12.4  - информация для калибровки каналов МЦФОС;
-	// -----------------------------
+						   // -----------------------------
 
 	MCFS_STATUS_REQ = 0x0A0C, ///< 12.10 - запрос состояния МЦФОС;
 	MCFS_RESET = 0x120C		  ///< 12.18 - сброс МЦФОС;
@@ -129,7 +129,7 @@ struct EthHeader
 		return header;
 	}
 
-	bool isValid() const
+	bool validate() const
 	{
 		return true;
 	}
@@ -388,7 +388,7 @@ struct EthMessage_PPU_MSG : EthMessage<EthMessage_PPU_MSG, ETH_MessageNumbers::P
 		return msg;
 	}
 
-	bool isValid() const
+	bool validate() const
 	{
 		return !commandString.isEmpty();
 	}
@@ -441,7 +441,7 @@ struct EthMessage_PPU_ANSWER_1 : EthMessage<EthMessage_PPU_ANSWER_1, ETH_Message
 		return msg;
 	}
 
-	bool isValid() const
+	bool validate() const
 	{
 		return !answerString.isEmpty();
 	}
@@ -541,7 +541,7 @@ struct EthMessage_PPU_ANSWER_2 : EthMessage<EthMessage_PPU_ANSWER_2, ETH_Message
 		return msg;
 	}
 
-	bool isValid() const
+	bool validate() const
 	{
 		return !answerString.isEmpty();
 	}
@@ -588,7 +588,7 @@ struct EthMessage_PPU_SET_MODE_ANSWER_1 : EthMessage<EthMessage_PPU_SET_MODE_ANS
 		return msg;
 	}
 
-	bool isValid() const
+	bool validate() const
 	{
 		return !answerString.isEmpty();
 	}
@@ -635,7 +635,7 @@ struct EthMessage_PPU_SET_MODE_ANSWER_2 : EthMessage<EthMessage_PPU_SET_MODE_ANS
 		return msg;
 	}
 
-	bool isValid() const
+	bool validate() const
 	{
 		return !answerString.isEmpty();
 	}
@@ -682,7 +682,7 @@ struct EthMessage_PPU_ENABLE_ANSWER_1 : EthMessage<EthMessage_PPU_ENABLE_ANSWER_
 		return msg;
 	}
 
-	bool isValid() const
+	bool validate() const
 	{
 		return !answerString.isEmpty();
 	}
@@ -729,7 +729,7 @@ struct EthMessage_PPU_ENABLE_ANSWER_2 : EthMessage<EthMessage_PPU_ENABLE_ANSWER_
 		return msg;
 	}
 
-	bool isValid() const
+	bool validate() const
 	{
 		return !answerString.isEmpty();
 	}
@@ -784,11 +784,11 @@ struct EthMessage_PPU_STOP_2 : EthMessage<EthMessage_PPU_STOP_2, ETH_MessageNumb
 	{
 		uint64_t time = TimeProvider::instance().getBsPeriodTime();
 		memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
-		//        timeBeginTrans[0] = time & 0xFF;
-		//        timeBeginTrans[1] = (time >> 8) & 0xFF;
-		//        timeBeginTrans[2] = (time >> 16) & 0xFF;
-		//        timeBeginTrans[3] = (time >> 24) & 0xFF;
-		//        timeBeginTrans[4] = (time >> 32) & 0xFF;
+										  //        timeBeginTrans[0] = time & 0xFF;
+										  //        timeBeginTrans[1] = (time >> 8) & 0xFF;
+										  //        timeBeginTrans[2] = (time >> 16) & 0xFF;
+										  //        timeBeginTrans[3] = (time >> 24) & 0xFF;
+										  //        timeBeginTrans[4] = (time >> 32) & 0xFF;
 	}
 
 	QJsonObject to_json() const
@@ -820,11 +820,11 @@ struct EthMessage_PPU_RESET_1 : EthMessage<EthMessage_PPU_RESET_1, ETH_MessageNu
 	{
 		uint64_t time = TimeProvider::instance().getBsPeriodTime();
 		memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
-		//        timeBeginTrans[0] = time & 0xFF;
-		//        timeBeginTrans[1] = (time >> 8) & 0xFF;
-		//        timeBeginTrans[2] = (time >> 16) & 0xFF;
-		//        timeBeginTrans[3] = (time >> 24) & 0xFF;
-		//        timeBeginTrans[4] = (time >> 32) & 0xFF;
+										  //        timeBeginTrans[0] = time & 0xFF;
+										  //        timeBeginTrans[1] = (time >> 8) & 0xFF;
+										  //        timeBeginTrans[2] = (time >> 16) & 0xFF;
+										  //        timeBeginTrans[3] = (time >> 24) & 0xFF;
+										  //        timeBeginTrans[4] = (time >> 32) & 0xFF;
 	}
 
 	EthMessage_PPU_RESET_1(uint8_t dst)
@@ -864,11 +864,11 @@ struct EthMessage_PPU_RESET_2 : EthMessage<EthMessage_PPU_RESET_2, ETH_MessageNu
 	{
 		uint64_t time = TimeProvider::instance().getBsPeriodTime();
 		memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
-		//        timeBeginTrans[0] = time & 0xFF;
-		//        timeBeginTrans[1] = (time >> 8) & 0xFF;
-		//        timeBeginTrans[2] = (time >> 16) & 0xFF;
-		//        timeBeginTrans[3] = (time >> 24) & 0xFF;
-		//        timeBeginTrans[4] = (time >> 32) & 0xFF;
+										  //        timeBeginTrans[0] = time & 0xFF;
+										  //        timeBeginTrans[1] = (time >> 8) & 0xFF;
+										  //        timeBeginTrans[2] = (time >> 16) & 0xFF;
+										  //        timeBeginTrans[3] = (time >> 24) & 0xFF;
+										  //        timeBeginTrans[4] = (time >> 32) & 0xFF;
 	}
 
 	EthMessage_PPU_RESET_2(uint8_t dst)
@@ -1027,12 +1027,12 @@ struct EthMessage_PPU_ENABLE_2 : EthMessage<EthMessage_PPU_ENABLE_2, ETH_Message
 	{
 		uint64_t time = TimeProvider::instance().getBsPeriodTime();
 		memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
-		//        state = _state > 0 ? 1 : 0;
-		//        timeBeginTrans[0] = time & 0xFF;
-		//        timeBeginTrans[1] = (time >> 8) & 0xFF;
-		//        timeBeginTrans[2] = (time >> 16) & 0xFF;
-		//        timeBeginTrans[3] = (time >> 24) & 0xFF;
-		//        timeBeginTrans[4] = (time >> 32) & 0xFF;
+										  //        state = _state > 0 ? 1 : 0;
+										  //        timeBeginTrans[0] = time & 0xFF;
+										  //        timeBeginTrans[1] = (time >> 8) & 0xFF;
+										  //        timeBeginTrans[2] = (time >> 16) & 0xFF;
+										  //        timeBeginTrans[3] = (time >> 24) & 0xFF;
+										  //        timeBeginTrans[4] = (time >> 32) & 0xFF;
 	}
 
 	EthMessage_PPU_ENABLE_2(int state)
@@ -1129,11 +1129,11 @@ struct EthMessage_PPU_MOVE_2 : EthMessage<EthMessage_PPU_MOVE_2, ETH_MessageNumb
 	{
 		uint64_t time = TimeProvider::instance().getBsPeriodTime();
 		memcpy(timeBeginTrans, &time, 5); // Копирует 5 младших байтов
-		//        timeBeginTrans[0] = time & 0xFF;
-		//        timeBeginTrans[1] = (time >> 8) & 0xFF;
-		//        timeBeginTrans[2] = (time >> 16) & 0xFF;
-		//        timeBeginTrans[3] = (time >> 24) & 0xFF;
-		//        timeBeginTrans[4] = (time >> 32) & 0xFF;
+										  //        timeBeginTrans[0] = time & 0xFF;
+										  //        timeBeginTrans[1] = (time >> 8) & 0xFF;
+										  //        timeBeginTrans[2] = (time >> 16) & 0xFF;
+										  //        timeBeginTrans[3] = (time >> 24) & 0xFF;
+										  //        timeBeginTrans[4] = (time >> 32) & 0xFF;
 
 		/// @warning !!! Для заполнения требует наличия заведённых структур для
 		/// повороток
@@ -1255,7 +1255,7 @@ struct EthMessage_MCFS_RESULT : EthMessage<EthMessage_MCFS_RESULT, ETH_MessageNu
 	}
 
 	/// Проверка количества обнаруженных объектов
-	bool isValid() const
+	bool validate() const
 	{
 		return (vecObjects.size() <= 60);
 	}
@@ -1541,7 +1541,7 @@ public:
 
 		/// @brief Десериализуем базовый заголовок
 		EthHeader header = EthHeader::deserialize(data);
-		if (!header.isValid())
+		if (!header.validate())
 		{
 			return nullptr;
 		}
@@ -1590,7 +1590,7 @@ private:
 			return nullptr;
 
 		T msg = T::deserialize(data);
-		if (!msg.isValid())
+		if (!msg.validate())
 			return nullptr;
 
 		return std::unique_ptr<EthHeader>(new T(msg));

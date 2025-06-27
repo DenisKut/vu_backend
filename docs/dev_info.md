@@ -108,7 +108,7 @@ messages.push_back(std::move(msg));
 >         return QSharedPointer<TcpHeader>();
 >     }
 >     TcpHeader header = TcpHeader::deserialize(data);
->     if (!header.isValid()) {
+>     if (!header.Validate()) {
 >         return QSharedPointer<TcpHeader>();
 >     }
 >     switch (static_cast<PBU_MessageNumbers>(header.typePack)) {

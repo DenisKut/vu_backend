@@ -201,7 +201,7 @@ struct TcpHeader
 	 * @brief Проверяет валидность заголовка
 	 * @return true если контрольная сумма совпадает
 	 */
-	bool isValid() const
+	bool validate() const
 	{
 		const size_t headerSize = sizeof(TcpHeader) - sizeof(checkSum);
 		return checkSum == calculateChecksum(
@@ -221,7 +221,7 @@ struct TcpHeader
 			<< "  ASKU Flag: " << (isAsku ? "Yes" : "No") << "\n"
 			<< "  Message Type: 0x" << std::hex << typePack << std::dec << "\n"
 			<< "  Checksum: 0x" << std::hex << checkSum << std::dec
-			<< (isValid() ? " (Valid)" : " (Invalid)");
+			<< (validate() ? " (Valid)" : " (Invalid)");
 		return oss.str();
 	}
 
@@ -1644,7 +1644,7 @@ struct TcpMessage_0x1024 : TcpMessage<TcpMessage_0x1024,
 
 		// Десериализация заголовка
 		TcpHeader header = TcpHeader::deserialize(data);
-		if (!header.isValid())
+		if (!header.validate())
 		{
 			throw std::runtime_error("Invalid header");
 		}
@@ -4025,7 +4025,7 @@ public:
 
 		/// @brief Десериализуем базовый заголовок
 		TcpHeader header = TcpHeader::deserialize(data);
-		if (!header.isValid())
+		if (!header.validate())
 		{
 			return nullptr;
 		}
@@ -4033,6 +4033,34 @@ public:
 		/// @brief Определяем тип сообщения
 		switch (static_cast<PBU_MessageNumbers>(header.typePack))
 		{
+		case PBU_MessageNumbers::REQ_REGISTRATION:
+		{
+			return parseMessage<TcpMessage_0x01>(data);
+		}
+		case PBU_MessageNumbers::REQ_TIME:
+		{
+			return parseMessage<TcpMessage_0x03>(data);
+		}
+		case PBU_MessageNumbers::GEO_MODULE:
+		{
+			return parseMessage<TcpMessage_0x05>(data);
+		}
+		case PBU_MessageNumbers::CURRENT_STATE_RLS:
+		{
+			return parseMessage<TcpMessage_0x1021>(data);
+		}
+		case PBU_MessageNumbers::MARK_TARGET:
+		{
+			return parseMessage<TcpMessage_0x1022>(data);
+		}
+		case PBU_MessageNumbers::MODULE_CAPABILITIES:
+		{
+			return parseMessage<TcpMessage_0x1023>(data);
+		}
+		case PBU_MessageNumbers::FORBIDDEN_SECTORS:
+		{
+			return parseMessage<TcpMessage_0x1024>(data);
+		}
 		case PBU_MessageNumbers::RES_REGISTRATION:
 		{
 			return parseMessage<TcpMessage_0x02>(data);
@@ -4041,57 +4069,63 @@ public:
 		{
 			return parseMessage<TcpMessage_0x04>(data);
 		}
+		// case PBU_MessageNumbers::GEO_COMPLEX:
+		// {
+		// 	return parseMessage<TcpMessage_0x06>(data);
+		// }
+		case PBU_MessageNumbers::MARK_TRAICE_PBU:
+		{
+			return parseMessage<TcpMessage_0x07>(data);
+		}
+		// case PBU_MessageNumbers::ORIENTATION_SC_COMPLEX:
+		// {
+		// 	return parseMessage<TcpMessage_0x08>(data);
+		// }
 		case PBU_MessageNumbers::TARGET_DESIGNATION:
 		{
 			return parseMessage<TcpMessage_0x641>(data);
+		}
+		case PBU_MessageNumbers::MODULE_SCHEME:
+		{
+			return parseMessage<TcpMessage_0x20>(data);
+		}
+		case PBU_MessageNumbers::STATUS_SCHEME_ELEMENTS:
+		{
+			return parseMessage<TcpMessage_0x21>(data);
+		}
+		case PBU_MessageNumbers::RECEIPT_CONTROL_COMMAND:
+		{
+			return parseMessage<TcpMessage_0x23>(data);
+		}
+		case PBU_MessageNumbers::STATUS_MODULE:
+		{
+			return parseMessage<TcpMessage_0x24>(data);
+		}
+		case PBU_MessageNumbers::TEXT_FOR_MESSAGE_LOG:
+		{
+			return parseMessage<TcpMessage_0x25>(data);
+		}
+		case PBU_MessageNumbers::TEXT_FOR_OPERATOR:
+		{
+			return parseMessage<TcpMessage_0x26>(data);
+		}
+		case PBU_MessageNumbers::COMMAND_SWITCH_ON:
+		{
+			return parseMessage<TcpMessage_0x40>(data);
+		}
+		case PBU_MessageNumbers::COMMAND_SWITCH_OFF:
+		{
+			return parseMessage<TcpMessage_0x41>(data);
+		}
+		case PBU_MessageNumbers::COMMAND_RESET_ALARM:
+		{
+			return parseMessage<TcpMessage_0x42>(data);
 		}
 		case PBU_MessageNumbers::TEXT_FOR_OPERATOR_PBU:
 		{
 			return parseMessage<TcpMessage_0x45>(data);
 		}
-		// case PBU_MessageNumbers::GEO_COMPLEX: {
-		//     return parseMessage<TcpMessage_0x06>(data)
-		// }
-		// case PBU_MessageNumbers::MARK_TRAICE_PBU: {
 
-		// }
-		// case PBU_MessageNumbers::ORIENTATION_SC_COMPLEX: {
-
-		// }
-
-		// case PBU_MessageNumbers::COMMAND_SWITCH_ON: {
-
-		// }
-		// case PBU_MessageNumbers::COMMAND_SWITCH_OFF: {
-
-		// }
-		// case PBU_MessageNumbers::COMMAND_RESTART: {
-
-		// }
-		// case PBU_MessageNumbers::COMMAND_RESET_ALARM: {
-
-		// }
-		// case PBU_MessageNumbers::COMMAND_SET_CORRECTIONS: {
-
-		// }
-		// case PBU_MessageNumbers::REQ_MODULE_SCHEME: {
-
-		// }
-		// case PBU_MessageNumbers::COMMAND_SET_LANGUAGE: {
-
-		// }
-		// case PBU_MessageNumbers::MESSAGE_SATELLITE_NAV: {
-
-		// }
-		// case PBU_MessageNumbers::COMMAND_SET_TIME: {
-
-		// }
-		// case PBU_MessageNumbers::COMMAND_SET_COORDINATES_MODULE: {
-
-		// }
-		// case PBU_MessageNumbers::COMMAND_SET_SETTINGS_VALUES: {
-
-		// }
 		// Обработка других типов...
 		default:
 			return nullptr;
@@ -4165,7 +4199,7 @@ private:
 			return nullptr;
 
 		T msg = T::deserialize(data);
-		if (!msg.isValid())
+		if (!msg.validate())
 			return nullptr;
 
 		return std::unique_ptr<TcpHeader>(new T(msg));

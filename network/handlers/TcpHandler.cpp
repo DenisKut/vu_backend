@@ -283,7 +283,7 @@ void TcpHandler::processBuffer(QByteArray &buffer, F processFunc)
 		memcpy(&header, buffer.constData() + pos, minHeader);
 
 		// 2. Проверяем контрольную сумму
-		if (!header.isValid())
+		if (!header.validate())
 		{
 			// Не валидный заголовок — сдвигаем окно поиска на 1 байт
 			++pos;
@@ -313,7 +313,7 @@ void TcpHandler::processBuffer(QByteArray &buffer, F processFunc)
 		// qDebug() << "Header type:" << header.typePack
 		//          << "\n\tsizeData:" << header.sizeData
 		//          << "\n\tchecksum:" << header.checkSum
-		//          << "\n\tisValid:" << header.isValid() << "\n";
+		//          << "\n\tisValid:" << header.validate() << "\n";
 		processFunc(messageData);
 
 		// 5. Сдвигаем позицию на размер пакета
@@ -568,7 +568,7 @@ void TcpHandler::processIncomingMessage(const QByteArray &data)
 						 static_cast<double>(msg_0x641->ceilElev);
 
 			// Если координаты отличаются незначительно, то отправляем ответ
-            if (std::abs(dAz) < 0.6 && std::abs(dAn) < 0.6)
+			if (std::abs(dAz) < 0.6 && std::abs(dAn) < 0.6)
 			{
 				auto msg_0x1022 = MessageFactory::
 					create<TcpMessage_0x1022>(nullptr, 0, 0);
@@ -853,7 +853,7 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data)
 					delete typedMsg;
 				}
 			}
-            break;
+			break;
 		}
 		case static_cast<int32_t>(RmoMsgType::MCFOS_WRITE_DAC_REF):
 		{
