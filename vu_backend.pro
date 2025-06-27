@@ -226,13 +226,14 @@ win32 {
     cleanall.commands = \
         cmd /c "if exist $$shell_path($$BIN_DIR) rmdir /S /Q $$shell_path($$BIN_DIR) & \
         if exist $$shell_path($$OBJECTS_DIR) rmdir /S /Q $$shell_path($$OBJECTS_DIR) & \
+				if exist build rmdir /S /Q build & \
         if exist release rmdir /S /Q release & \
         if exist debug rmdir /S /Q debug & \
         if exist objects rmdir /S /Q objects & \
         del /F /Q .qmake.stash Makefile* object_script.*.Debug object_script.*.Release"
 } else {
     cleanall.commands = \
-        rm -rf $$BIN_DIR $$OBJECTS_DIR release debug objects .qmake.stash Makefile* object_script.*.Debug object_script.*.Release
+        rm -rf $$BIN_DIR $$OBJECTS_DIR build release debug objects .qmake.stash Makefile* object_script.*.Debug object_script.*.Release
 }
 
 QMAKE_EXTRA_TARGETS += cleanall

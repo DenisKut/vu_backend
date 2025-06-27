@@ -686,7 +686,7 @@ void EthHandler::checkReceived()
 	}
 
 	// Проверка таймаута (если долго не было пакетов)
-	if (m_lastPacketTime.validate() &&
+	if (m_lastPacketTime.isValid() &&
 		m_lastPacketTime.msecsTo(QDateTime::currentDateTime()) > PACKET_TIMEOUT_MS)
 	{
 		qInfo() << "No packets received for" << PACKET_TIMEOUT_MS / 1000 << "seconds";
