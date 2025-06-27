@@ -311,7 +311,7 @@ struct TcpMessage : TcpHeader
 		TDerived message;
 		if (data.size() >= static_cast<int>(sizeof(TDerived)))
 		{
-			memcpy(&message, data.constData(), sizeof(TDerived));
+            memcpy((void*)&message, data.constData(), sizeof(TDerived));
 		}
 		return message;
 	}
@@ -537,6 +537,8 @@ struct TcpMessage_0x1021 : TcpMessage<TcpMessage_0x1021,
 	float elCur;	  ///< Текущее положение по углу места (32 бит)
 	float dAzVisible; ///< Ширина зоны обзора/луча по азимуту (32 бит)
 	float dElVisible; ///< Ширина поля обзора/луча по углу места (32 бит)
+
+    TcpMessage_0x1021() = default;
 
 	TcpMessage_0x1021(AppConfig::ModulePPU_num num_device)
 		: numDrive(to_uint8(num_device)),
@@ -1298,7 +1300,7 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
 		json["capabilities"] = capabilitiesArray;
 		return json;
 	}
-/// @warning Отключение диагностики комплилятора для метода копирования
+/// @warning Отключение диагностики компилилятора для метода копирования
 /// @note Мы сами перепроверяем строку при её сериализации/десериализации
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
@@ -1314,7 +1316,7 @@ struct TcpMessage_0x1023 : TcpMessage<TcpMessage_0x1023,
 
 		// Копирование заголовка
 		const size_t headerSize = sizeof(TcpMessage_0x1023);
-		memcpy(&msg, data.constData(), headerSize);
+        memcpy((void*)&msg, data.constData(), headerSize);
 
 		// Копирование JSON
 		const size_t jsonSize = msg.getJsonSize();
@@ -2750,7 +2752,7 @@ struct TcpMessage_0x20 : TcpMessage<TcpMessage_0x20,
 
 		// Копирование заголовка
 		const size_t headerSize = sizeof(TcpMessage_0x20);
-		memcpy(&msg, data.constData(), headerSize);
+        memcpy((void*)&msg, data.constData(), headerSize);
 
 		// Копирование JSON
 		const size_t jsonSize = msg.getJsonSize();
@@ -2879,15 +2881,22 @@ struct TcpMessage_0x21_Header : TcpMessage<TcpMessage_0x21_Header,
  * @brief Сообщение статуса элементов схемы (0x21)
  * @note Обертка для удобной работы
  */
-class TcpMessage_0x21
+class TcpMessage_0x21 : public TcpHeader
 {
 	TcpMessage_0x21_Header header;
 	std::vector<ElementStatus> elements;
 
 public:
+	TcpMessage_0x21() = default;
+    bool validate() const { return true; } // TODO: добавить реальную логику
+
 	/// @brief Конструкторы
 	/// @{
-	TcpMessage_0x21() = default;
+	TcpMessage_0x21(const TcpMessage_0x21 &) = default;
+	TcpMessage_0x21(TcpMessage_0x21 &&) = default;
+
+	TcpMessage_0x21 &operator=(const TcpMessage_0x21 &) = default;
+	TcpMessage_0x21 &operator=(TcpMessage_0x21 &&) = default;
 
 	explicit TcpMessage_0x21(const std::vector<ElementStatus> &elems)
 		: elements(elems)
@@ -3062,10 +3071,9 @@ struct TcpMessage_0x23 : TcpMessage<TcpMessage_0x23,
 				   ///< некорректности хотя бы одного из параметров;
 				   ///< - "3": выполнение команды прервано новой командой
 				   ///< управления либо отменено оператором;
-				   ///< - "4": команда не выполнена по причине
-				   ///< неисправности оборудования;
-				   ///< - "5": команда не выполнена из-за внутренней
-				   ///< ошибки;
+				   ///< - "4": команда не выполнена по причине неисправности
+				   ///< оборудования;
+				   ///< - "5": команда не выполнена из-за внутренней ошибки;
 				   ///< - "6": неизвестный тип сообщения;
 				   ///< - "7": команда отклонена, так как РАФ выключен;
 				   ///< - "8": команда не выполнена по причине неготовности
@@ -3077,14 +3085,7 @@ struct TcpMessage_0x23 : TcpMessage<TcpMessage_0x23,
 				   ///< - "11": команда не выполнена, так как модуль
 				   ///< находится в ТП;
 				   ///< - "127": неизвестная ошибка.
-				   ///< @note Коды с 128 до 255 включительно — коды ошибок
-				   ///< для определенной команды одинаковые для разных
-				   ///< типов подключаемых модулей:
-				   ///<    - "128": требуемый язык не поддерживается;
-				   ///<    - "129": отмена установки времени по причине
-				   ///<    исправности собственного источника времени;
-				   ///<    - "130": ошибка сохранения.
-				   ///< @warning Коды с 256 по 65535 специфичные для
+				   ///< @note Коды с 128 по 65535 специфичные для
 				   ///< каждого модуля, определяются в унифицированном
 				   ///< протоколе сопряжения ПО модуля с составными частями
 				   ///< РУК КББ (приложение 1 к протоколу)
@@ -3227,8 +3228,8 @@ struct TcpMessage_0x24 : TcpMessage<TcpMessage_0x24,
 					  ///< - "3": выключение.
 
 	uint8_t isRGDV : 1; ///< @brief Признак включения РГДВ
-						///< @details В данном поле передается «1»,
-						///< если модуль находится в РГДВ, «0» - если нет
+						///< @details В данном поле передается «1», если
+						///< модуль находится в РГДВ, «0» - если нет
 						///< default - 1
 
 	uint8_t isRAF : 1; ///< @brief Признак включения РАФ
@@ -3551,8 +3552,7 @@ struct TcpMessage_0x25 : TcpMessage<TcpMessage_0x25,
 		int minSize = sizeof(TcpHeader) + 8 + 4;
 		if (data.size() < minSize)
 			return msg;
-		memcpy(static_cast<TcpHeader *>(&msg), data.constData(),
-			   sizeof(TcpHeader));
+		memcpy(static_cast<TcpHeader *>(&msg), data.constData(), sizeof(TcpHeader));
 		int offset = sizeof(TcpHeader);
 		memcpy(&msg.time1, data.constData() + offset, sizeof(msg.time1));
 		offset += sizeof(msg.time1);
@@ -3650,12 +3650,9 @@ struct TcpMessage_0x26 : TcpMessage<TcpMessage_0x26,
 		TcpMessage_0x26 msg;
 		if (data.size() < static_cast<int>(sizeof(TcpHeader) + 8))
 			return msg;
-		memcpy(static_cast<TcpHeader *>(&msg), data.constData(),
-			   sizeof(TcpHeader));
-		memcpy(&msg.time1, data.constData() + sizeof(TcpHeader),
-			   sizeof(msg.time1));
-		memcpy(&msg.time2, data.constData() + sizeof(TcpHeader) + 4,
-			   sizeof(msg.time2));
+		memcpy(static_cast<TcpHeader *>(&msg), data.constData(), sizeof(TcpHeader));
+		memcpy(&msg.time1, data.constData() + sizeof(TcpHeader), sizeof(msg.time1));
+		memcpy(&msg.time2, data.constData() + sizeof(TcpHeader) + 4, sizeof(msg.time2));
 		msg.text = data.mid(sizeof(TcpHeader) + 8);
 		return msg;
 	}
