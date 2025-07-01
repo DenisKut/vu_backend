@@ -46,8 +46,8 @@ NetworkManager::NetworkManager(QObject *parent)
 			Qt::QueuedConnection);
 
 	// --- Connect MCFOS TCP->UDP routing ---
-	connect(m_tcpHandler, &TcpHandler::mcfosWriteRequested, m_udpHandler, &UdpHandler::mcfosWrite_DAC_REF, Qt::QueuedConnection);
-	connect(m_tcpHandler, &TcpHandler::mcfosStartRequested, m_udpHandler, &UdpHandler::mcfosStart, Qt::QueuedConnection);
+    connect(m_tcpHandler, &TcpHandler::mcfosWriteRequested, m_udpHandler, &UdpHandler::slot_mcfosWrite_DAC_REF, Qt::QueuedConnection);
+    connect(m_tcpHandler, &TcpHandler::mcfosStartRequested, m_udpHandler, &UdpHandler::slot_mcfosStart, Qt::QueuedConnection);
 
 #ifdef _WIN32
 	// connect(&m_ethTimer, &QTimer::timeout, m_ethHandler,

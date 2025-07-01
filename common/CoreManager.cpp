@@ -12,50 +12,20 @@ void CoreManager::initialize()
 {
 	try
 	{
-		m_networkManager->start(); // Запуск сетевого модуля
+        // Запуск сетевого модуля
+        m_networkManager->start();
+
 		// Пример: отправить paramCU из Calculator в EthHandler
 		Calculator::instance()->setTestToETHCallback(
-			[this](const Calculator::testToETH &test)
-			{
-			// Например, вызвать метод EthHandler (через NetworkManager)
-			if (m_networkManager->m_ethHandler) {
-				// Если EthHandler потоковый — используйте QMetaObject::invokeMethod
-				QMetaObject::invokeMethod(m_networkManager->m_ethHandler, [test]()
-				{
-					// Здесь можно обработать testToETH и отправить его в EthHandler
-					// Лучше написать в EthHandler метод для обработки testToETH и вызвать его здесь
-					//
-					// Соответственно внутри тела функции EthHandler должен быть
-					// реализован метод для обработки testToETH и передачи данных далее
-					// m_ethHandler->processTest(test);
-				},
-				Qt::QueuedConnection);
-		} });
-
-		Calculator::instance()->setTestToUDPCallback(
-			[this](const Calculator::testToUDP &test)
-			{
-			// Например, вызвать метод UdpHandler (через NetworkManager)
-			if (m_networkManager->m_udpHandler) {
-				QMetaObject::invokeMethod(m_networkManager->m_udpHandler, [test]()
-				{
-					// По аналогии с примером выше
-					// m_udpHandler->processTest(test);
-				},
-				Qt::QueuedConnection);
-		} });
-		Calculator::instance()->setTestToTCPCallback(
-			[this](const Calculator::testToTCP &test)
-			{
-			// Например, вызвать метод TcpHandler (через NetworkManager)
-			if (m_networkManager->m_tcpHandler) {
-				QMetaObject::invokeMethod(m_networkManager->m_tcpHandler, [test]()
-				{
-					// По аналогии с примером выше
-					// m_tcpHandler->processTest(test);
-				},
-				Qt::QueuedConnection);
-		} });
+            [this](const Calculator::testDataToETH &testData) {
+            if (m_networkManager->m_ethHandler) {
+                QMetaObject::invokeMethod(m_networkManager->m_ethHandler, [testData]()
+                {
+                    // m_ethHandler->processTest(testData);
+                },
+                Qt::QueuedConnection);
+            }
+        });
 	}
 	catch (...)
 	{

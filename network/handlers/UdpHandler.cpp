@@ -6,6 +6,7 @@
 #include <math.h>
 #include <QFile>
 #include <QTextStream>
+#include "../../common/calculator/Calculator.h"
 
 #define _pi 3.1415926536
 
@@ -13,136 +14,257 @@ UdpHandler::UdpHandler(QObject *parent)
 	: QObject(parent), m_socket(nullptr)
 {
 	// Регистрация QHostAddress для queued connections
-	qRegisterMetaType<QHostAddress>("QHostAddress");
+    qRegisterMetaType<QHostAddress>("QHostAddress");
 }
 
-void UdpHandler::mcfosWrite_DAC_REF(QSharedPointer<RmoBaseMessage> msg)
+void UdpHandler::mcfosWrite_DAC_REF(int N, int windowType,
+                                    float A, float f0, float df)
 {
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// АДРЕС И ПОРТ НАЗНАЧЕНИЯ НЕ ЗАГРУЖАЮТСЯ ИЗ ФАЙЛА НАСТРОЕК -
-	// НУЖНО РАЗОБРАТЬСЯ, В ЧЁМ ПРИЧИНА
-	// m_targetAddr = QHostAddress("192.168.2.10");
-	// m_targetPort = 49498;
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // АДРЕС И ПОРТ НАЗНАЧЕНИЯ НЕ ЗАГРУЖАЮТСЯ ИЗ ФАЙЛА НАСТРОЕК -
+    // НУЖНО РАЗОБРАТЬСЯ, В ЧЁМ ПРИЧИНА
+    // m_targetAddr = QHostAddress("192.168.2.10");
+    // m_targetPort = 49498;
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-	qDebug() << "[MCFOS] mcfosWrite_DAC_REF called with message:";
-	qDebug() << "m_targetAddr: " << m_targetAddr.toString();
+    // Расчёт оконной функции для излучаемого сигнала
+    float *windowDAC = nullptr;
+    windowDAC = getWindowTukey(N, 0.15f);
+
+    // ОШИБКА - не удалось создать оконную функцию
+    // для излучаемого сигнала
+    if (windowDAC == nullptr)
+    {
+        qInfo() << "ERROR: cannot create window function for MCFOS DAC!";
+        return;
+    }
+
+    // Расчёт оконной функции для опорного сигнала
+    float *windowREF = nullptr;
+    switch (windowType)
+    {
+    case MCFOS_WindowType_Nuttall:
+    {
+        windowREF = getWindowNuttall(N);
+        break;
+    }
+    case MCFOS_WindowType_BlackmanHarris:
+    {
+        windowREF = getWindowBlackmanHarris(N);
+        break;
+    }
+    case MCFOS_WindowType_Blackman:
+    {
+        windowREF = getWindowBlackman(N);
+        break;
+    }
+    default:
+    {
+        windowREF = nullptr;
+        break;
+    }
+    }
+
+    // ОШИБКА - не удалось создать оконную функцию
+    // для опорного сигнала
+    if (windowREF == nullptr)
+    {
+        qInfo() << "ERROR: cannot create window function for MCFOS REF!";
+        return;
+    }
+
+    // Генерируем массивы излучаемого и опорного сигналов,
+    // обрезая разрядность до 16-ти бит и добавляя номера буферов
+    //------------------------------------------------------------------------------------
+    vecSignalDAC_Re.clear();
+    vecSignalDAC_Im.clear();
+    vecSignalREF_Re.clear();
+    vecSignalREF_Im.clear();
+    float fN = static_cast<float>(N);
+    for (int i = 0; i < N; i++)
+    {
+        float it = static_cast<float>(i);
+        float re = A * cos(0.01 * 2. * _pi * (f0 * it + df * it * it / (fN * 2.))); // Синфазная составляющая
+        float im = A * sin(0.01 * 2. * _pi * (f0 * it + df * it * it / (fN * 2.))); // Квадратурная составляющая
+
+        vecSignalDAC_Re.append(0x00010000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(re * windowDAC[i])))));
+        vecSignalDAC_Im.append(0x00020000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(im * windowDAC[i])))));
+
+        vecSignalREF_Re.append(0x00040000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(re * windowREF[i])))));
+        vecSignalREF_Im.append(0x00080000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(-im * windowREF[i])))));
+    }
+
+    // Освобождаем память, выделенную под оконные функции
+    free(windowDAC);
+    free(windowREF);
+
+    // * В буфер vecSignalREF_Im пишутся комплексно-сопряжённые значения,
+    //   поэтому в формуле есть знак "минус"
+
+    // Зануляем первый и последний элементы массивов,
+    // добавляя номера буферов и признаки последнего отсчёта
+    vecSignalDAC_Re[0] = 0x00010000;
+    vecSignalDAC_Re[N - 1] = 0x01010000;
+
+    vecSignalDAC_Im[0] = 0x00020000;
+    vecSignalDAC_Im[N - 1] = 0x01020000;
+
+    vecSignalREF_Re[0] = 0x00040000;
+    vecSignalREF_Re[N - 1] = 0x01040000;
+
+    vecSignalREF_Im[0] = 0x00080000;
+    vecSignalREF_Im[N - 1] = 0x01080000;
+    //------------------------------------------------------------------------------------
+
+    UdpMessage_MCFOS_Cmd mes;
+
+    mes.CMD_BUF_R = 1;
+    // Режим работы МЦФОС
+    m_mode = 1; // очистка буферов ЦАП и Ref
+    sendMessage(mes.serialize());
+
+    mes.CMD_BUF_R = 0;
+    // Режим работы МЦФОС
+    m_mode = 2; // запись сигнала в буфер ЦАП
+    writeSignalToMCFOS(&mes, &vecSignalDAC_Re);
+    writeSignalToMCFOS(&mes, &vecSignalDAC_Im);
+    // Режим работы МЦФОС
+    m_mode = 3; // запись сигнала в буфер REF
+    writeSignalToMCFOS(&mes, &vecSignalREF_Re);
+    writeSignalToMCFOS(&mes, &vecSignalREF_Im);
+
+    qInfo() << "[MCFOS]: signal has been written to DAC and REF";
+}
+
+void UdpHandler::mcfosStart(quint32 isSignalFromDAC,
+                            uint16_t periodSize,
+                            uint16_t periodCount,
+                            uint32_t ampOff,
+                            uint16_t pulseOn,
+                            uint16_t pulseOff,
+                            uint16_t procDelay,
+                            uint16_t procDelta,
+                            int numRangeCh)
+{
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // АДРЕС И ПОРТ НАЗНАЧЕНИЯ НЕ ЗАГРУЖАЮТСЯ ИЗ ФАЙЛА НАСТРОЕК -
+    // НУЖНО РАЗОБРАТЬСЯ, В ЧЁМ ПРИЧИНА
+    // m_targetAddr = QHostAddress("192.168.2.10");
+    // m_targetPort = 49498;
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    // Формирование заголовка сообщения на МЦФОС:
+    //--------------------------------------------------------------------
+    UdpMessage_MCFOS_Cmd mes;
+    mes.CMD_DAC_S = 1;
+    mes.CMD_ADC_S = 1;
+    mes.PERIOD_SIZE = periodSize - 1;
+    mes.PERIOD_COUNT = periodCount - 1;
+    mes.AMP_OFF = ampOff - 1;
+    mes.PULSE_ON = pulseOn - 2;
+    mes.PULSE_OFF = pulseOff - 2;
+    mes.PROC_DELAY = procDelay - 1;
+    mes.PROC_DELTA = procDelta - 1;
+
+    // Захват сигнала из буфера ЦАП:
+    if (isSignalFromDAC != 0)
+    {
+        mes.CMD_MUX = 2;
+    }
+
+    // Начальный адрес чтения DDR памяти:
+    mes.DDR_ADDR = 0;
+
+    // Кол-во байт, которое должно быть вычитано из DDR памяти:
+    quint32 DDR_LEN;
+    if (isCorrEn)
+    {
+        // При чтении результата корреляционной обработки
+        mes.CMD_COR_EN = 1;
+        DDR_LEN = ceil(4 * 2 * 4 * numRangeCh * (mes.PERIOD_COUNT + 1) / 1024) * 1024;
+    }
+    else
+    {
+        // При чтении сигнальной дорожки АЦП
+        DDR_LEN = ceil(2 * 2 * 4 * mes.PERIOD_SIZE * (mes.PERIOD_COUNT + 1) / 1024) * 1024;
+    }
+    mes.DDR_LEN = DDR_LEN;
+    //--------------------------------------------------------------------
+
+    // Режим работы МЦФОС
+    m_mode = 4; // Излучение и приём
+    QByteArray dataTemp;
+    dataTemp.append(mes.serialize());
+    //    qInfo() << Qt::endl << "UDP Message MCFOS:" << dataTemp.toHex(' ').toUpper() << Qt::endl;
+    sendMessage(dataTemp);
+
+    // Пауза для гарантированного приёма последнего сигнала в пачке:
+    float tPauseMs = 1000.0 * static_cast<float>(periodCount) *
+                     static_cast<float>(periodSize) * 0.00000001;
+    unsigned long pauseMs = static_cast<unsigned long>(tPauseMs);
+    qInfo() << "[MCFOS] QThread pauseMs for receive signal =" << pauseMs;
+    QThread::msleep(pauseMs);
+
+    //--------------------------------------------------------------------
+    // Далее начинаем процесс чтения результата, записанного в DDR память
+    //--------------------------------------------------------------------
+
+    // Очищаем буфер, в который будем складывать данные, считанные из DDR
+    recDDR.clear();
+
+    qInfo() << "[MCFOS] Read data from DDR:";
+
+    // Формирование заголовка сообщения на МЦФОС:
+    //--------------------------------------------------------------------
+    UdpMessage_MCFOS_Cmd mesRead;
+    mesRead.CMD_DDR_R = 1;
+    mcfosAddrDDR = 1;
+    mcfosAddrMaxDDR = 8 * numRangeCh * periodCount;
+    mesRead.DDR_ADDR = 4 * (mcfosAddrDDR - 1);
+    quint32 size = mcfosAddrSizeDDR;
+    if (mcfosAddrMaxDDR - mcfosAddrDDR + 1 <= mcfosAddrSizeDDR)
+    {
+        size = mcfosAddrMaxDDR - mcfosAddrDDR + 1;
+    }
+    mesRead.DDR_LEN = 4 * size;
+    mcfosAddrDDR += size;
+
+    if (isCorrEn)
+    {
+        // При чтении результата корреляционной обработки
+        mesRead.CMD_COR_EN = 1;
+    }
+    //--------------------------------------------------------------------
+
+    // Режим работы МЦФОС
+    m_mode = 6; // Чтение результата из DDR
+    sendMessage(mesRead.serialize());
+
+    qInfo() << "TIME BEGIN MCFOS: " << TimeProvider::instance().getMks();
+}
+
+void UdpHandler::slot_mcfosWrite_DAC_REF(QSharedPointer<RmoBaseMessage> msg)
+{
+    qInfo() << "[MCFOS] mcfosWrite_DAC_REF called with message:";
+    qInfo() << "m_targetAddr: " << m_targetAddr.toString();
 	if (msg)
 		msg->info();
 	// Здесь можно привести msg к RmoMessage_MCFOS_Write_DAC_REF и использовать параметры
 	// auto m = qSharedPointerCast<RmoMessage_MCFOS_Write_DAC_REF>(msg);
 	// ...
 	auto m = dynamic_cast<RmoMessage_MCFOS_Write_DAC_REF *>(msg.get());
-	//    auto m = qSharedPointerCast<RmoMessage_MCFOS_Write_DAC_REF>(msg);
+    //    auto m = qSharedPointerCast<RmoMessage_MCFOS_Write_DAC_REF>(msg);
 
-	int N = m->pulseSize; // Длина импульса
-
-	// Расчёт оконной функции
-	float *window = nullptr;
-	switch (static_cast<int>(m->windowType))
-	{
-	case MCFOS_WindowType_Nuttall:
-	{
-		window = getWindowNuttall(N);
-		break;
-	}
-	case MCFOS_WindowType_BlackmanHarris:
-	{
-		window = getWindowBlackmanHarris(N);
-		break;
-	}
-	case MCFOS_WindowType_Blackman:
-	{
-		window = getWindowBlackman(N);
-		break;
-	}
-	default:
-	{
-		window = nullptr;
-		break;
-	}
-	}
-
-	// ОШИБКА - не удалось создать оконную функцию
-	if (window == nullptr)
-	{
-		qInfo() << "ERROR: cannot create window function for MCFOS!";
-		return;
-	}
-
-	// Основные параметры для расчёта сигнала
-	float A = m->amlitude;
-	float f0 = m->f0;
-	float df = m->df;
-
-	// Генерируем массивы излучаемого и опорного сигналов,
-	// обрезая разрядность до 16-ти бит и добавляя номера буферов
-	//------------------------------------------------------------------------------------
-	vecSignalDAC_Re.clear();
-	vecSignalDAC_Im.clear();
-	vecSignalREF_Re.clear();
-	vecSignalREF_Im.clear();
-	float fN = static_cast<float>(N);
-	for (int i = 0; i < N; i++)
-	{
-		float it = static_cast<float>(i);
-		float re = A * cos(0.01 * 2. * _pi * (f0 * it + df * it * it / (fN * 2.))); // Синфазная составляющая
-		float im = A * sin(0.01 * 2. * _pi * (f0 * it + df * it * it / (fN * 2.))); // Квадратурная составляющая
-
-		vecSignalDAC_Re.append(0x00010000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(re)))));
-		vecSignalDAC_Im.append(0x00020000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(im)))));
-
-		vecSignalREF_Re.append(0x00040000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(re * window[i])))));
-		vecSignalREF_Im.append(0x00080000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(-im * window[i])))));
-	}
-	// * В буфер vecSignalREF_Im пишутся комплексно-сопряжённые значения,
-	//   поэтому в формуле есть знак "минус"
-
-	// Зануляем первый и последний элементы массивов,
-	// добавляя номера буферов и признаки последнего отсчёта
-	vecSignalDAC_Re[0] = 0x00010000;
-	vecSignalDAC_Re[N - 1] = 0x01010000;
-
-	vecSignalDAC_Im[0] = 0x00020000;
-	vecSignalDAC_Im[N - 1] = 0x01020000;
-
-	vecSignalREF_Re[0] = 0x00040000;
-	vecSignalREF_Re[N - 1] = 0x01040000;
-
-	vecSignalREF_Im[0] = 0x00080000;
-	vecSignalREF_Im[N - 1] = 0x01080000;
-	//------------------------------------------------------------------------------------
-
-	UdpMessage_MCFOS_Cmd mes;
-
-	mes.CMD_BUF_R = 1;
-	// Режим работы МЦФОС
-	m_mode = 1; // очистка буферов ЦАП и Ref
-	sendMessage(mes.serialize());
-
-	mes.CMD_BUF_R = 0;
-	// Режим работы МЦФОС
-	m_mode = 2; // запись сигнала в буфер ЦАП
-	writeSignalToMCFOS(&mes, &vecSignalDAC_Re);
-	writeSignalToMCFOS(&mes, &vecSignalDAC_Im);
-	// Режим работы МЦФОС
-	m_mode = 3; // запись сигнала в буфер REF
-	writeSignalToMCFOS(&mes, &vecSignalREF_Re);
-	writeSignalToMCFOS(&mes, &vecSignalREF_Im);
-
-	qInfo() << "[MCFOS]: signal has been written to DAC and REF";
+    mcfosWrite_DAC_REF(m->pulseSize,
+                       static_cast<int>(m->windowType),
+                       m->amlitude,
+                       m->f0,
+                       m->df);
 }
 
-void UdpHandler::mcfosStart(QSharedPointer<RmoBaseMessage> msg)
+void UdpHandler::slot_mcfosStart(QSharedPointer<RmoBaseMessage> msg)
 {
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// АДРЕС И ПОРТ НАЗНАЧЕНИЯ НЕ ЗАГРУЖАЮТСЯ ИЗ ФАЙЛА НАСТРОЕК -
-	// НУЖНО РАЗОБРАТЬСЯ, В ЧЁМ ПРИЧИНА
-	// m_targetAddr = QHostAddress("192.168.2.10");
-	// m_targetPort = 49498;
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-	qDebug() << "[MCFOS] mcfosStart called with message:";
+    qInfo() << "[MCFOS] mcfosStart called with message:";
 	if (msg)
 		msg->info();
 	// Здесь можно привести msg к RmoMessage_MCFOS_Start и использовать параметры
@@ -151,103 +273,22 @@ void UdpHandler::mcfosStart(QSharedPointer<RmoBaseMessage> msg)
 	auto m = dynamic_cast<RmoMessage_MCFOS_Start *>(msg.get());
 	//    auto m = qSharedPointerCast<RmoMessage_MCFOS_Start>(msg);
 
-	quint32 isCorrelation = m->isCorrelation;
-	quint32 isSignalFromDAC = m->isSignalFromDAC;
-	quint32 isWriteFile = m->isWriteFile;
+    // Записывать ли результаты в файл
+    isWriteFile = (m->isWriteFile != 0) ? true : false;
 
-    Q_UNUSED(isWriteFile);
-	// Формирование заголовка сообщения на МЦФОС:
-	//--------------------------------------------------------------------
-	UdpMessage_MCFOS_Cmd mes;
-	mes.CMD_DAC_S = 1;
-	mes.CMD_ADC_S = 1;
-	mes.PERIOD_SIZE = m->periodSize - 1;
-	mes.PERIOD_COUNT = m->periodCount - 1;
-	mes.AMP_OFF = m->ampOff - 1;
-	mes.PULSE_ON = m->pulseOn - 2;
-	mes.PULSE_OFF = m->pulseOff - 2;
-	mes.PROC_DELAY = m->procDelay - 1;
-	mes.PROC_DELTA = m->procDelta - 1;
+    // Включена ли корреляционная обработка:
+    isCorrEn = (m->isCorrelation != 0) ? true : false;
 
-	// Захват сигнала из буфера ЦАП:
-	if (isSignalFromDAC != 0)
-	{
-		mes.CMD_MUX = 2;
-	}
-
-	// Начальный адрес чтения DDR памяти:
-	mes.DDR_ADDR = 0;
-
-	// Кол-во байт, которое должно быть вычитано из DDR памяти:
-	quint32 DDR_LEN;
-	if (isCorrelation == 0)
-	{
-		// При чтении сигнальной дорожки АЦП
-		DDR_LEN = ceil(2 * 2 * 4 * mes.PERIOD_SIZE * (mes.PERIOD_COUNT + 1) / 1024) * 1024;
-	}
-	else
-	{
-		// При чтении результата корреляционной обработки
-		mes.CMD_COR_EN = 1;
-		DDR_LEN = ceil(4 * 2 * 4 * 100 * (mes.PERIOD_COUNT + 1) / 1024) * 1024;
-	}
-	mes.DDR_LEN = DDR_LEN;
-	//--------------------------------------------------------------------
-
-	// Режим работы МЦФОС
-	m_mode = 4; // излучение и приём
-	QByteArray dataTemp;
-	dataTemp.append(mes.serialize());
-	//    qInfo() << Qt::endl << "UDP Message MCFOS:" << dataTemp.toHex(' ').toUpper() << Qt::endl;
-	sendMessage(dataTemp);
-
-	// Пауза для гарантированного приёма последнего сигнала в пачке:
-	float tPauseMs = 1000.0 * static_cast<float>(m->periodCount) *
-					 static_cast<float>(m->periodSize) * 0.00000001;
-	unsigned long pauseMs = static_cast<unsigned long>(tPauseMs);
-	qInfo() << "[MCFOS] QThread pauseMs for receive signal =" << pauseMs;
-	QThread::msleep(pauseMs);
-
-	//--------------------------------------------------------------------
-	// Далее начинаем процесс чтения результата, записанного в DDR память
-	//--------------------------------------------------------------------
-
-	// Очищаем буфер, в который будем складывать данные, считанные из DDR
-	recDDR.clear();
-
-	qInfo() << "[MCFOS] Read data from DDR:";
-
-	// Формирование заголовка сообщения на МЦФОС:
-	//--------------------------------------------------------------------
-	UdpMessage_MCFOS_Cmd mesRead;
-	mesRead.CMD_DDR_R = 1;
-	mcfosAddrDDR = 1;
-	mcfosAddrMaxDDR = 8 * 100 * m->periodCount;
-	mesRead.DDR_ADDR = 4 * (mcfosAddrDDR - 1);
-	quint32 size = mcfosAddrSizeDDR;
-	if (mcfosAddrMaxDDR - mcfosAddrDDR + 1 <= mcfosAddrSizeDDR)
-	{
-		size = mcfosAddrMaxDDR - mcfosAddrDDR + 1;
-	}
-	mesRead.DDR_LEN = 4 * size;
-	mcfosAddrDDR += size;
-
-	if (isCorrelation == 0)
-	{
-		// При чтении сигнальной дорожки АЦП
-		DDR_LEN = ceil(2 * 2 * 4 * mes.PERIOD_SIZE * (mes.PERIOD_COUNT + 1) / 1024) * 1024;
-	}
-	else
-	{
-		// При чтении результата корреляционной обработки
-		mes.CMD_COR_EN = 1;
-		DDR_LEN = ceil(4 * 2 * 4 * 100 * (mes.PERIOD_COUNT + 1) / 1024) * 1024;
-	}
-	//--------------------------------------------------------------------
-
-	// Режим работы МЦФОС
-	m_mode = 6; // чтение результата из DDR
-	sendMessage(mesRead.serialize());
+    // Запуск МЦФОС
+    mcfosStart(m->isSignalFromDAC,
+               m->periodSize,
+               m->periodCount,
+               m->ampOff,
+               m->pulseOn,
+               m->pulseOff,
+               m->procDelay,
+               m->procDelta,
+               m->numRangeCh);
 }
 
 UdpHandler::~UdpHandler()
@@ -466,6 +507,42 @@ float *UdpHandler::getWindowBlackman(int length)
 	return window;
 }
 
+/// Генерация окна Тьюки
+float *UdpHandler::getWindowTukey(int length, const float alpha) {
+    if (length <= 0)
+        return nullptr;
+
+    float* window = static_cast<float*>(malloc(length * sizeof(float)));
+    if (!window)
+        return nullptr;
+
+    // Обработка частных случаев
+    if (length == 1) {
+        window[0] = 1.0f;
+        return window;
+    }
+
+    const int N = length - 1;  // Для правильной индексации (0..N)
+    const float width = alpha * N / 2.0f;  // Ширина "плеча" окна
+
+    for (int i = 0; i < length; ++i) {
+        if (i < width) {
+            // Возрастающая часть (левое плечо)
+            float phase = static_cast<float>(i) / width - 1.0f;
+            window[i] = 0.5f * (1.0f + cosf(static_cast<float>(M_PI) * phase));
+        } else if (i > N - width) {
+            // Убывающая часть (правое плечо)
+            float phase = static_cast<float>(i - N) / width + 1.0f;
+            window[i] = 0.5f * (1.0f + cosf(static_cast<float>(M_PI) * phase));
+        } else {
+            // Центральная часть (константа)
+            window[i] = 1.0f;
+        }
+    }
+
+    return window;
+}
+
 void UdpHandler::mcfosReadDDR(const QByteArray &data)
 {
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -477,13 +554,13 @@ void UdpHandler::mcfosReadDDR(const QByteArray &data)
 
 	// Складываем прочитанную порцию данных в буфер
 	recDDR.append(data);
-	//    qInfo() << "[MCFOS] Read data from DDR:" << data.size() << "bytes";
+//    qInfo() << "[MCFOS] Read data from DDR:" << data.size() << "bytes";
 
 	// Пока не дочитали память до конца
 	if (mcfosAddrDDR <= mcfosAddrMaxDDR)
 	{
-		//        qInfo() << "[MCFOS] Send message to MCFOS for read block data, DDR address:"
-		//                << 4 * (mcfosAddrDDR - 1);
+//        qInfo() << "[MCFOS] Send message to MCFOS for read block data, DDR address:"
+//                << 4 * (mcfosAddrDDR - 1);
 		// Формирование заголовка сообщения на МЦФОС:
 		//--------------------------------------------------------------------
 		UdpMessage_MCFOS_Cmd mesRead;
@@ -495,15 +572,7 @@ void UdpHandler::mcfosReadDDR(const QByteArray &data)
 			size = mcfosAddrMaxDDR - mcfosAddrDDR + 1;
 		}
 		mesRead.DDR_LEN = 4 * size;
-		mcfosAddrDDR += size;
-
-		//        if (mcfosAddrMaxDDR - mcfosAddrDDR + 1 > mcfosAddrSizeDDR) {
-		//            mesRead.DDR_LEN = 4 * mcfosAddrSizeDDR;
-		//            mcfosAddrDDR += mcfosAddrSizeDDR;
-		//        } else {
-		//            mesRead.DDR_LEN = 4 * (mcfosAddrMaxDDR - mcfosAddrDDR + 1);
-		//            mcfosAddrDDR += mcfosAddrMaxDDR - mcfosAddrDDR + 1;
-		//        }
+        mcfosAddrDDR += size;
 		//--------------------------------------------------------------------
 
 		sendMessage(mesRead.serialize());
@@ -511,43 +580,14 @@ void UdpHandler::mcfosReadDDR(const QByteArray &data)
 	// Дочитали память до конца
 	else
 	{
-		//        qInfo() << "[MCFOS] DDR has read all, total bytes:" << recDDR.size();
+        qInfo() << "[MCFOS] All data from DDR has read";
 
-		// Конвертация и запись результата в файл для дальнейшей обработки в MatLab:
-		//--------------------------------------------------------------------
-		//        qInfo() << "recDDR =" << Qt::endl << recDDR.toHex(' ').toUpper();
-		//        qInfo() << Qt::endl;
-
-		// Конвертация массива QByteArray в массив 32-разрядых знаковых целых чисел
-		QVector<qint32> vecResult;
-		for (int i = 0; i < recDDR.size(); i += 4)
-		{
-			quint32 word = 0x000000FF & static_cast<quint32>(recDDR[i]);
-			word |= 0x0000FF00 & (static_cast<quint32>(recDDR[i + 1]) << 8);
-			word |= 0x00FF0000 & (static_cast<quint32>(recDDR[i + 2]) << 16);
-			word |= 0xFF000000 & (static_cast<quint32>(recDDR[i + 3]) << 24);
-			vecResult.append(static_cast<qint32>(word));
-		}
-		//        qInfo() << "vecResult =" << Qt::endl << vecResult;
-		//        qInfo() << Qt::endl;
-
-		// Запись массива чисел в текстовый файл для удобства загрузки в MatLab
-		QFile *file = new QFile("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\MCFOS\\resultFromDDR.txt");
-		if (file->open(QIODevice::WriteOnly))
-		{
-			QTextStream out(file);
-			for (int i = 0; i < vecResult.size(); i++)
-			{
-				out << QString("%1, ").arg(vecResult[i]);
-			}
-			qInfo() << "[MCFOS] File has wrote by data from DDR";
-		}
-		else
-		{
-			qInfo() << "[MCFOS] ERROR: cannot open file for write data from DDR";
-		}
-		file->close();
-		//--------------------------------------------------------------------
+        // Вызываем обработчик принятых данных в Calculator
+        QMetaObject::invokeMethod(
+            Calculator::instance(),
+            [this]() { Calculator::instance()->recDataMCFOS(this->recDDR); },
+            Qt::QueuedConnection
+        );
 	}
 }
 

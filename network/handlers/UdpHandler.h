@@ -30,7 +30,7 @@ public:
 	void stop();
 
 	/**
-	 * @brief Запуск чтения DDR из МЦФОС при поолучении пакета
+     * @brief Запуск чтения DDR из МЦФОС при получении пакета
 	 */
 	Q_INVOKABLE void mcfosReadDDR(const QByteArray &data);
 
@@ -48,14 +48,46 @@ public:
 									  const QHostAddress &addr,
 									  quint16 port);
 
-	// Генерация окна Натталла (4-терм)
+    /**
+     * @brief Генерация окна Натталла (4-терм)
+     */
 	float *getWindowNuttall(int length);
 
-	// Генерация окна Блэкмана-Харриса (4-терм)
+    /**
+     * @brief Генерация окна Блэкмана-Харриса (4-терм)
+     */
 	float *getWindowBlackmanHarris(int length);
 
-	// Генерация окна Блэкмана (3-терм)
+    /**
+     * @brief Генерация окна Блэкмана (3-терм)
+     */
 	float *getWindowBlackman(int length);
+
+    /**
+     * @brief Генерация окна Тьюки
+     */
+    float *getWindowTukey(int length, const float alpha);
+
+    /**
+     * @brief Генерация и запись сигналов
+     *        в буферы ЦАП и REF МЦФОС
+     */
+    void mcfosWrite_DAC_REF(int N, int windowType,
+                            float A, float f0, float df);
+
+    /**
+     * @brief Отправка команды на излучение
+     *        и приём, и чтение памяти МЦФОС
+     */
+    void mcfosStart(quint32 isSignalFromDAC,
+                    uint16_t periodSize,
+                    uint16_t periodCount,
+                    uint32_t ampOff,
+                    uint16_t pulseOn,
+                    uint16_t pulseOff,
+                    uint16_t procDelay,
+                    uint16_t procDelta,
+                    int numRangeCh);
 
 signals:
 	/**
@@ -92,16 +124,19 @@ public slots:
 	 * @brief Генерация и запись сигналов
 	 *        в буферы ЦАП и REF МЦФОС
 	 */
-	void mcfosWrite_DAC_REF(QSharedPointer<RmoBaseMessage> msg);
+    void slot_mcfosWrite_DAC_REF(QSharedPointer<RmoBaseMessage> msg);
 
 	/**
 	 * @brief Отправка команды на излучение
 	 *        и приём, и чтение памяти МЦФОС
 	 */
-	void mcfosStart(QSharedPointer<RmoBaseMessage> msg);
+    void slot_mcfosStart(QSharedPointer<RmoBaseMessage> msg);
 
 private slots:
 	void onReadyRead();
+
+public:
+    QByteArray recDDR;				// Буфер, содержащий результат чтения DDR
 
 private:
 	quint16 m_port = 0;
@@ -110,10 +145,9 @@ private:
 	quint16 m_targetPort = 0;
 	QHostAddress m_targetAddr;
 
-	quint32 mcfosAddrDDR = 0;		 // Текущий адрес блока памяти в DDR
-	quint32 mcfosAddrMaxDDR = 0;	 // Максимальный адрес памяти в DDR
-	quint32 mcfosAddrSizeDDR = 1024; // Размер блока для одного канала в DDR
-	QByteArray recDDR;				 // Буфер, содержащий результат чтения DDR
+    quint32 mcfosAddrDDR = 0;		// Текущий адрес блока памяти в DDR
+    quint32 mcfosAddrMaxDDR = 0;	// Максимальный адрес памяти в DDR
+    quint32 mcfosAddrSizeDDR = 256; // Размер блока для одного канала в DDR
 
 	QVector<quint32> vecSignalDAC_Re, vecSignalDAC_Im; // numBuf: 1, 2
 	QVector<quint32> vecSignalREF_Re, vecSignalREF_Im; // numBuf: 3, 4
@@ -131,6 +165,16 @@ private:
 
 	quint8 m_step = 0; ///< Текущий шаг взаимодействия с МЦФОС
 					   ///< в текущем режиме работы
+
+    bool isWriteFile = false; ///< Записывать ли результат
+                              ///< чтения памяти МЦФОС в файл
+
+    bool isCorrEn = false;    ///< Включена ли корреляционная
+                              ///< обработка
+
+    int impulseCount = 0;        ///< Кол-во импульсов
+    int rangeChCount = 0;        ///< Кол-во дальностных каналов
+    const int numBytesInCh = 32; ///< Кол-во байтов в одном дальностном канале
 
 	/**
 	 * @enum MCFOS_WindowType

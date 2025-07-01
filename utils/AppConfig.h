@@ -29,10 +29,10 @@ static inline int64_t from_timeBS(const uint8_t value[5])
 	return _bsTime;
 } ///< @brief Получение времени БС из пакета синхронизации от БС
 
-static inline double from_anglePPU(const uint8_t in[3])
+static inline float from_anglePPU(const uint8_t in[3])
 {
 	// Предвычисление константы
-	static constexpr double SCALE = 360.0 / 65536.0;
+    static constexpr float SCALE = 360.0 / 65536.0;
 
 	// Объединение операций сдвига (компилятор оптимизирует в одну инструкцию)
 	const int32_t tmp = (static_cast<int32_t>(in[2]) << 16) | (static_cast<int32_t>(in[1]) << 8) | static_cast<int32_t>(in[0]);
@@ -41,14 +41,14 @@ static inline double from_anglePPU(const uint8_t in[3])
 	const int32_t out = (tmp << 8) >> 8;
 
 	// Прямое умножение на предвычисленную константу
-	return static_cast<double>(out) * SCALE;
+    return static_cast<float>(out) * SCALE;
 } ///< @brief Приведение к градусам из 3-байтового массива с дискретами
 
-static inline void to_anglePPU(double value, uint8_t out[3])
+static inline void to_anglePPU(float value, uint8_t out[3])
 {
 	// Предвычисление константы
-	static constexpr double INV_SCALE = 65536.0 / 360.0;
-	double scaled = value * INV_SCALE;
+    static constexpr float INV_SCALE = 65536.0 / 360.0;
+    float scaled = value * INV_SCALE;
 
 	// Ограничение диапазона 24-битного знакового целого
 	constexpr int32_t MIN_VAL = -0x800000;
@@ -798,11 +798,11 @@ public:
 		uint8_t lastCommand;   ///< Код последней полученной команды
 		uint8_t state;		   ///< Состояние
 		uint8_t ispr;		   ///< Исправность оборудования
-		double az;			   ///< Текущая координата по азимуту,
+        float az;			   ///< Текущая координата по азимуту,
 							   ///<   отсчётов (65536/360 = 1 град)
 		uint64_t azDelay;	   ///< Задержка измерения координаты
 							   ///<   по азимуту, мс (20 = 1 мс)
-		double an;			   ///< Текущая координата по углу места,
+        float an;			   ///< Текущая координата по углу места,
 							   ///<   отсчётов (65536/360 = 1 град)
 		uint64_t anDelay;	   ///< Задержка измерения координаты
 							   ///<   по углу места, мс (20 = 1 мс)

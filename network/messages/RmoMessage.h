@@ -682,6 +682,7 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage
 	quint32 isCorrelation;
 	quint32 isSignalFromDAC;
 	quint32 isWriteFile;
+    quint32 numRangeCh;
 
 	int type() const override { return typeField; }
 	static int typeStatic() { return static_cast<int>(RmoMsgType::MCFOS_START); }
@@ -702,7 +703,8 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage
 			   << windowType
 			   << isCorrelation
 			   << isSignalFromDAC
-			   << isWriteFile;
+               << isWriteFile
+               << numRangeCh;
 		return data;
 	}
 	static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray &data)
@@ -710,7 +712,11 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage
 		auto msg = QSharedPointer<RmoMessage_MCFOS_Start>::create();
 		QDataStream stream(data);
 		stream.setByteOrder(QDataStream::LittleEndian);
-		stream >> msg->typeField >> msg->periodSize >> msg->periodCount >> msg->ampOff >> msg->pulseOn >> msg->pulseOff >> msg->procDelay >> msg->procDelta >> msg->windowType >> msg->isCorrelation >> msg->isSignalFromDAC >> msg->isWriteFile;
+        stream >> msg->typeField >> msg->periodSize >> msg->periodCount
+               >> msg->ampOff >> msg->pulseOn >> msg->pulseOff
+               >> msg->procDelay >> msg->procDelta >> msg->windowType
+               >> msg->isCorrelation >> msg->isSignalFromDAC >> msg->isWriteFile
+               >> msg->numRangeCh;
 		return msg;
 	}
 	nlohmann::json toJson() const override
@@ -727,6 +733,7 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage
 		j["isCorrelation"] = isCorrelation;
 		j["isSignalFromDAC"] = isSignalFromDAC;
 		j["isWriteFile"] = isWriteFile;
+        j["numRangeCh"] = numRangeCh;
 		return j;
 	}
 	static QSharedPointer<RmoBaseMessage> fromJson(const nlohmann::json &j)
@@ -743,6 +750,7 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage
 		msg->isCorrelation = j.value("isCorrelation", 0);
 		msg->isSignalFromDAC = j.value("isSignalFromDAC", 0);
 		msg->isWriteFile = j.value("isWriteFile", 0);
+        msg->numRangeCh = j.value("numRangeCh", 0);
 		return msg;
 	}
 	static QSharedPointer<RmoMessage_MCFOS_Start> fromBaseConstructor()
@@ -763,6 +771,7 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage
 		qInfo() << "isCorrelation = " << isCorrelation;
 		qInfo() << "isSignalFromDAC = " << isSignalFromDAC;
 		qInfo() << "isWriteFile = " << isWriteFile;
+        qInfo() << "numRangeCh = " << numRangeCh;
 	}
 };
 

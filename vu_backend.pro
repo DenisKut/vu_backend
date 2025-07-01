@@ -114,13 +114,13 @@ win32 {
 # Windows
 win32 {
     INCLUDEPATH += $$PWD/libs/fftw
-    LIBS += -L$$PWD/libs/fftw -lfftw3-3
+    LIBS += -L$$PWD/libs/fftw -lfftw3f-3 -lfftw3-3
 }
 # Linux
 unix:!macx {
     # Используем системную версию FFTW
     INCLUDEPATH += /usr/include
-    LIBS += -lfftw3
+    LIBS += -lfftw3f -lfftw3
 }
 
 #-------------------------------

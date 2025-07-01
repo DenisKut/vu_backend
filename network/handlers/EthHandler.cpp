@@ -4,6 +4,7 @@
 #include "network/messages/EthMessage.h"
 #include "utils/AppConfig.h"
 #include "utils/env_loader/Settings.h"
+#include "../../common/calculator/Calculator.h"
 #include <QDebug>
 
 // DS ADD BEG
@@ -747,6 +748,16 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
 				TimeProvider::instance().setBsPeriodNumber(msgBS_SYNC->periodNumber);
 				TimeProvider::instance().setBsPeriodTime(msgBS_SYNC->periodTime);
 				TimeProvider::instance().setBsPeriodWidth(msgBS_SYNC->periodWidth);
+
+                // Отправить данные сообщения синхронизации в Calculator:
+                //-------------------------------------------------------
+                // Вызываем обработчик сообщения синхронизации в Calculator
+                QMetaObject::invokeMethod(
+                    Calculator::instance(),
+                    []() { Calculator::instance()->recTimeBS(); },
+                    Qt::QueuedConnection
+                );
+                //-------------------------------------------------------
 #ifdef QT_DEBUG
 				qDebug() << "2.5 RECEIVED";
 #endif
@@ -768,23 +779,64 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
 			auto msgPPU_POSITION = reinterpret_cast<EthMessage_PPU_POSITION_1 *>(parsed.get());
 			if (msgPPU_POSITION)
 			{
-				int64_t timeTemp = 0;
-				for (int i = 4; i >= 0; --i)
-				{
-					timeTemp = (timeTemp << 8) | msgPPU_POSITION->timeBeginTrans[i];
-				}
-				timeTemp &= 0x000000FFFFFFFFFF;
-				TimeProvider::instance().setBsTimePPU(timeTemp);
-				AppConfig::instance().setModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->lastCommand);
-				AppConfig::instance().setModulePPU_state(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->state);
-				AppConfig::instance().setModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->ispr);
-				AppConfig::instance().setModulePPU_az(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->az);
-				AppConfig::instance().setModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->azDelay);
-				AppConfig::instance().setModulePPU_an(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->an);
-				AppConfig::instance().setModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->anDelay);
-				AppConfig::instance().setModulePPU_borders(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->borders);
-				AppConfig::instance().setModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->waitCommands);
-				AppConfig::instance().setModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->waitTarget);
+//				int64_t timeTemp = 0;
+//				for (int i = 4; i >= 0; --i)
+//				{
+//					timeTemp = (timeTemp << 8) | msgPPU_POSITION->timeBeginTrans[i];
+//				}
+//				timeTemp &= 0x000000FFFFFFFFFF;
+//				TimeProvider::instance().setBsTimePPU(timeTemp);
+//				AppConfig::instance().setModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->lastCommand);
+//				AppConfig::instance().setModulePPU_state(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->state);
+//				AppConfig::instance().setModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->ispr);
+//				AppConfig::instance().setModulePPU_az(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->az);
+//				AppConfig::instance().setModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->azDelay);
+//				AppConfig::instance().setModulePPU_an(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->an);
+//				AppConfig::instance().setModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->anDelay);
+//				AppConfig::instance().setModulePPU_borders(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->borders);
+//				AppConfig::instance().setModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->waitCommands);
+//				AppConfig::instance().setModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_1, msgPPU_POSITION->waitTarget);
+
+                // Отправить данные ППУ в Calculator:
+                //-------------------------------------------------------
+                Calculator::paramPPU ppu;
+                int64_t timeTemp = 0;
+                for (int i = 4; i >= 0; --i)
+                {
+                    timeTemp = (timeTemp << 8) | msgPPU_POSITION->timeBeginTrans[i];
+                }
+                timeTemp &= 0x000000FFFFFFFFFF;
+                ppu.timeBs = timeTemp;          // Время обновления координат от ППУ (по БС)
+                ppu.timeSys = TimeProvider::instance().getMks(); // Время приёма пакета от БС (системное)
+                ppu.az = from_anglePPU(msgPPU_POSITION->az); // Текущая горизонтальная координата, град
+                ppu.an = from_anglePPU(msgPPU_POSITION->az); // Текущая вертикальная координата, град
+                ppu.lastCommand = msgPPU_POSITION->lastCommand;	 // Код последней полученной команды
+                ppu.state = msgPPU_POSITION->state;			 // Состояние
+                ppu.ispr = msgPPU_POSITION->ispr;			 // Исправность оборудования
+                ppu.azDelay = msgPPU_POSITION->azDelay;		 // Задержка измерения координаты по азимуту, мс
+                ppu.anDelay = msgPPU_POSITION->anDelay;		 // Задержка измерения координаты по углу места, мс
+                ppu.borders = msgPPU_POSITION->borders;		 // Состояние границ
+                ppu.waitCommands = msgPPU_POSITION->waitCommands;	 // Время ожидания команд, мс
+                ppu.waitTarget = msgPPU_POSITION->waitTarget;		 // Время ожидания целеуказаний, мс
+                // Ошибки драйверов: 0х31-ошибка Аз, 0х32-ошибка Ум
+                ppu.driverError[0] = msgPPU_POSITION->driverError[0];
+                ppu.driverError[1] = msgPPU_POSITION->driverError[1];
+                ppu.driverError[2] = msgPPU_POSITION->driverError[2];
+                // Признаки срабатывания концевых выключателей
+                ppu.signsSwithes[0] = msgPPU_POSITION->signsSwithes[0];
+                ppu.signsSwithes[1] = msgPPU_POSITION->signsSwithes[1];
+                ppu.signsSwithes[2] = msgPPU_POSITION->signsSwithes[2];
+                ppu.operatingMode = msgPPU_POSITION->operatingMode;	 // Режим работы
+
+                ppu.numRLMN = 0; // Номер РЛ-канала
+
+                // Вызываем обработчик ЦУ в Calculator
+                QMetaObject::invokeMethod(
+                    Calculator::instance(),
+                    [ppu]() { Calculator::instance()->recPosPPU(ppu); },
+                    Qt::QueuedConnection
+                );
+                //-------------------------------------------------------
 #ifdef QT_DEBUG
 				qDebug() << "11.1 RECEIVED";
 #endif

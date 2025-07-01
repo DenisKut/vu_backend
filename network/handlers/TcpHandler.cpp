@@ -1,5 +1,6 @@
 #include "TcpHandler.h"
 #include "network/messages/EthMessage.h"
+#include "../../common/calculator/Calculator.h"
 #include <QHostAddress>
 #include <QDebug>
 
@@ -550,69 +551,115 @@ void TcpHandler::processIncomingMessage(const QByteArray &data)
 			sendMessage(msg_0x24.serializeFull());
 			LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x24.serializeFull(), LogManager::jobj_toString(msg_0x24.to_json()));
 
-			// Задать ЦУ для ППУ
-			AppConfig::instance().setModulePPU_CU(
-				(AppConfig::ModulePPU_num)msg_0x641->numDrive,
-				static_cast<double>(msg_0x641->ceilAz),
-				static_cast<double>(msg_0x641->ceilElev),
-				static_cast<double>(msg_0x641->ceilVAz),
-				static_cast<double>(msg_0x641->ceilVElev),
-				0, 0, 0, 0, 0, 0);
+            // Отправить данные ЦУ в Calculator:
+            //-------------------------------------------------------
+            Calculator::paramCU cu;
 
-			// Определяем, насколько текущие координаты ППУ отличаются от ЦУ
-			double dAz = AppConfig::instance().getModulePPU_az(
-							 AppConfig::instance().ModulePPU_num_RLMN_1) -
-						 static_cast<double>(msg_0x641->ceilAz);
-			double dAn = AppConfig::instance().getModulePPU_an(
-							 AppConfig::instance().ModulePPU_num_RLMN_1) -
-						 static_cast<double>(msg_0x641->ceilElev);
+            // Время получения замера (от Сервера)
+            cu.timeCeil = 0x00000000FFFFFFFF & static_cast<int64_t>(msg_0x641->time1);
+            cu.timeCeil = cu.timeCeil | \
+                    (0xFFFFFFFF00000000 & (static_cast<int64_t>(msg_0x641->time2) << 32));
+            cu.timeCeil *= 1000; // Перевод времени в мкс
 
-			// Если координаты отличаются незначительно, то отправляем ответ
-			if (std::abs(dAz) < 0.6 && std::abs(dAn) < 0.6)
-			{
-				auto msg_0x1022 = MessageFactory::
-					create<TcpMessage_0x1022>(nullptr, 0, 0);
-				// auto msg_0x1022 = MessageFactory::
-				//          create<TcpMessage_0x1022>(nullptr);
+            // Время приёма сообщения в мкс (системное)
+            cu.timeSys = TimeProvider::instance().getMks();
 
-				msg_0x1022.trackStatus = 0;
-				msg_0x1022.isExtra = 0;
-				msg_0x1022.isTest = 0;
-				msg_0x1022.snrSum = 0;
-				msg_0x1022.epr = 0;
-				msg_0x1022.maxRange = 20;
-				msg_0x1022.numbTrack = msg_0x641->idxCeilVOI;
-				msg_0x1022.rangeCnt = 0;
-				msg_0x1022.speedCnt = 0;
-				msg_0x1022.chanCnt = 1; /// Всегда один канал!
-				msg_0x1022.rangeStart = 0;
-				msg_0x1022.rangeStep = 0.1;
-				msg_0x1022.vradStart = 0;
-				msg_0x1022.vradStep = 0.1;
+            // Время приёма сообщения в мкс (по БС)
+            cu.timeBs = TimeProvider::instance().getBsPeriodTime();
 
-				msg_0x1022.numDrive = msg_0x641->numDrive;
-				msg_0x1022.azimuth = msg_0x641->ceilAz;
-				msg_0x1022.range = msg_0x641->ceilRange;
-				msg_0x1022.eps = msg_0x641->ceilElev;
-				msg_0x1022.vel = msg_0x641->ceilVr;
-				msg_0x1022.velAz = msg_0x641->ceilVAz;
-				msg_0x1022.velEps = msg_0x641->ceilVElev;
-				msg_0x1022.sigAz = msg_0x641->sigAz;
-				msg_0x1022.sigEps = msg_0x641->sigElev;
-				msg_0x1022.sigD = msg_0x641->sigRange;
-				msg_0x1022.sigVr = msg_0x641->sigVr;
-				msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
-				msg_0x1022.typeTrack =
-					static_cast<uint8_t>(msg_0x641->typeCeil);
-#ifdef QT_DEBUG
-				std::cout << "Sent message 0x1022:";
-#endif
-#ifdef TRACE
-				std::cout << " " << msg_0x1022.toString() << std::endl;
-#endif
-				sendMessage(msg_0x1022.serializeFull());
-				LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1022.serializeFull(), LogManager::jobj_toString(msg_0x1022.to_json()));
-			}
+            cu.az    = msg_0x641->ceilAz;    // Азимут
+            cu.an    = msg_0x641->ceilElev;  // Угол места
+            cu.r     = msg_0x641->ceilRange; // Дальность
+
+            cu.azV   = msg_0x641->ceilVAz;   // Скорость изменения азимута
+            cu.anV   = msg_0x641->ceilVElev; // Скорость изменения угла места
+            cu.rV    = msg_0x641->ceilVr;    // Радиальная скорость
+
+            cu.azEr  = msg_0x641->sigAz;     // Ошибка по азимуту
+            cu.anEr  = msg_0x641->sigElev;   // Ошибка по углу места
+            cu.rEr   = msg_0x641->sigRange;	 // Ошибка по дальности
+
+            cu.azVEr = msg_0x641->sigVAz;    // Ошибка по азимутальной скорости
+            cu.anVEr = msg_0x641->sigVElev;  // Ошибка по угломестной скорости
+            cu.rVEr  = msg_0x641->sigVr;     // Ошибка по радиальной скорости
+
+            cu.numRLMN = static_cast<int>(msg_0x641->numDrive); // Номер РЛ-канала
+            cu.mode = 1;                     // Режим работы = 1 - обнаружение
+
+            // Вызываем обработчик ЦУ в Calculator
+            QMetaObject::invokeMethod(
+                Calculator::instance(),
+                [cu]() { Calculator::instance()->recCU(cu); },
+                Qt::QueuedConnection
+            );
+            //-------------------------------------------------------
+
+//            // Отладочный эхо-ответ на ЦУ
+//            //-------------------------------------------------------
+//			// Задать ЦУ для ППУ
+//			AppConfig::instance().setModulePPU_CU(
+//				(AppConfig::ModulePPU_num)msg_0x641->numDrive,
+//				static_cast<double>(msg_0x641->ceilAz),
+//				static_cast<double>(msg_0x641->ceilElev),
+//				static_cast<double>(msg_0x641->ceilVAz),
+//				static_cast<double>(msg_0x641->ceilVElev),
+//				0, 0, 0, 0, 0, 0);
+
+//			// Определяем, насколько текущие координаты ППУ отличаются от ЦУ
+//			double dAz = AppConfig::instance().getModulePPU_az(
+//							 AppConfig::instance().ModulePPU_num_RLMN_1) -
+//						 static_cast<double>(msg_0x641->ceilAz);
+//			double dAn = AppConfig::instance().getModulePPU_an(
+//							 AppConfig::instance().ModulePPU_num_RLMN_1) -
+//						 static_cast<double>(msg_0x641->ceilElev);
+
+//			// Если координаты отличаются незначительно, то отправляем ответ
+//            if (std::abs(dAz) < 0.6 && std::abs(dAn) < 0.6)
+//			{
+//				auto msg_0x1022 = MessageFactory::
+//					create<TcpMessage_0x1022>(nullptr, 0, 0);
+//				// auto msg_0x1022 = MessageFactory::
+//				//          create<TcpMessage_0x1022>(nullptr);
+
+//				msg_0x1022.trackStatus = 0;
+//				msg_0x1022.isExtra = 0;
+//				msg_0x1022.isTest = 0;
+//				msg_0x1022.snrSum = 0;
+//				msg_0x1022.epr = 0;
+//				msg_0x1022.maxRange = 20;
+//				msg_0x1022.numbTrack = msg_0x641->idxCeilVOI;
+//				msg_0x1022.rangeCnt = 0;
+//				msg_0x1022.speedCnt = 0;
+//				msg_0x1022.chanCnt = 1; /// Всегда один канал!
+//				msg_0x1022.rangeStart = 0;
+//				msg_0x1022.rangeStep = 0.1;
+//				msg_0x1022.vradStart = 0;
+//				msg_0x1022.vradStep = 0.1;
+
+//				msg_0x1022.numDrive = msg_0x641->numDrive;
+//				msg_0x1022.azimuth = msg_0x641->ceilAz;
+//				msg_0x1022.range = msg_0x641->ceilRange;
+//				msg_0x1022.eps = msg_0x641->ceilElev;
+//				msg_0x1022.vel = msg_0x641->ceilVr;
+//				msg_0x1022.velAz = msg_0x641->ceilVAz;
+//				msg_0x1022.velEps = msg_0x641->ceilVElev;
+//				msg_0x1022.sigAz = msg_0x641->sigAz;
+//				msg_0x1022.sigEps = msg_0x641->sigElev;
+//				msg_0x1022.sigD = msg_0x641->sigRange;
+//				msg_0x1022.sigVr = msg_0x641->sigVr;
+//				msg_0x1022.numbTrackServr = msg_0x641->idxCeilVOI;
+//				msg_0x1022.typeTrack =
+//					static_cast<uint8_t>(msg_0x641->typeCeil);
+//#ifdef QT_DEBUG
+//				std::cout << "Sent message 0x1022:";
+//#endif
+//#ifdef TRACE
+//				std::cout << " " << msg_0x1022.toString() << std::endl;
+//#endif
+//				sendMessage(msg_0x1022.serializeFull());
+//				LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::TCP_BINARY, msg_0x1022.serializeFull(), LogManager::jobj_toString(msg_0x1022.to_json()));
+//			}
+//            //-------------------------------------------------------
 
 			AppConfig::instance().SET_PBU_PROTO_0X24_MODE(0);
 			AppConfig::instance().SET_PBU_PROTO_0X23_CODE(
