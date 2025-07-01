@@ -877,175 +877,175 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
 				qDebug() << "getBsPeriodTime =" << TimeProvider::instance().getBsPeriodTime();
 				qDebug() << "getBsPeriodWidth =" << TimeProvider::instance().getBsPeriodWidth();
 #endif
-				uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_1);
-				if (state & AppConfig::ModulePPU_state_TurnedOn)
-				{
-#ifdef QT_DEBUG
-					qDebug() << "PPU 1 is turned On" << Qt::endl;
-#endif
-					static double azC0 = 0, anC0 = 0, azC1 = 0, anC1 = 0, azC2 = 0, anC2 = 0;
-					static uint16_t azC1u = 0, azC2u = 0, anC1u = 0, anC2u = 0;
-					static uint32_t azC0u = 0, anC0u = 0;
-					static int mode = 3;
-					auto msg = EthMessageFactory::create<EthMessage_PPU_MOVE_1>();
-					if (mode == 0)
-					{
-						static bool isChangedImitPeriod = false;
-						if (!isChangedImitPeriod)
-						{
-							const u_char buf[60] = {0x00, 0x0A, 0x35, 0x00, 0x23, 0x03, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x20, 0x20, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x04, 0x06, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x28, 0x00, 0x19, 0x00, 0x05, 0x00, 0x64, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-							QByteArray data = QByteArray(reinterpret_cast<const char *>(buf), sizeof(buf));
-#ifdef QT_DEBUG
-							qDebug() << "Sending message to change period of messages on imitator:";
-#endif
-#ifdef TRACE
-							qDebug() << "ETH Message from VU to BS:" << Qt::endl
-									 << data.toHex(' ').toUpper();
-#endif
-							QMetaObject::invokeMethod(this, "sendMessage", Qt::QueuedConnection, Q_ARG(QByteArray, data));
-							isChangedImitPeriod = true;
-							mode = 1;
-						}
-					}
-					else if (mode == 1)
-					{
-						mode = 2;
-					}
-					else if (mode == 2)
-					{
-						mode = 3;
-					}
-					else if (mode == 3)
-					{
-						mode = 4;
-						//                        double dt = 0.0000001*static_cast<double>(TimeProvider::instance().getBsPeriodWidth());
-						// double dt = 0.1;
-						// double az = AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_1);
-						// double an = AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_1);
-						// static double azLast = 0, azAccLast = 0, anLast = 0, anAccLast = 0;
-						// double aMax = 30.0, KP = 3.0, KD = 6.0;
-						// dt *= 3.0;
-						double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_1);
-						double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_1);
-						// double azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::ModulePPU_num_RLMN_1);
-						// double anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::ModulePPU_num_RLMN_1);
-						//                        calculateCoefficientsPPU(azTarget, azTargetVel, az, &azLast, &azAccLast, aMax, KP, KD, dt, &azC0, &azC1, &azC2);
-						//                        calculateCoefficientsPPU(anTarget, anTargetVel, an, &anLast, &anAccLast, aMax, KP, KD, dt, &anC0, &anC1, &anC2);
-						//                        azC2 *= 2.0; anC2 *= 2.0;
+//				uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_1);
+//				if (state & AppConfig::ModulePPU_state_TurnedOn)
+//				{
+//#ifdef QT_DEBUG
+//					qDebug() << "PPU 1 is turned On" << Qt::endl;
+//#endif
+//					static double azC0 = 0, anC0 = 0, azC1 = 0, anC1 = 0, azC2 = 0, anC2 = 0;
+//					static uint16_t azC1u = 0, azC2u = 0, anC1u = 0, anC2u = 0;
+//					static uint32_t azC0u = 0, anC0u = 0;
+//					static int mode = 3;
+//					auto msg = EthMessageFactory::create<EthMessage_PPU_MOVE_1>();
+//					if (mode == 0)
+//					{
+//						static bool isChangedImitPeriod = false;
+//						if (!isChangedImitPeriod)
+//						{
+//							const u_char buf[60] = {0x00, 0x0A, 0x35, 0x00, 0x23, 0x03, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x20, 0x20, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x04, 0x06, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x28, 0x00, 0x19, 0x00, 0x05, 0x00, 0x64, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+//							QByteArray data = QByteArray(reinterpret_cast<const char *>(buf), sizeof(buf));
+//#ifdef QT_DEBUG
+//							qDebug() << "Sending message to change period of messages on imitator:";
+//#endif
+//#ifdef TRACE
+//							qDebug() << "ETH Message from VU to BS:" << Qt::endl
+//									 << data.toHex(' ').toUpper();
+//#endif
+//							QMetaObject::invokeMethod(this, "sendMessage", Qt::QueuedConnection, Q_ARG(QByteArray, data));
+//							isChangedImitPeriod = true;
+//							mode = 1;
+//						}
+//					}
+//					else if (mode == 1)
+//					{
+//						mode = 2;
+//					}
+//					else if (mode == 2)
+//					{
+//						mode = 3;
+//					}
+//					else if (mode == 3)
+//					{
+//						mode = 4;
+//						//                        double dt = 0.0000001*static_cast<double>(TimeProvider::instance().getBsPeriodWidth());
+//						// double dt = 0.1;
+//						// double az = AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_1);
+//						// double an = AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_1);
+//						// static double azLast = 0, azAccLast = 0, anLast = 0, anAccLast = 0;
+//						// double aMax = 30.0, KP = 3.0, KD = 6.0;
+//						// dt *= 3.0;
+//						double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_1);
+//						double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_1);
+//						// double azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::ModulePPU_num_RLMN_1);
+//						// double anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::ModulePPU_num_RLMN_1);
+//						//                        calculateCoefficientsPPU(azTarget, azTargetVel, az, &azLast, &azAccLast, aMax, KP, KD, dt, &azC0, &azC1, &azC2);
+//						//                        calculateCoefficientsPPU(anTarget, anTargetVel, an, &anLast, &anAccLast, aMax, KP, KD, dt, &anC0, &anC1, &anC2);
+//						//                        azC2 *= 2.0; anC2 *= 2.0;
 
-						// Vremenno peredaiom fiksirovannie koordinaty
-						//------------------------------------------------------
-						azC0 = azTarget;
-						anC0 = anTarget;
-						if (anC0 < 0.01)
-							anC0 = 0.01;
-						azC1 = AppConfig::instance().getModulePPU_azC1(AppConfig::ModulePPU_num_RLMN_1);
-						anC1 = AppConfig::instance().getModulePPU_anC1(AppConfig::ModulePPU_num_RLMN_1);
-						azC2 = AppConfig::instance().getModulePPU_azC2(AppConfig::ModulePPU_num_RLMN_1);
-						anC2 = AppConfig::instance().getModulePPU_anC2(AppConfig::ModulePPU_num_RLMN_1);
-						//------------------------------------------------------
+//						// Vremenno peredaiom fiksirovannie koordinaty
+//						//------------------------------------------------------
+//						azC0 = azTarget;
+//						anC0 = anTarget;
+//						if (anC0 < 0.01)
+//							anC0 = 0.01;
+//						azC1 = AppConfig::instance().getModulePPU_azC1(AppConfig::ModulePPU_num_RLMN_1);
+//						anC1 = AppConfig::instance().getModulePPU_anC1(AppConfig::ModulePPU_num_RLMN_1);
+//						azC2 = AppConfig::instance().getModulePPU_azC2(AppConfig::ModulePPU_num_RLMN_1);
+//						anC2 = AppConfig::instance().getModulePPU_anC2(AppConfig::ModulePPU_num_RLMN_1);
+//						//------------------------------------------------------
 
-						static constexpr double INV_SCALE = 65536.0 / 360.0;
-						azC0u = static_cast<uint32_t>(azC0 * INV_SCALE);
-						azC1u = static_cast<uint16_t>(azC1 * INV_SCALE);
-						azC2u = static_cast<uint16_t>(azC2 * INV_SCALE);
-						anC0u = static_cast<uint32_t>(anC0 * INV_SCALE);
-						anC1u = static_cast<uint16_t>(anC1 * INV_SCALE);
-						anC2u = static_cast<uint16_t>(anC2 * INV_SCALE);
-#ifdef QT_DEBUG
-						qDebug() << "azCur =" << azC0;
-						qDebug() << "azVel =" << azC1 << "=" << azC1u;
-						qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
-						qDebug() << "anCur =" << anC0;
-						qDebug() << "anVel =" << anC1 << "=" << anC1u;
-						qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
-#endif
-						msg.azC0[0] = static_cast<uint8_t>(azC0u);
-						msg.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
-						msg.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
-						msg.azC1 = azC1u;
-						msg.azC2 = azC2u;
+//						static constexpr double INV_SCALE = 65536.0 / 360.0;
+//						azC0u = static_cast<uint32_t>(azC0 * INV_SCALE);
+//						azC1u = static_cast<uint16_t>(azC1 * INV_SCALE);
+//						azC2u = static_cast<uint16_t>(azC2 * INV_SCALE);
+//						anC0u = static_cast<uint32_t>(anC0 * INV_SCALE);
+//						anC1u = static_cast<uint16_t>(anC1 * INV_SCALE);
+//						anC2u = static_cast<uint16_t>(anC2 * INV_SCALE);
+//#ifdef QT_DEBUG
+//						qDebug() << "azCur =" << azC0;
+//						qDebug() << "azVel =" << azC1 << "=" << azC1u;
+//						qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
+//						qDebug() << "anCur =" << anC0;
+//						qDebug() << "anVel =" << anC1 << "=" << anC1u;
+//						qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
+//#endif
+//						msg.azC0[0] = static_cast<uint8_t>(azC0u);
+//						msg.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
+//						msg.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
+//						msg.azC1 = azC1u;
+//						msg.azC2 = azC2u;
 
-						msg.anC0[0] = static_cast<uint8_t>(anC0u);
-						msg.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
-						msg.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
-						msg.anC1 = anC1u;
-						msg.anC2 = anC2u;
+//						msg.anC0[0] = static_cast<uint8_t>(anC0u);
+//						msg.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
+//						msg.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
+//						msg.anC1 = anC1u;
+//						msg.anC2 = anC2u;
 
-						msg.azSector = 0;
-						msg.anSector = 0;
+//						msg.azSector = 0;
+//						msg.anSector = 0;
 
-						QByteArray data = msg.serializeFull();
-#ifdef QT_DEBUG
-						qDebug() << "Sending message to move the PPU 1";
-#endif
-#ifdef TRACE
-						qDebug() << "ETH Message from VU to BS:" << Qt::endl
-								 << data.toHex(' ').toUpper();
-#endif
-						sendMessage(data);
-						LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
-					}
-					else if (mode == 4)
-					{
-						mode = 5;
-					}
-					else if (mode == 5)
-					{
-						mode = 3;
-					}
-					//                    else if (mode == 6) { mode = 7; }
-					//                    else if (mode == 7) { mode = 8; }
-					//                    else if (mode == 8) { mode = 9; }
-					//                    else if (mode == 9) { mode = 10; }
-					//                    else if (mode == 10) { mode = 11; }
-					//                    else if (mode == 11) { mode = 12; }
-					//                    else if (mode == 12) { mode = 3; }
+//						QByteArray data = msg.serializeFull();
+//#ifdef QT_DEBUG
+//						qDebug() << "Sending message to move the PPU 1";
+//#endif
+//#ifdef TRACE
+//						qDebug() << "ETH Message from VU to BS:" << Qt::endl
+//								 << data.toHex(' ').toUpper();
+//#endif
+//						sendMessage(data);
+//						LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
+//					}
+//					else if (mode == 4)
+//					{
+//						mode = 5;
+//					}
+//					else if (mode == 5)
+//					{
+//						mode = 3;
+//					}
+//					//                    else if (mode == 6) { mode = 7; }
+//					//                    else if (mode == 7) { mode = 8; }
+//					//                    else if (mode == 8) { mode = 9; }
+//					//                    else if (mode == 9) { mode = 10; }
+//					//                    else if (mode == 10) { mode = 11; }
+//					//                    else if (mode == 11) { mode = 12; }
+//					//                    else if (mode == 12) { mode = 3; }
 
-					// Отправка отладочных данных на форму для отображения:
-					/*
-					RmoMessage_TargetPPU msgRmo;
-					msgRmo.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_1);
-					msgRmo.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_1);
-					msgRmo.azC0 = azC0; msgRmo.azC1 = azC1; msgRmo.azC2 = azC2;
-					msgRmo.anC0 = anC0; msgRmo.anC1 = anC1; msgRmo.anC2 = anC2;
-					msgRmo.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_1);
-					msgRmo.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_1);
-					msgRmo.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::ModulePPU_num_RLMN_1);
-					msgRmo.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::ModulePPU_num_RLMN_1);
-					msgRmo.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::ModulePPU_num_RLMN_1));
-					msgRmo.counter = rmoCounter++;
-					*/
-					// auto msgRmo = QSharedPointer::create<RmoMessage_TargetPPU>();
+//					// Отправка отладочных данных на форму для отображения:
+//					/*
+//					RmoMessage_TargetPPU msgRmo;
+//					msgRmo.azPPU = AppConfig::instance().getModulePPU_az(AppConfig::ModulePPU_num_RLMN_1);
+//					msgRmo.anPPU = AppConfig::instance().getModulePPU_an(AppConfig::ModulePPU_num_RLMN_1);
+//					msgRmo.azC0 = azC0; msgRmo.azC1 = azC1; msgRmo.azC2 = azC2;
+//					msgRmo.anC0 = anC0; msgRmo.anC1 = anC1; msgRmo.anC2 = anC2;
+//					msgRmo.azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_1);
+//					msgRmo.anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_1);
+//					msgRmo.azTargetVel = AppConfig::instance().getModulePPU_azTargetVel(AppConfig::ModulePPU_num_RLMN_1);
+//					msgRmo.anTargetVel = AppConfig::instance().getModulePPU_anTargetVel(AppConfig::ModulePPU_num_RLMN_1);
+//					msgRmo.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::ModulePPU_num_RLMN_1));
+//					msgRmo.counter = rmoCounter++;
+//					*/
+//					// auto msgRmo = QSharedPointer::create<RmoMessage_TargetPPU>();
 
-					auto msgFill = RmoMessageFactory::instance()
-									   .createWithArgs<RmoMessage_TargetPPU>(
-										   AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
-					msgFill->set_azC(azC0, azC1, azC2);
-					msgFill->set_anC(anC0, anC1, anC2);
-					msgFill->counter = AppConfig::instance().increaseRmoCounter();
+//					auto msgFill = RmoMessageFactory::instance()
+//									   .createWithArgs<RmoMessage_TargetPPU>(
+//										   AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
+//					msgFill->set_azC(azC0, azC1, azC2);
+//					msgFill->set_anC(anC0, anC1, anC2);
+//					msgFill->counter = AppConfig::instance().increaseRmoCounter();
 
-					if (m_tcpSendCallback)
-						m_tcpSendCallback(msgFill);
-				}
-				else
-				{
-#ifdef QT_DEBUG
-					qDebug() << "PPU 1 is turned Off" << Qt::endl;
-#endif
-					auto msgEnable = EthMessageFactory::create<EthMessage_PPU_ENABLE_1>();
-					msgEnable.state = AppConfig::ModulePPU_state_TurnedOn; // Включить ППУ
-					QByteArray data = msgEnable.serializeFull();
-#ifdef QT_DEBUG
-					qDebug() << "Sending message to turn on the PPU";
-#endif
-#ifdef TRACE
-					qDebug() << "ETH Message from VU to BS:" << Qt::endl
-							 << data.toHex(' ').toUpper();
-#endif
-					sendMessage(data);
-					LOG(ProtocolMessageLog, CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
-				}
+//					if (m_tcpSendCallback)
+//						m_tcpSendCallback(msgFill);
+//				}
+//				else
+//				{
+//#ifdef QT_DEBUG
+//					qDebug() << "PPU 1 is turned Off" << Qt::endl;
+//#endif
+//					auto msgEnable = EthMessageFactory::create<EthMessage_PPU_ENABLE_1>();
+//					msgEnable.state = AppConfig::ModulePPU_state_TurnedOn; // Включить ППУ
+//					QByteArray data = msgEnable.serializeFull();
+//#ifdef QT_DEBUG
+//					qDebug() << "Sending message to turn on the PPU";
+//#endif
+//#ifdef TRACE
+//					qDebug() << "ETH Message from VU to BS:" << Qt::endl
+//							 << data.toHex(' ').toUpper();
+//#endif
+//					sendMessage(data);
+//					LOG(ProtocolMessageLog, CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
+//				}
 			}
 		}
 		// PPU_POSITION_2 (11.11)
@@ -1054,23 +1054,64 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
 			auto msgPPU_POSITION = reinterpret_cast<EthMessage_PPU_POSITION_2 *>(parsed.get());
 			if (msgPPU_POSITION)
 			{
-				int64_t timeTemp = 0;
-				for (int i = 4; i >= 0; --i)
-				{
-					timeTemp = (timeTemp << 8) | msgPPU_POSITION->timeBeginTrans[i];
-				}
-				timeTemp &= 0x000000FFFFFFFFFF;
-				TimeProvider::instance().setBsTimePPU(timeTemp);
-				AppConfig::instance().setModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->lastCommand);
-				AppConfig::instance().setModulePPU_state(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->state);
-				AppConfig::instance().setModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->ispr);
-				AppConfig::instance().setModulePPU_az(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->az);
-				AppConfig::instance().setModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->azDelay);
-				AppConfig::instance().setModulePPU_an(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->an);
-				AppConfig::instance().setModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->anDelay);
-				AppConfig::instance().setModulePPU_borders(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->borders);
-				AppConfig::instance().setModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->waitCommands);
-				AppConfig::instance().setModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->waitTarget);
+//				int64_t timeTemp = 0;
+//				for (int i = 4; i >= 0; --i)
+//				{
+//					timeTemp = (timeTemp << 8) | msgPPU_POSITION->timeBeginTrans[i];
+//				}
+//				timeTemp &= 0x000000FFFFFFFFFF;
+//				TimeProvider::instance().setBsTimePPU(timeTemp);
+//				AppConfig::instance().setModulePPU_lastCommand(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->lastCommand);
+//				AppConfig::instance().setModulePPU_state(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->state);
+//				AppConfig::instance().setModulePPU_ispr(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->ispr);
+//				AppConfig::instance().setModulePPU_az(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->az);
+//				AppConfig::instance().setModulePPU_azDelay(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->azDelay);
+//				AppConfig::instance().setModulePPU_an(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->an);
+//				AppConfig::instance().setModulePPU_anDelay(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->anDelay);
+//				AppConfig::instance().setModulePPU_borders(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->borders);
+//				AppConfig::instance().setModulePPU_waitCommands(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->waitCommands);
+//				AppConfig::instance().setModulePPU_waitTarget(AppConfig::ModulePPU_num_RLMN_2, msgPPU_POSITION->waitTarget);
+
+                // Отправить данные ППУ в Calculator:
+                //-------------------------------------------------------
+                Calculator::paramPPU ppu;
+                int64_t timeTemp = 0;
+                for (int i = 4; i >= 0; --i)
+                {
+                    timeTemp = (timeTemp << 8) | msgPPU_POSITION->timeBeginTrans[i];
+                }
+                timeTemp &= 0x000000FFFFFFFFFF;
+                ppu.timeBs = timeTemp;          // Время обновления координат от ППУ (по БС)
+                ppu.timeSys = TimeProvider::instance().getMks(); // Время приёма пакета от БС (системное)
+                ppu.az = from_anglePPU(msgPPU_POSITION->az); // Текущая горизонтальная координата, град
+                ppu.an = from_anglePPU(msgPPU_POSITION->az); // Текущая вертикальная координата, град
+                ppu.lastCommand = msgPPU_POSITION->lastCommand;	 // Код последней полученной команды
+                ppu.state = msgPPU_POSITION->state;			 // Состояние
+                ppu.ispr = msgPPU_POSITION->ispr;			 // Исправность оборудования
+                ppu.azDelay = msgPPU_POSITION->azDelay;		 // Задержка измерения координаты по азимуту, мс
+                ppu.anDelay = msgPPU_POSITION->anDelay;		 // Задержка измерения координаты по углу места, мс
+                ppu.borders = msgPPU_POSITION->borders;		 // Состояние границ
+                ppu.waitCommands = msgPPU_POSITION->waitCommands;	 // Время ожидания команд, мс
+                ppu.waitTarget = msgPPU_POSITION->waitTarget;		 // Время ожидания целеуказаний, мс
+                // Ошибки драйверов: 0х31-ошибка Аз, 0х32-ошибка Ум
+                ppu.driverError[0] = msgPPU_POSITION->driverError[0];
+                ppu.driverError[1] = msgPPU_POSITION->driverError[1];
+                ppu.driverError[2] = msgPPU_POSITION->driverError[2];
+                // Признаки срабатывания концевых выключателей
+                ppu.signsSwithes[0] = msgPPU_POSITION->signsSwithes[0];
+                ppu.signsSwithes[1] = msgPPU_POSITION->signsSwithes[1];
+                ppu.signsSwithes[2] = msgPPU_POSITION->signsSwithes[2];
+                ppu.operatingMode = msgPPU_POSITION->operatingMode;	 // Режим работы
+
+                ppu.numRLMN = 1; // Номер РЛ-канала
+
+                // Вызываем обработчик ЦУ в Calculator
+                QMetaObject::invokeMethod(
+                    Calculator::instance(),
+                    [ppu]() { Calculator::instance()->recPosPPU(ppu); },
+                    Qt::QueuedConnection
+                );
+                //-------------------------------------------------------
 #ifdef QT_DEBUG
 				qDebug() << "11.11 RECEIVED";
 #endif
@@ -1111,147 +1152,147 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
 				qDebug() << "getBsPeriodTime =" << TimeProvider::instance().getBsPeriodTime();
 				qDebug() << "getBsPeriodWidth =" << TimeProvider::instance().getBsPeriodWidth();
 #endif
-				uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_2);
-				if (state & AppConfig::ModulePPU_state_TurnedOn)
-				{
-#ifdef QT_DEBUG
-					qDebug() << "PPU 2 is turned On" << Qt::endl;
-#endif
-					static double azC0 = 0, anC0 = 0, azC1 = 0, anC1 = 0, azC2 = 0, anC2 = 0;
-					static uint16_t azC1u = 0, azC2u = 0, anC1u = 0, anC2u = 0;
-					static uint32_t azC0u = 0, anC0u = 0;
-					static int mode = 3;
-					auto msg = EthMessageFactory::create<EthMessage_PPU_MOVE_2>();
-					if (mode == 0)
-					{
-						static bool isChangedImitPeriod = false;
-						if (!isChangedImitPeriod)
-						{
-							const u_char buf[60] = {0x00, 0x0A, 0x35, 0x00, 0x23, 0x03, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x20, 0x20, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x04, 0x06, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x28, 0x00, 0x19, 0x00, 0x05, 0x00, 0x64, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-							QByteArray data = QByteArray(reinterpret_cast<const char *>(buf), sizeof(buf));
-#ifdef QT_DEBUG
-							qDebug() << "Sending message to change period of messages on imitator:";
-#endif
-#ifdef TRACE
-							qDebug() << "ETH Message from VU to BS:" << Qt::endl
-									 << data.toHex(' ').toUpper();
-#endif
-							QMetaObject::invokeMethod(this, "sendMessage", Qt::QueuedConnection, Q_ARG(QByteArray, data));
-							isChangedImitPeriod = true;
-							mode = 1;
-						}
-					}
-					else if (mode == 1)
-					{
-						mode = 2;
-					}
-					else if (mode == 2)
-					{
-						mode = 3;
-					}
-					else if (mode == 3)
-					{
-						mode = 4;
-						double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_2);
-						double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_2);
+//				uint8_t state = AppConfig::instance().getModulePPU_state(AppConfig::ModulePPU_num_RLMN_2);
+//				if (state & AppConfig::ModulePPU_state_TurnedOn)
+//				{
+//#ifdef QT_DEBUG
+//					qDebug() << "PPU 2 is turned On" << Qt::endl;
+//#endif
+//					static double azC0 = 0, anC0 = 0, azC1 = 0, anC1 = 0, azC2 = 0, anC2 = 0;
+//					static uint16_t azC1u = 0, azC2u = 0, anC1u = 0, anC2u = 0;
+//					static uint32_t azC0u = 0, anC0u = 0;
+//					static int mode = 3;
+//					auto msg = EthMessageFactory::create<EthMessage_PPU_MOVE_2>();
+//					if (mode == 0)
+//					{
+//						static bool isChangedImitPeriod = false;
+//						if (!isChangedImitPeriod)
+//						{
+//							const u_char buf[60] = {0x00, 0x0A, 0x35, 0x00, 0x23, 0x03, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x20, 0x20, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x04, 0x06, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x28, 0x00, 0x19, 0x00, 0x05, 0x00, 0x64, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+//							QByteArray data = QByteArray(reinterpret_cast<const char *>(buf), sizeof(buf));
+//#ifdef QT_DEBUG
+//							qDebug() << "Sending message to change period of messages on imitator:";
+//#endif
+//#ifdef TRACE
+//							qDebug() << "ETH Message from VU to BS:" << Qt::endl
+//									 << data.toHex(' ').toUpper();
+//#endif
+//							QMetaObject::invokeMethod(this, "sendMessage", Qt::QueuedConnection, Q_ARG(QByteArray, data));
+//							isChangedImitPeriod = true;
+//							mode = 1;
+//						}
+//					}
+//					else if (mode == 1)
+//					{
+//						mode = 2;
+//					}
+//					else if (mode == 2)
+//					{
+//						mode = 3;
+//					}
+//					else if (mode == 3)
+//					{
+//						mode = 4;
+//						double azTarget = AppConfig::instance().getModulePPU_azTarget(AppConfig::ModulePPU_num_RLMN_2);
+//						double anTarget = AppConfig::instance().getModulePPU_anTarget(AppConfig::ModulePPU_num_RLMN_2);
 
-						//------------------------------------------------------
-						azC0 = azTarget;
-						anC0 = anTarget;
-						if (anC0 < 0.01)
-							anC0 = 0.01;
-						azC1 = AppConfig::instance().getModulePPU_azC1(AppConfig::ModulePPU_num_RLMN_2);
-						anC1 = AppConfig::instance().getModulePPU_anC1(AppConfig::ModulePPU_num_RLMN_2);
-						azC2 = AppConfig::instance().getModulePPU_azC2(AppConfig::ModulePPU_num_RLMN_2);
-						anC2 = AppConfig::instance().getModulePPU_anC2(AppConfig::ModulePPU_num_RLMN_2);
-						//------------------------------------------------------
+//						//------------------------------------------------------
+//						azC0 = azTarget;
+//						anC0 = anTarget;
+//						if (anC0 < 0.01)
+//							anC0 = 0.01;
+//						azC1 = AppConfig::instance().getModulePPU_azC1(AppConfig::ModulePPU_num_RLMN_2);
+//						anC1 = AppConfig::instance().getModulePPU_anC1(AppConfig::ModulePPU_num_RLMN_2);
+//						azC2 = AppConfig::instance().getModulePPU_azC2(AppConfig::ModulePPU_num_RLMN_2);
+//						anC2 = AppConfig::instance().getModulePPU_anC2(AppConfig::ModulePPU_num_RLMN_2);
+//						//------------------------------------------------------
 
-						static constexpr double INV_SCALE = 65536.0 / 360.0;
-						azC0u = static_cast<uint32_t>(azC0 * INV_SCALE);
-						azC1u = static_cast<uint16_t>(azC1 * INV_SCALE);
-						azC2u = static_cast<uint16_t>(azC2 * INV_SCALE);
-						anC0u = static_cast<uint32_t>(anC0 * INV_SCALE);
-						anC1u = static_cast<uint16_t>(anC1 * INV_SCALE);
-						anC2u = static_cast<uint16_t>(anC2 * INV_SCALE);
-#ifdef QT_DEBUG
-						qDebug() << "azCur =" << azC0;
-						qDebug() << "azVel =" << azC1 << "=" << azC1u;
-						qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
-						qDebug() << "anCur =" << anC0;
-						qDebug() << "anVel =" << anC1 << "=" << anC1u;
-						qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
-#endif
-						msg.azC0[0] = static_cast<uint8_t>(azC0u);
-						msg.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
-						msg.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
-						msg.azC1 = azC1u;
-						msg.azC2 = azC2u;
+//						static constexpr double INV_SCALE = 65536.0 / 360.0;
+//						azC0u = static_cast<uint32_t>(azC0 * INV_SCALE);
+//						azC1u = static_cast<uint16_t>(azC1 * INV_SCALE);
+//						azC2u = static_cast<uint16_t>(azC2 * INV_SCALE);
+//						anC0u = static_cast<uint32_t>(anC0 * INV_SCALE);
+//						anC1u = static_cast<uint16_t>(anC1 * INV_SCALE);
+//						anC2u = static_cast<uint16_t>(anC2 * INV_SCALE);
+//#ifdef QT_DEBUG
+//						qDebug() << "azCur =" << azC0;
+//						qDebug() << "azVel =" << azC1 << "=" << azC1u;
+//						qDebug() << "azAcc =" << 2.0 * azC2 << "=" << azC2u;
+//						qDebug() << "anCur =" << anC0;
+//						qDebug() << "anVel =" << anC1 << "=" << anC1u;
+//						qDebug() << "anAcc =" << 2.0 * anC2 << "=" << anC2u;
+//#endif
+//						msg.azC0[0] = static_cast<uint8_t>(azC0u);
+//						msg.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
+//						msg.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
+//						msg.azC1 = azC1u;
+//						msg.azC2 = azC2u;
 
-						msg.anC0[0] = static_cast<uint8_t>(anC0u);
-						msg.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
-						msg.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
-						msg.anC1 = anC1u;
-						msg.anC2 = anC2u;
+//						msg.anC0[0] = static_cast<uint8_t>(anC0u);
+//						msg.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
+//						msg.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
+//						msg.anC1 = anC1u;
+//						msg.anC2 = anC2u;
 
-						msg.azSector = 0;
-						msg.anSector = 0;
+//						msg.azSector = 0;
+//						msg.anSector = 0;
 
-						QByteArray data = msg.serializeFull();
-#ifdef QT_DEBUG
-						qDebug() << "Sending message to move the PPU 2";
-#endif
-#ifdef TRACE
-						qDebug() << "ETH Message from VU to BS:" << Qt::endl
-								 << data.toHex(' ').toUpper();
-#endif
-						sendMessage(data);
-						LOG(ProtocolMessageLog, CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
-					}
-					else if (mode == 4)
-					{
-						mode = 5;
-					}
-					else if (mode == 5)
-					{
-						mode = 3;
-					}
-					//                    else if (mode == 6) { mode = 7; }
-					//                    else if (mode == 7) { mode = 8; }
-					//                    else if (mode == 8) { mode = 9; }
-					//                    else if (mode == 9) { mode = 10; }
-					//                    else if (mode == 10) { mode = 11; }
-					//                    else if (mode == 11) { mode = 12; }
-					//                    else if (mode == 12) { mode = 3; }
+//						QByteArray data = msg.serializeFull();
+//#ifdef QT_DEBUG
+//						qDebug() << "Sending message to move the PPU 2";
+//#endif
+//#ifdef TRACE
+//						qDebug() << "ETH Message from VU to BS:" << Qt::endl
+//								 << data.toHex(' ').toUpper();
+//#endif
+//						sendMessage(data);
+//						LOG(ProtocolMessageLog, CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msg.to_json()));
+//					}
+//					else if (mode == 4)
+//					{
+//						mode = 5;
+//					}
+//					else if (mode == 5)
+//					{
+//						mode = 3;
+//					}
+//					//                    else if (mode == 6) { mode = 7; }
+//					//                    else if (mode == 7) { mode = 8; }
+//					//                    else if (mode == 8) { mode = 9; }
+//					//                    else if (mode == 9) { mode = 10; }
+//					//                    else if (mode == 10) { mode = 11; }
+//					//                    else if (mode == 11) { mode = 12; }
+//					//                    else if (mode == 12) { mode = 3; }
 
-					// Отправка отладочных данных на форму для отображения:
-					auto msgFill = RmoMessageFactory::instance()
-									   .createWithArgs<RmoMessage_TargetPPU>(
-										   AppConfig::ModulePPU_num::ModulePPU_num_RLMN_2);
-					msgFill->set_azC(azC0, azC1, azC2);
-					msgFill->set_anC(anC0, anC1, anC2);
-					msgFill->counter = AppConfig::instance().increaseRmoCounter();
+//					// Отправка отладочных данных на форму для отображения:
+//					auto msgFill = RmoMessageFactory::instance()
+//									   .createWithArgs<RmoMessage_TargetPPU>(
+//										   AppConfig::ModulePPU_num::ModulePPU_num_RLMN_2);
+//					msgFill->set_azC(azC0, azC1, azC2);
+//					msgFill->set_anC(anC0, anC1, anC2);
+//					msgFill->counter = AppConfig::instance().increaseRmoCounter();
 
-					if (m_tcpSendCallback)
-						m_tcpSendCallback(msgFill);
-				}
-				else
-				{
-#ifdef QT_DEBUG
-					qDebug() << "PPU 2 is turned Off" << Qt::endl;
-#endif
-					auto msgEnable = EthMessageFactory::create<EthMessage_PPU_ENABLE_2>();
-					msgEnable.state = AppConfig::ModulePPU_state_TurnedOn; // Включить ППУ
-					QByteArray data = msgEnable.serializeFull();
-#ifdef QT_DEBUG
-					qDebug() << "Sending message to turn on the PPU 2";
-#endif
-#ifdef TRACE
-					qDebug() << "ETH Message from VU to BS:" << Qt::endl
-							 << data.toHex(' ').toUpper();
-#endif
-					sendMessage(data);
-					LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
-				}
+//					if (m_tcpSendCallback)
+//						m_tcpSendCallback(msgFill);
+//				}
+//				else
+//				{
+//#ifdef QT_DEBUG
+//					qDebug() << "PPU 2 is turned Off" << Qt::endl;
+//#endif
+//					auto msgEnable = EthMessageFactory::create<EthMessage_PPU_ENABLE_2>();
+//					msgEnable.state = AppConfig::ModulePPU_state_TurnedOn; // Включить ППУ
+//					QByteArray data = msgEnable.serializeFull();
+//#ifdef QT_DEBUG
+//					qDebug() << "Sending message to turn on the PPU 2";
+//#endif
+//#ifdef TRACE
+//					qDebug() << "ETH Message from VU to BS:" << Qt::endl
+//							 << data.toHex(' ').toUpper();
+//#endif
+//					sendMessage(data);
+//					LOG_PROTOCOL(CLASS_NAME, LogLevel::MessageSent, Protocol::ETH_BINARY, data.toHex(' ').toUpper(), LogManager::jobj_toString(msgEnable.to_json()));
+//				}
 			}
 		}
 		// ...other message types as needed...
