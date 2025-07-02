@@ -80,18 +80,19 @@ void UdpHandler::mcfosWrite_DAC_REF(int N, int windowType,
     vecSignalDAC_Im.clear();
     vecSignalREF_Re.clear();
     vecSignalREF_Im.clear();
+    const float A_REF = 32760.f; // Для буфера REF всегда используем максимальную амплитуду
     float fN = static_cast<float>(N);
     for (int i = 0; i < N; i++)
     {
         float it = static_cast<float>(i);
-        float re = A * cos(0.01 * 2. * _pi * (f0 * it + df * it * it / (fN * 2.))); // Синфазная составляющая
-        float im = A * sin(0.01 * 2. * _pi * (f0 * it + df * it * it / (fN * 2.))); // Квадратурная составляющая
+        float re = cos(0.01 * 2. * _pi * (f0 * it + df * it * it / (fN * 2.))); // Синфазная составляющая
+        float im = sin(0.01 * 2. * _pi * (f0 * it + df * it * it / (fN * 2.))); // Квадратурная составляющая
 
-        vecSignalDAC_Re.append(0x00010000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(re * windowDAC[i])))));
-        vecSignalDAC_Im.append(0x00020000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(im * windowDAC[i])))));
+        vecSignalDAC_Re.append(0x00010000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(A * re * windowDAC[i])))));
+        vecSignalDAC_Im.append(0x00020000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(A * im * windowDAC[i])))));
 
-        vecSignalREF_Re.append(0x00040000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(re * windowREF[i])))));
-        vecSignalREF_Im.append(0x00080000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(-im * windowREF[i])))));
+        vecSignalREF_Re.append(0x00040000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(A_REF * re * windowREF[i])))));
+        vecSignalREF_Im.append(0x00080000 | (0x0000FFFF & static_cast<quint32>(static_cast<qint16>(qRound(-A_REF * im * windowREF[i])))));
     }
 
     // Освобождаем память, выделенную под оконные функции
