@@ -348,7 +348,7 @@ void Calculator::recDataMCFOS(const QByteArray &data)
     // МЦФОС
     //-------------------------------------
     // Время предыдущего излучения МЦФОС (системное)
-    m_paramRLMN[numLastMCFOS].m_paramMCFOS.time = TimeProvider::instance().getMks() - 200000;
+    m_paramRLMN[numLastMCFOS].m_paramMCFOS.timeSys = TimeProvider::instance().getMks() - 200000;
 
     // Параметры излучаемого сигнала
     m_paramRLMN[numLastMCFOS].m_paramMCFOS.N = 800;             // Длительность сигнала
@@ -851,9 +851,12 @@ void Calculator::getDV(const QByteArray& inputData,
             // Выполнение БПФ
             fftwf_execute(plan);
 
-            // Сохранение результатов (модуль комплексной амплитуды)
+            // Сохранение результатов - модуль комплексной амплитуды
+            // без вычисления квадратного корня (экономим время на
+            // вычислении корня - сравниваем результат с квадратом порога)
             for (int k = 0; k < impulseCount; ++k) {
-                const float magnitude = std::sqrt(out[k][0]*out[k][0] + out[k][1]*out[k][1]);
+//                const float magnitude = std::sqrt(out[k][0]*out[k][0] + out[k][1]*out[k][1]);
+                const float magnitude = out[k][0]*out[k][0] + out[k][1]*out[k][1];
                 vecResult[receiver][sample][k] = magnitude;
             }
         }
