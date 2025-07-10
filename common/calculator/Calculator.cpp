@@ -320,16 +320,16 @@ void Calculator::recDataMCFOS(const QByteArray &data)
     //-------------------------------------
     m_paramRLMN[numLastMCFOS].m_paramPPU.timeBs = TimeProvider::instance().getBsPeriodTime() - 1000000;       // Время обновления координат от ППУ (по БС)
     m_paramRLMN[numLastMCFOS].m_paramPPU.timeSys = TimeProvider::instance().getMks() - 100000;     // Время приёма пакета от БС (системное)
-    m_paramRLMN[numLastMCFOS].m_paramPPU.az = 130.5;               // Текущая горизонтальная координата, град
-    m_paramRLMN[numLastMCFOS].m_paramPPU.an = 0.2;               // Текущая вертикальная координата, град
-    m_paramRLMN[numLastMCFOS].m_paramPPU.lastCommand = 0;	 // Код последней полученной команды
+    m_paramRLMN[numLastMCFOS].m_paramPPU.az = 130.5;        // Текущая горизонтальная координата, град
+    m_paramRLMN[numLastMCFOS].m_paramPPU.an = 0.2;          // Текущая вертикальная координата, град
+    m_paramRLMN[numLastMCFOS].m_paramPPU.lastCommand = 0;	// Код последней полученной команды
     m_paramRLMN[numLastMCFOS].m_paramPPU.state = 0;			// Состояние
     m_paramRLMN[numLastMCFOS].m_paramPPU.ispr = 0;			// Исправность оборудования
     m_paramRLMN[numLastMCFOS].m_paramPPU.azDelay = 0;		// Задержка измерения координаты по азимуту, мс
     m_paramRLMN[numLastMCFOS].m_paramPPU.anDelay = 0;		// Задержка измерения координаты по углу места, мс
     m_paramRLMN[numLastMCFOS].m_paramPPU.borders = 0;		// Состояние границ
-    m_paramRLMN[numLastMCFOS].m_paramPPU.waitCommands = 0; // Время ожидания команд, мс
-    m_paramRLMN[numLastMCFOS].m_paramPPU.waitTarget = 0;	 // Время ожидания целеуказаний, мс
+    m_paramRLMN[numLastMCFOS].m_paramPPU.waitCommands = 0;  // Время ожидания команд, мс
+    m_paramRLMN[numLastMCFOS].m_paramPPU.waitTarget = 0;	// Время ожидания целеуказаний, мс
 
     // Ошибки драйверов: 0х31-ошибка Аз, 0х32-ошибка Ум
     m_paramRLMN[numLastMCFOS].m_paramPPU.driverError[0] = 0;
@@ -496,34 +496,80 @@ void Calculator::recDataMCFOS(const QByteArray &data)
             qInfo() << "sample.point.aMean_dB =" << sample.point.aMean_dB;
             //-----------------------------------------------------------------------
 
+            // Вычисление радиальной скорости
+            //-----------------------------------------------------------------------
+            const float alpha = 225000.f; // 9 мм / (4 * 10 нс) - константа
+            // Период повторения импульсов в пачке в отсчётах по 10 нс (константа это учитывает)
+            int periodSize = static_cast<int>(m_paramRLMN[numLastMCFOS].m_paramMCFOS.periodSize);
+            // Кол-во импульсов в пачке
+            int periodCount = static_cast<int>(m_paramRLMN[numLastMCFOS].m_paramMCFOS.periodCount);
+            // Диапазон однозначного измерения скорости
+            // (максимальная измеряемая скорость) в м/с
+            int vDelta = alpha / periodSize;
+            // Определяем, сколько м/с приходится
+            // на один скоростной отсчёт
+            int dv = vDelta / periodCount;
+            // Вычисляем радиальную скорость
+            int v = dv * static_cast<int>(vMax[check]); // Радиальная скорость в м/с
+            sample.point.rV = static_cast<float>(v); // Записываем результат в структуру
+            qInfo() << "sample.point.rV =" << sample.point.rV;
+            //-----------------------------------------------------------------------
+
             // Вычисление дальности
             //-----------------------------------------------------------------------
             int shiftNul = m_paramRLMN[numLastMCFOS].shiftNul;
             int delay = static_cast<int>(m_paramRLMN[numLastMCFOS].m_paramMCFOS.procDelay);
             int delta = static_cast<int>(m_paramRLMN[numLastMCFOS].m_paramMCFOS.procDelta);
-            int ri = delay + delta * rMax[check] - shiftNul; // Дальность в отсчётах по 10 нс
+
+            // Дальность в отсчётах по 10 нс
+            int ri = delay + delta * rMax[check] - shiftNul;
+
+            // В случае монохроматического импульса или
+            // ЛЧМ импульса без учёта доплеровского смещения
+            // дальность r_wd (without dopler) определяется так:
+            //     r_wd = (c * ri * dt) / 2
+
             // Радиоволна за 10 нс проходит 300000000 м/с * 10 нс = 3 м,
             // задержка максимума учитывает путь радиоволны до цели и обратно,
             // поэтому нужно ещё поделить расстояние на 2, чтобы определить
-            // расстояние в одну сторону до цели
-            sample.point.r = static_cast<float>((ri * 3)) / 2.f; // Дальность в метрах
+            // расстояние в одну сторону до цели без учёта доплеровского смещения,
+            // которое, в худшем случае (v = 800 м/с) может достигнуть dr ~= 10 м,
+            // что чуть больше предельного разрешения по дальности, но, в основном,
+            // будет менее 2 м при радиальных скоростях до 150 м/с, т.е. это уже
+            // спорт высших достижений, так что пока оставляем дальность без коррекции
+            sample.point.r = static_cast<float>((ri * 3) / 2); // Округление с точностью до 1 м
             qInfo() << "sample.point.r =" << sample.point.r;
-            //-----------------------------------------------------------------------
 
-            // Вычисление радиальной скорости
-            //-----------------------------------------------------------------------
-            const float alpha = 225000.f; // 9 мм / (4 * 10 нс) - константа
-            // Период повторения импульсов в пачке в отсчётах по 10 нс (константа это учитывает)
-            float period = static_cast<float>(m_paramRLMN[numLastMCFOS].m_paramMCFOS.periodSize);
-            // Диапазон однозначного измерения скорости
-            // (максимальная измеряемая скорость) в м/с
-            float vDelta = alpha / period;
-            // Определяем, сколько м/с приходится
-            // на один скоростной отсчёт
-            float dv = vDelta / static_cast<float>(m_paramRLMN[numLastMCFOS].m_paramMCFOS.periodCount);
-            // Вычисляем радиальную скорость
-            sample.point.rV = dv * vMax[check];   // Радиальная скорость в м/с
-            qInfo() << "sample.point.rV =" << sample.point.rV;
+//            // Если всё-таки хотим корректировать дальность:
+//            //------------------------------------
+//            // В случае ЛЧМ импульса дальность r корректируется
+//            // на величину доплеровского смещения:
+//            //     r = r_wd - dr, где dr = (c * t * v) / (λ * dF), т.е.
+//            //
+//            //     r = (c * ri * dt) / 2 - (c * t * v) / (λ * dF),
+//            //
+//            // но только в том случае, когда доплеровская ошибка dr много
+//            // меньше разрешения по дальности: dr << c / (2 * dF), что
+//            // эквивалентно: |f_d * t| << 1, где f_d = 2 * v / wavelen
+//            float dF = m_paramRLMN[numLastMCFOS].m_paramMCFOS.df; // Девиация частоты сигнала
+//            int N = m_paramRLMN[numLastMCFOS].m_paramMCFOS.N; // Длительность импульса
+//            // Если девиация частоты ненулевая и |f_d * t| << 1 (|f_d * t| < 0.3),
+//            // то корректируем дальность
+//            if (dF > 0.f && static_cast<float>(2 * v * N / 9) * 0.001 < 0.3) {
+//                float dr = static_cast<float>(N * 3 / 10 * v) / (0.009 * dF); // Доплеровская добавка
+//                // Вычитаем доплеровскую добавку dr из расстояния r без учёта доплера,
+//                // если добавка не превышает 20 метров (разумный гарантированный предел)
+//                if (dr < 20.f) {
+//                    sample.point.r -= dr;
+//                } else {
+//                    qInfo() << "WARNING in Calculator::recDataMCFOS(...): "
+//                               "dopler addition dr > 20.0, dr =" << dr;
+//                }
+//
+//                // В результате получается скорректированное расстояние
+//                // sample.point.r с учётом доплеровского смещения
+//            }
+//            //------------------------------------
             //-----------------------------------------------------------------------
             //-------------------------------------------------------------------------------
 
