@@ -16,16 +16,7 @@ public:
 	Calculator(const Calculator &) = delete;
 	Calculator &operator=(const Calculator &) = delete;
 	Calculator(Calculator &&) = delete;
-	Calculator &operator=(Calculator &&) = delete;
-
-    /**
-     * @brief Вычисление дальностно-скоротного портрета
-     */
-    void getDV(const QByteArray& inputData,
-               int impulseCount,
-               int corrCount,
-               const float *windowFunc,
-               QVector<QVector<float>> vecResult[4]);
+    Calculator &operator=(Calculator &&) = delete;
 
     /**
      * @struct paramCU
@@ -252,6 +243,24 @@ public:
     int numLastMCFOS = 1;     ///< Номер РЛМН, для которого выполняется обмен с МЦФОС
     //---------------------------------------------------------------
 
+    /**
+     * @brief Вычисление коэффициентов полинома ППУ
+     */
+    void calcCoeffPPU(double angleTarget, double velocityTarget,
+                      double angleCurrent, double *angleLast,
+                      double *accelerationLast, double accelerationMax,
+                      double KP, double KD, double dt,
+                      double *C0, double *C1, double *C2);
+
+    /**
+     * @brief Вычисление дальностно-скоротного портрета
+     */
+    void getDV(const QByteArray& inputData,
+               int impulseCount,
+               int corrCount,
+               const float *windowFunc,
+               QVector<QVector<float>> vecResult[4]);
+
     /// Заранее рассчитанная оконная функция
     /// сигнального буфера ЦАП для обработки
     /// данных от МЦФОС
@@ -302,15 +311,6 @@ public:
         MCFOS_WindowType_Blackman = 2,
         MCFOS_WindowType_Tukey = 3
     };
-
-    /**
-     * @brief Вычисление коэффициентов полинома ППУ
-     */
-    void calcCoeffPPU(double angleTarget, double velocityTarget,
-                      double angleCurrent, double *angleLast,
-                      double *accelerationLast, double accelerationMax,
-                      double KP, double KD, double dt,
-                      double *C0, double *C1, double *C2);
 
     struct testDataToETH
 	{

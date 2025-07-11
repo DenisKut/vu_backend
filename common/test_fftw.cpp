@@ -79,8 +79,9 @@ void test_fftw()
 
     // Запись отсчётов тестового сигнала в файл:
     //--------------------------------------------------------------------
-    QFile *file = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
-                                    "MCFOS\\FromDimaFrom_25_06_2025\\test_signal.txt"));
+    QFile *file = new QFile(QString("test_signal.txt"));
+//    QFile *file = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
+//                                    "MCFOS\\FromDimaFrom_25_06_2025\\test_signal.txt"));
     if (file->open(QIODevice::WriteOnly))
     {
         QTextStream out(file);
@@ -131,8 +132,9 @@ void test_fftw()
 
     // Запись результата БПФ в файл:
     //--------------------------------------------------------------------
-    file = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
-                             "MCFOS\\FromDimaFrom_25_06_2025\\test_result_fft.txt"));
+    file = new QFile(QString("test_result_fft.txt"));
+//    file = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
+//                             "MCFOS\\FromDimaFrom_25_06_2025\\test_result_fft.txt"));
     if (file->open(QIODevice::WriteOnly))
     {
         QTextStream out(file);
@@ -151,8 +153,9 @@ void test_fftw()
 
     // Запись результата БПФ в файл:
     //--------------------------------------------------------------------
-    file = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
-                             "MCFOS\\FromDimaFrom_25_06_2025\\test_result_fft.txt"));
+    file = new QFile(QString("test_result_fft_abs.txt"));
+//    file = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
+//                             "MCFOS\\FromDimaFrom_25_06_2025\\test_result_fft_abs.txt"));
     if (file->open(QIODevice::WriteOnly))
     {
         QTextStream out(file);

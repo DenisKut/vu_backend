@@ -123,6 +123,7 @@ void UdpHandler::mcfosWrite_DAC_REF(int N, int windowType,
     // Режим работы МЦФОС
     m_mode = 1; // очистка буферов ЦАП и Ref
     sendMessage(mes.serialize());
+    QThread::msleep(10);
 
     mes.CMD_BUF_R = 0;
     // Режим работы МЦФОС
@@ -157,6 +158,7 @@ void UdpHandler::mcfosStart(quint32 isSignalFromDAC,
     // Формирование заголовка сообщения на МЦФОС:
     //--------------------------------------------------------------------
     UdpMessage_MCFOS_Cmd mes;
+    mes.CMD_C_SH = 8;
     mes.CMD_DAC_S = 1;
     mes.CMD_ADC_S = 1;
     mes.PERIOD_SIZE = periodSize - 1;

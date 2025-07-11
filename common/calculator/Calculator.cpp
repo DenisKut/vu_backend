@@ -588,8 +588,9 @@ void Calculator::recDataMCFOS(const QByteArray &data)
         // Запись массива чисел в текстовый файл для удобства загрузки в MatLab
         //--------------------------------------------------------------------
         for (int num = 0; num < receiverCount; num++) {
-            QFile *file = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
-                                    "MCFOS\\FromDimaFrom_25_06_2025\\resultDV%1.txt").arg(num));
+            QFile *file = new QFile(QString("resultDV%1.txt").arg(num));
+//            QFile *file = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
+//                                    "MCFOS\\FromDimaFrom_25_06_2025\\resultDV%1.txt").arg(num));
             if (file->open(QIODevice::WriteOnly))
             {
                 QTextStream out(file);
@@ -865,12 +866,14 @@ void Calculator::getDV(const QByteArray& inputData,
 //                            "MCFOS\\FromDimaFrom_25_06_2025\\resultDVorigin.txt"));
 //    QFile *file1 = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
 //                            "MCFOS\\FromDimaFrom_25_06_2025\\resultDVwindowed.txt"));
-//    if (file->open(QIODevice::WriteOnly) && file1->open(QIODevice::WriteOnly))
-//    {
-//        QTextStream outS(file);
-//        QTextStream outS1(file1);
-//        outS << QString("%1, %2").arg(corrCount).arg(impulseCount);
-//        outS1 << QString("%1, %2").arg(corrCount).arg(impulseCount);
+    QFile *file = new QFile(QString("resultDVorigin.txt"));
+    QFile *file1 = new QFile(QString("resultDVwindowed.txt"));
+    if (file->open(QIODevice::WriteOnly) && file1->open(QIODevice::WriteOnly))
+    {
+        QTextStream outS(file);
+        QTextStream outS1(file1);
+        outS << QString("%1, %2").arg(corrCount).arg(impulseCount);
+        outS1 << QString("%1, %2").arg(corrCount).arg(impulseCount);
 
     // Обработка данных
     for (int receiver = 0; receiver < receiverCount; ++receiver) {
@@ -885,13 +888,13 @@ void Calculator::getDV(const QByteArray& inputData,
                 const float re = static_cast<float>(extractInt32(inputData, byteOffset));
                 const float im = static_cast<float>(extractInt32(inputData, byteOffset + 4));
 
-//                outS << QString(", %1, %2").arg(re).arg(im);
+                outS << QString(", %1, %2").arg(re).arg(im);
 
                 // Умножение на оконную функцию
                 in[pulse][0] = re * windowFunc[pulse];
                 in[pulse][1] = im * windowFunc[pulse];
 
-//                outS1 << QString(", %1, %2").arg(re * windowFunc[pulse]).arg(im * windowFunc[pulse]);
+                outS1 << QString(", %1, %2").arg(re * windowFunc[pulse]).arg(im * windowFunc[pulse]);
             }
 
             // Выполнение БПФ
@@ -907,14 +910,14 @@ void Calculator::getDV(const QByteArray& inputData,
             }
         }
     }
-//        qInfo() << "[MCFOS] File has wrote by data from DDR";
-//    }
-//    else
-//    {
-//        qInfo() << "[MCFOS] ERROR: cannot open file for write data from DDR";
-//    }
-//    file->close();
-//    file1->close();
+        qInfo() << "[MCFOS] File for DV has wrote by data from DDR";
+    }
+    else
+    {
+        qInfo() << "[MCFOS] ERROR: cannot open file for write data from DDR";
+    }
+    file->close();
+    file1->close();
     // Освобождение ресурсов FFTW
     fftwf_destroy_plan(plan);
     fftwf_free(in);
