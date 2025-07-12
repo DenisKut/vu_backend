@@ -301,9 +301,9 @@ void Calculator::recDataMCFOS(const QByteArray &data, bool _isCorrEn)
             QTextStream out(file);
             out << QString("%1").arg(0);
             for (int ir = 0; ir < data.size(); ir += 2) {
-                signed short word;
-                word = 0x00FF & data[ir];
-                word = 0xFF00 & (data[ir+1] << 8);
+                int16_t word;
+                word  = 0x00FF & static_cast<int16_t>(data[ir]);
+                word |= 0xFF00 & (static_cast<int16_t>(data[ir+1]) << 8);
                 if (word > 8192) word -= 16384;
 //                int32_t word;
 //                word = 0x000000FF & data[ir];
@@ -903,14 +903,28 @@ void Calculator::getDV(const QByteArray& inputData,
 //                            "MCFOS\\FromDimaFrom_25_06_2025\\resultDVorigin.txt"));
 //    QFile *file1 = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
 //                            "MCFOS\\FromDimaFrom_25_06_2025\\resultDVwindowed.txt"));
-    QFile *file = new QFile(QString("resultDVorigin.txt"));
-    QFile *file1 = new QFile(QString("resultDVwindowed.txt"));
-    if (file->open(QIODevice::WriteOnly) && file1->open(QIODevice::WriteOnly))
+    QFile *file = new QFile(QString("resultForDV_extracted.txt"));
+    QFile *file1 = new QFile(QString("resultForDV_windowed.txt"));
+    QFile *file2 = new QFile(QString("resultForDV_origin.txt"));
+    if (file->open(QIODevice::WriteOnly) &&
+        file1->open(QIODevice::WriteOnly) &&
+        file2->open(QIODevice::WriteOnly))
     {
         QTextStream outS(file);
         QTextStream outS1(file1);
+        QTextStream outS2(file2);
         outS << QString("%1, %2").arg(corrCount).arg(impulseCount);
         outS1 << QString("%1, %2").arg(corrCount).arg(impulseCount);
+        outS2 << QString("%1, %2").arg(corrCount).arg(impulseCount);
+
+        for (int i = 0; i < inputData.size(); i += 4) {
+            int32_t word;
+            word  = 0x000000FF &  static_cast<int32_t>(inputData[i]);
+            word |= 0x0000FF00 & (static_cast<int32_t>(inputData[i+1]) << 8);
+            word |= 0x00FF0000 & (static_cast<int32_t>(inputData[i+2]) << 16);
+            word |= 0xFF000000 & (static_cast<int32_t>(inputData[i+3]) << 24);
+            outS2 << QString(", %1").arg(word);
+        }
 
     // Обработка данных
     for (int receiver = 0; receiver < receiverCount; ++receiver) {
@@ -955,6 +969,7 @@ void Calculator::getDV(const QByteArray& inputData,
     }
     file->close();
     file1->close();
+    file2->close();
     // Освобождение ресурсов FFTW
     fftwf_destroy_plan(plan);
     fftwf_free(in);
