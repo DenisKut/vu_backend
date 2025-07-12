@@ -266,7 +266,7 @@ void Calculator::receiveTestToETH(const testDataToETH &testData)
 }
 
 // Приняты данные от МЦФОС
-void Calculator::recDataMCFOS(const QByteArray &data)
+void Calculator::recDataMCFOS(const QByteArray &data, bool _isCorrEn)
 {
     // Проверка номера МЦФОС, с которым сейчас идёт обмен, на граничные условия
     if (numLastMCFOS < 0) {
@@ -289,6 +289,38 @@ void Calculator::recDataMCFOS(const QByteArray &data)
                    "data.size() == 0. Aborting function...";
         return;
     }
+
+    // Если была считана сигнальная дорожка
+    //--------------------------------------------------------------------
+    if (false == _isCorrEn) {
+        // Запись массива чисел в текстовый файл для удобства загрузки в MatLab
+        QFile *file = new QFile("signalsADC.txt");
+        if (file->open(QIODevice::WriteOnly))
+        {
+            QTextStream out(file);
+            out << QString("%1").arg(0);
+            for (int ir = 0; ir < data.size(); ir += 2) {
+                int16_t word;
+                word = 0x00FF & data[ir];
+                word = 0xFF00 & (data[ir+1] << 8);
+//                int32_t word;
+//                word = 0x000000FF & data[ir];
+//                word = 0x0000FF00 & (data[ir+1] << 8);
+//                word = 0x00FF0000 & (data[ir+2] << 16);
+//                word = 0xFF000000 & (data[ir+3] << 24);
+                out << QString(", %1").arg(word);
+            }
+            qInfo() << "[MCFOS] File has wrote by data from DDR by ADC data";
+        }
+        else
+        {
+            qInfo() << "[MCFOS] ERROR: cannot open file for write data from DDR by ADC data";
+        }
+        file->close();
+
+        return;
+    }
+    //--------------------------------------------------------------------
 
     // ОТЛАДКА - ввод исходных данных руками
     //-----------------------------------------------------------------

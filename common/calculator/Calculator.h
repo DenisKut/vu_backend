@@ -324,7 +324,7 @@ public slots:
     /**
      * @brief Приняты данные от МЦФОС
      */
-    void recDataMCFOS(const QByteArray &data);
+    void recDataMCFOS(const QByteArray &data, bool _isCorrEn);
 
     /**
      * @brief Принято ЦУ от ПБУ или от РМО

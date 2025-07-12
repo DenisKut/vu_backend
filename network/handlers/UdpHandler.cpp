@@ -222,7 +222,14 @@ void UdpHandler::mcfosStart(quint32 isSignalFromDAC,
     UdpMessage_MCFOS_Cmd mesRead;
     mesRead.CMD_DDR_R = 1;
     mcfosAddrDDR = 1;
-    mcfosAddrMaxDDR = 8 * numRangeCh * periodCount;
+    if (isCorrEn)
+    {
+        // При чтении результата корреляционной обработки
+        mesRead.CMD_COR_EN = 1;
+        mcfosAddrMaxDDR = 8 * numRangeCh * periodCount;
+    } else {
+        mcfosAddrMaxDDR = 8 * periodSize * periodCount;
+    }
     mesRead.DDR_ADDR = 4 * (mcfosAddrDDR - 1);
     quint32 size = mcfosAddrSizeDDR;
     if (mcfosAddrMaxDDR - mcfosAddrDDR + 1 <= mcfosAddrSizeDDR)
@@ -231,12 +238,6 @@ void UdpHandler::mcfosStart(quint32 isSignalFromDAC,
     }
     mesRead.DDR_LEN = 4 * size;
     mcfosAddrDDR += size;
-
-    if (isCorrEn)
-    {
-        // При чтении результата корреляционной обработки
-        mesRead.CMD_COR_EN = 1;
-    }
     //--------------------------------------------------------------------
 
     // Режим работы МЦФОС
@@ -588,7 +589,7 @@ void UdpHandler::mcfosReadDDR(const QByteArray &data)
         // Вызываем обработчик принятых данных в Calculator
         QMetaObject::invokeMethod(
             Calculator::instance(),
-            [this]() { Calculator::instance()->recDataMCFOS(this->recDDR); },
+            [this]() { Calculator::instance()->recDataMCFOS(this->recDDR, isCorrEn); },
             Qt::QueuedConnection
         );
 	}
