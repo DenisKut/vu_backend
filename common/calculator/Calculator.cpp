@@ -294,15 +294,17 @@ void Calculator::recDataMCFOS(const QByteArray &data, bool _isCorrEn)
     //--------------------------------------------------------------------
     if (false == _isCorrEn) {
         // Запись массива чисел в текстовый файл для удобства загрузки в MatLab
-        QFile *file = new QFile("signalsADC.txt");
+        QString fileNameTemp = "signalsADC.txt";
+        QFile *file = new QFile(fileNameTemp);
         if (file->open(QIODevice::WriteOnly))
         {
             QTextStream out(file);
             out << QString("%1").arg(0);
             for (int ir = 0; ir < data.size(); ir += 2) {
-                int16_t word;
+                signed short word;
                 word = 0x00FF & data[ir];
                 word = 0xFF00 & (data[ir+1] << 8);
+                if (word > 8192) word -= 16384;
 //                int32_t word;
 //                word = 0x000000FF & data[ir];
 //                word = 0x0000FF00 & (data[ir+1] << 8);
@@ -310,14 +312,17 @@ void Calculator::recDataMCFOS(const QByteArray &data, bool _isCorrEn)
 //                word = 0xFF000000 & (data[ir+3] << 24);
                 out << QString(", %1").arg(word);
             }
-            qInfo() << "[MCFOS] File has wrote by data from DDR by ADC data";
+            qInfo() << "[MCFOS] File" << fileNameTemp
+                    << "has wrote by data from DDR (ADC)";
         }
         else
         {
-            qInfo() << "[MCFOS] ERROR: cannot open file for write data from DDR by ADC data";
+            qInfo() << "[MCFOS] ERROR: cannot open file" << fileNameTemp
+                    << "for write data from DDR (ADC)";
         }
         file->close();
 
+        // Дальше ничего не делаем:
         return;
     }
     //--------------------------------------------------------------------
