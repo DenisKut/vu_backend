@@ -587,11 +587,18 @@ void UdpHandler::mcfosReadDDR(const QByteArray &data)
         qInfo() << "[MCFOS] All data from DDR has read";
 
         // Вызываем обработчик принятых данных в Calculator
-        QMetaObject::invokeMethod(
-            Calculator::instance(),
-            [this]() { Calculator::instance()->recDataMCFOS(this->recDDR, isCorrEn); },
-            Qt::QueuedConnection
-        );
+//        QMetaObject::invokeMethod(
+//            Calculator::instance(),
+//            [this]() { Calculator::instance()->recDataMCFOS(this->recDDR, isCorrEn); },
+//            Qt::QueuedConnection
+//        );
+
+        QMetaObject::invokeMethod(           // Вызов слота
+            Calculator::instance(),          // Получатель
+            "recDataMCFOS",                  // Имя слота
+            Qt::QueuedConnection,            // Тип соединения
+            Q_ARG(QByteArray, this->recDDR), // Параметр 1
+            Q_ARG(bool,       isCorrEn));    // Параметр 2
 	}
 }
 

@@ -197,7 +197,7 @@ void TcpHandler::reconnect()
 		m_socket->abort();
 	}
 
-	qInfo() << "Reconnecting to" << m_host << ":" << m_port;
+//	qInfo() << "Reconnecting to" << m_host << ":" << m_port;
 	m_socket->connectToHost(m_host, m_port);
 }
 
@@ -739,32 +739,161 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data)
 	qDebug() << Qt::endl
 			 << "RMO TCP Message:" << data.toHex(' ').toUpper();
 #endif
-	if (data.size() < static_cast<int>(sizeof(int32_t)))
+    if (data.size() < 8)
 		return;
 	QDataStream stream(data);
 	stream.setByteOrder(Utils::ByteOrder);
 	int32_t type = 0;
-	stream >> type;
-	qDebug() << "typeField received:" << type;
+    int dataLen = 0;
+    stream >> type >> dataLen;
+    qDebug() << "typeField received:" << type;
+    qDebug() << "dataLen:" << dataLen;
+//    qInfo() << Qt::endl << "TCP Message from RMO:" << data.toHex(' ').toUpper();
 
 	// Передаём ВСЮ data (включая type) в фабрику
 	auto msg = RmoMessageFactory::instance().fromByteArray(type, data);
 	if (msg)
-	{
+    {
 		switch (type)
 		{
 		case static_cast<int32_t>(RmoMsgType::TARGET_PPU):
 		{
 			auto typedMsg = dynamic_cast<RmoMessage_TargetPPU *>(msg.get());
+            static QByteArray ethResult;
 			if (typedMsg)
 			{
 				typedMsg->info();
-				AppConfig::instance().setModulePPU_CU(
-					(AppConfig::ModulePPU_num)typedMsg->numPPU,
-					typedMsg->azTarget, typedMsg->anTarget,
-					typedMsg->azTargetVel, typedMsg->anTargetVel,
-					typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
-					typedMsg->anC1, typedMsg->azC2, typedMsg->anC2);
+
+                // Создаём и заполняем параметры ЦУ:
+                //---------------------------------------------------------------
+                Calculator::paramCU cu;
+
+                // Время получения замера (от Сервера)
+                cu.timeCeil = TimeProvider::instance().getMks() - 10000; // Для отладки замер был получен 10 мс назад
+
+                // Время приёма сообщения в мкс (системное)
+                cu.timeSys = TimeProvider::instance().getMks();
+
+                // Время приёма сообщения в 0.1 мкс (по БС)
+                cu.timeBs = TimeProvider::instance().getBsPeriodTime();
+
+                cu.az    = typedMsg->azTarget; // Азимут
+                cu.an    = typedMsg->anTarget; // Угол места
+                cu.r     = 234.f; // Дальность
+
+                cu.azV   = typedMsg->azTargetVel;   // Скорость изменения азимута
+                cu.anV   = typedMsg->anTargetVel; // Скорость изменения угла места
+                cu.rV    = 0.f;   // Радиальная скорость
+
+                cu.azEr  = 0.f;   // Ошибка по азимуту
+                cu.anEr  = 0.f;   // Ошибка по углу места
+                cu.rEr   = 0.f;	  // Ошибка по дальности
+
+                cu.azVEr = 0.f;   // Ошибка по азимутальной скорости
+                cu.anVEr = 0.f;   // Ошибка по угломестной скорости
+                cu.rVEr  = 0.f;   // Ошибка по радиальной скорости
+
+                cu.numRLMN = static_cast<int>(typedMsg->numPPU); // Номер РЛ-канала
+                cu.mode = 1;      // Режим работы = 1 - обнаружение
+
+                // Вызываем обработчик ЦУ в Calculator
+                QMetaObject::invokeMethod(
+                    Calculator::instance(),
+                    [cu]() { Calculator::instance()->recCU(cu); },
+                    Qt::QueuedConnection
+                );
+                //---------------------------------------------------------------
+
+//				AppConfig::instance().setModulePPU_CU(
+//					(AppConfig::ModulePPU_num)typedMsg->numPPU,
+//					typedMsg->azTarget, typedMsg->anTarget,
+//					typedMsg->azTargetVel, typedMsg->anTargetVel,
+//					typedMsg->azC0, typedMsg->anC0, typedMsg->azC1,
+//                    typedMsg->anC1, typedMsg->azC2, typedMsg->anC2);
+//                if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1)
+//                {
+//                    auto ethMsgPPU1 = EthMessageFactory ::create<EthMessage_PPU_MOVE_1>();
+
+//                    static constexpr double INV_SCALE = 65536.0 / 360.0;
+//                    uint32_t azC0u = static_cast<uint32_t>(typedMsg->azC0 * INV_SCALE);
+//                    uint16_t azC1u = static_cast<uint16_t>(typedMsg->azC1 * INV_SCALE);
+//                    uint16_t azC2u = static_cast<uint16_t>(typedMsg->azC2 * INV_SCALE);
+//                    uint32_t anC0u = static_cast<uint32_t>(typedMsg->anC0 * INV_SCALE);
+//                    uint16_t anC1u = static_cast<uint16_t>(typedMsg->anC1 * INV_SCALE);
+//                    uint16_t anC2u = static_cast<uint16_t>(typedMsg->anC2 * INV_SCALE);
+
+//                    ethMsgPPU1.azC0[0] = static_cast<uint8_t>(azC0u);
+//                    ethMsgPPU1.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
+//                    ethMsgPPU1.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
+//                    ethMsgPPU1.azC1 = azC1u;
+//                    ethMsgPPU1.azC2 = azC2u;
+
+//                    ethMsgPPU1.anC0[0] = static_cast<uint8_t>(anC0u);
+//                    ethMsgPPU1.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
+//                    ethMsgPPU1.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
+//                    ethMsgPPU1.anC1 = anC1u;
+//                    ethMsgPPU1.anC2 = anC2u;
+
+//                    ethMsgPPU1.azSector = 0;
+//                    ethMsgPPU1.anSector = 0;
+
+//                    ethResult = ethMsgPPU1.serializeFull();
+
+////                    uint8_t azC0[3];   ///< Коэффициент C0 полинома для движения по азимуту, град
+////                    uint16_t azC1;	   ///< Коэффициент C1 полинома для движения по азимуту, град/с
+////                    uint16_t azC2;	   ///< Коэффициент C2 полинома для движения по азимуту, град/с^2
+////                    uint8_t anC0[3];   ///< Коэффициент C0 полинома для движения по углу места, град
+////                    uint16_t anC1;	   ///< Коэффициент C1 полинома для движения по углу места, град/с
+////                    uint16_t anC2;	   ///< Коэффициент C2 полинома для движения по углу места, град/с^2
+////                    uint16_t azSector; ///< Размер области по азимуту, град
+////                    uint16_t anSector; ///< Размер области по углу места, град
+//                }
+//                else if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_2)
+//                {
+//                    auto ethMsgPPU2 = EthMessageFactory ::create<EthMessage_PPU_MOVE_2>();
+
+//                    static constexpr double INV_SCALE = 65536.0 / 360.0;
+//                    uint32_t azC0u = static_cast<uint32_t>(typedMsg->azC0 * INV_SCALE);
+//                    uint16_t azC1u = static_cast<uint16_t>(typedMsg->azC1 * INV_SCALE);
+//                    uint16_t azC2u = static_cast<uint16_t>(typedMsg->azC2 * INV_SCALE);
+//                    uint32_t anC0u = static_cast<uint32_t>(typedMsg->anC0 * INV_SCALE);
+//                    uint16_t anC1u = static_cast<uint16_t>(typedMsg->anC1 * INV_SCALE);
+//                    uint16_t anC2u = static_cast<uint16_t>(typedMsg->anC2 * INV_SCALE);
+
+//                    ethMsgPPU2.azC0[0] = static_cast<uint8_t>(azC0u);
+//                    ethMsgPPU2.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
+//                    ethMsgPPU2.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
+//                    ethMsgPPU2.azC1 = azC1u;
+//                    ethMsgPPU2.azC2 = azC2u;
+
+//                    ethMsgPPU2.anC0[0] = static_cast<uint8_t>(anC0u);
+//                    ethMsgPPU2.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
+//                    ethMsgPPU2.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
+//                    ethMsgPPU2.anC1 = anC1u;
+//                    ethMsgPPU2.anC2 = anC2u;
+
+//                    ethMsgPPU2.azSector = 0;
+//                    ethMsgPPU2.anSector = 0;
+
+//                    ethResult = ethMsgPPU2.serializeFull();
+
+////                    uint8_t azC0[3];   ///< Коэффициент C0 полинома для движения по азимуту, град
+////                    uint16_t azC1;	   ///< Коэффициент C1 полинома для движения по азимуту, град/с
+////                    uint16_t azC2;	   ///< Коэффициент C2 полинома для движения по азимуту, град/с^2
+////                    uint8_t anC0[3];   ///< Коэффициент C0 полинома для движения по углу места, град
+////                    uint16_t anC1;	   ///< Коэффициент C1 полинома для движения по углу места, град/с
+////                    uint16_t anC2;	   ///< Коэффициент C2 полинома для движения по углу места, град/с^2
+////                    uint16_t azSector; ///< Размер области по азимуту, град
+////                    uint16_t anSector; ///< Размер области по углу места, град
+//                }
+//                if (m_ethSendCallback && !ethResult.isEmpty())
+//                {
+//                    m_ethSendCallback(ethResult);
+//                }
+//                else
+//                {
+//                    delete typedMsg;
+//                }
 			}
 			break;
 		}
@@ -853,11 +982,11 @@ void TcpHandler::processIncomingMessageRMO(const QByteArray &data)
 			break;
 		}
 		case static_cast<int32_t>(RmoMsgType::SET_MODE_PPU):
-		{
+        {
 			auto typedMsg = dynamic_cast<RmoMessage_SetModePPU *>(msg.get());
 			static QByteArray ethResult;
 			if (typedMsg)
-			{
+            {
 				typedMsg->info();
 				if (typedMsg->numPPU == AppConfig::ModulePPU_num_RLMN_1)
 				{

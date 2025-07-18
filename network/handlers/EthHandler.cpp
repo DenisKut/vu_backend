@@ -6,6 +6,7 @@
 #include "utils/env_loader/Settings.h"
 #include "../../common/calculator/Calculator.h"
 #include <QDebug>
+#include <QSharedPointer>
 
 // DS ADD BEG
 #ifdef _WIN32
@@ -214,7 +215,7 @@ void EthHandler::stopReconnectTimer()
 void EthHandler::attemptReconnect()
 {
 	m_reconnectAttempts++;
-	qInfo() << "Attempting to reconnect, attempt" << m_reconnectAttempts;
+//	qInfo() << "Attempting to reconnect, attempt" << m_reconnectAttempts;
 
 	disconnectAdapter();
 	QThread::msleep(500); // Даем время на корректное закрытие
@@ -228,7 +229,7 @@ EthHandler::EthHandler(QObject *parent)
 	m_reconnectTimer->setSingleShot(false);
 	connect(m_reconnectTimer, &QTimer::timeout, this, &EthHandler::attemptReconnect);
 #ifndef _WIN32
-	QString interfaceName = findWiredInterface();
+    QString interfaceName = "eth1";//findWiredInterface();
 	if (!interfaceName.isEmpty())
 	{
 
@@ -652,7 +653,7 @@ void EthHandler::checkReceived()
                 disconnectAdapter();
                 // Запускаем таймер переподключения
                 startReconnectTimer(); }, Qt::QueuedConnection);
-	}
+    }
 }
 
 #else
@@ -696,6 +697,16 @@ void EthHandler::checkReceived()
 	}
 }
 #endif
+
+
+
+/// Отправить произвольное сообщение:
+void EthHandler::sendMessageSlot(const QByteArray &_data)
+{
+    sendMessage(_data);
+}
+
+
 
 #ifndef _WIN32
 bool EthHandler::isEthernetInterface(const QNetworkInterface &interface)
@@ -808,8 +819,10 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
                 timeTemp &= 0x000000FFFFFFFFFF;
                 ppu.timeBs = timeTemp;          // Время обновления координат от ППУ (по БС)
                 ppu.timeSys = TimeProvider::instance().getMks(); // Время приёма пакета от БС (системное)
-                ppu.az = from_anglePPU(msgPPU_POSITION->az); // Текущая горизонтальная координата, град
-                ppu.an = from_anglePPU(msgPPU_POSITION->az); // Текущая вертикальная координата, град
+                float az = from_anglePPU(msgPPU_POSITION->az);
+                float an = from_anglePPU(msgPPU_POSITION->an);
+                ppu.az = az; // Текущая горизонтальная координата, град
+                ppu.an = an; // Текущая вертикальная координата, град
                 ppu.lastCommand = msgPPU_POSITION->lastCommand;	 // Код последней полученной команды
                 ppu.state = msgPPU_POSITION->state;			 // Состояние
                 ppu.ispr = msgPPU_POSITION->ispr;			 // Исправность оборудования
@@ -1016,17 +1029,19 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
 //					msgRmo.isRemote = static_cast<uint8_t>(AppConfig::instance().getModulePPU_isRemote(AppConfig::ModulePPU_num_RLMN_1));
 //					msgRmo.counter = rmoCounter++;
 //					*/
-//					// auto msgRmo = QSharedPointer::create<RmoMessage_TargetPPU>();
+//                    auto msgRmo = QSharedPointer::create<RmoMessage_TargetPPU>();
 
-//					auto msgFill = RmoMessageFactory::instance()
-//									   .createWithArgs<RmoMessage_TargetPPU>(
-//										   AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
-//					msgFill->set_azC(azC0, azC1, azC2);
-//					msgFill->set_anC(anC0, anC1, anC2);
-//					msgFill->counter = AppConfig::instance().increaseRmoCounter();
+                    auto msgFill = RmoMessageFactory::instance()
+                                       .createWithArgs<RmoMessage_TargetPPU>(
+                                           AppConfig::ModulePPU_num::ModulePPU_num_RLMN_1);
+//                    msgFill->set_azC(azC0, azC1, azC2);
+//                    msgFill->set_anC(anC0, anC1, anC2);
+                    msgFill->azPPU = az;
+                    msgFill->anPPU = an;
+                    msgFill->counter = AppConfig::instance().increaseRmoCounter();
 
-//					if (m_tcpSendCallback)
-//						m_tcpSendCallback(msgFill);
+                    if (m_tcpSendCallback)
+                        m_tcpSendCallback(msgFill);
 //				}
 //				else
 //				{
@@ -1083,8 +1098,10 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
                 timeTemp &= 0x000000FFFFFFFFFF;
                 ppu.timeBs = timeTemp;          // Время обновления координат от ППУ (по БС)
                 ppu.timeSys = TimeProvider::instance().getMks(); // Время приёма пакета от БС (системное)
-                ppu.az = from_anglePPU(msgPPU_POSITION->az); // Текущая горизонтальная координата, град
-                ppu.an = from_anglePPU(msgPPU_POSITION->az); // Текущая вертикальная координата, град
+                float az = from_anglePPU(msgPPU_POSITION->az);
+                float an = from_anglePPU(msgPPU_POSITION->an);
+                ppu.az = az; // Текущая горизонтальная координата, град
+                ppu.an = an; // Текущая вертикальная координата, град
                 ppu.lastCommand = msgPPU_POSITION->lastCommand;	 // Код последней полученной команды
                 ppu.state = msgPPU_POSITION->state;			 // Состояние
                 ppu.ispr = msgPPU_POSITION->ispr;			 // Исправность оборудования
@@ -1264,16 +1281,18 @@ void EthHandler::processIncomingFrame(const QByteArray &msg)
 //					//                    else if (mode == 11) { mode = 12; }
 //					//                    else if (mode == 12) { mode = 3; }
 
-//					// Отправка отладочных данных на форму для отображения:
-//					auto msgFill = RmoMessageFactory::instance()
-//									   .createWithArgs<RmoMessage_TargetPPU>(
-//										   AppConfig::ModulePPU_num::ModulePPU_num_RLMN_2);
+                    // Отправка отладочных данных на форму для отображения:
+                    auto msgFill = RmoMessageFactory::instance()
+                                       .createWithArgs<RmoMessage_TargetPPU>(
+                                           AppConfig::ModulePPU_num::ModulePPU_num_RLMN_2);
 //					msgFill->set_azC(azC0, azC1, azC2);
 //					msgFill->set_anC(anC0, anC1, anC2);
-//					msgFill->counter = AppConfig::instance().increaseRmoCounter();
+                    msgFill->azPPU = az;
+                    msgFill->anPPU = an;
+                    msgFill->counter = AppConfig::instance().increaseRmoCounter();
 
-//					if (m_tcpSendCallback)
-//						m_tcpSendCallback(msgFill);
+                    if (m_tcpSendCallback)
+                        m_tcpSendCallback(msgFill);
 //				}
 //				else
 //				{

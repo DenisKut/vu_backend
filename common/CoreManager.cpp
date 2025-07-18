@@ -15,17 +15,17 @@ void CoreManager::initialize()
         // Запуск сетевого модуля
         m_networkManager->start();
 
-		// Пример: отправить paramCU из Calculator в EthHandler
-		Calculator::instance()->setTestToETHCallback(
-            [this](const Calculator::testDataToETH &testData) {
-            if (m_networkManager->m_ethHandler) {
-                QMetaObject::invokeMethod(m_networkManager->m_ethHandler, [testData]()
-                {
-                    // m_ethHandler->processTest(testData);
-                },
-                Qt::QueuedConnection);
-            }
-        });
+//		// Пример: отправить paramCU из Calculator в EthHandler
+//		Calculator::instance()->setTestToETHCallback(
+//            [this](const Calculator::testDataToETH &testData) {
+//            if (m_networkManager->m_ethHandler) {
+//                QMetaObject::invokeMethod(m_networkManager->m_ethHandler, [testData]()
+//                {
+//                    m_ethHandler->processTest(testData);
+//                },
+//                Qt::QueuedConnection);
+//            }
+//        });
 
 //        // Отправить  из Calculator в EthHandler
 //        Calculator::instance()->setTestToETHCallback(

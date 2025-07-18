@@ -58,23 +58,25 @@ void TcpConnectionHandler::sendData(const QByteArray &data)
 		qWarning("[TcpConnectionHandler] sendData: socket not connected");
 		return;
 	}
-//	qint64 written = m_socket->write(data);
-//    if (written != data.size())
-//    {
-//        qWarning("[TcpConnectionHandler] sendData: not all data written (%lld/%d)",
-//                 written, data.size());
-//    }
-
-    // Отправка в т.ч. больших данных (фрагментированных)
-    qint64 written = 0;
-    while (written < data.size()) {
-        const qint64 result = m_socket->write(data.constData() + written,
-                                              data.size()      - written);
-        if (result <= 0) {
-            qWarning() << "[TcpConnectionHandler] sendData: failed to write data:"
-                       << m_socket->errorString();
-            break;
-        }
-        written += result;
+    qint64 written = m_socket->write(data);
+    m_socket->flush();
+    if (written != data.size())
+    {
+        qWarning("[TcpConnectionHandler] sendData: not all data written (%lld/%d)",
+                 written, data.size());
     }
+
+//    // Отправка в т.ч. больших данных (фрагментированных)
+//    qint64 written = 0;
+//    while (written < data.size()) {
+//        const qint64 result = m_socket->write(data.constData() + written,
+//                                              data.size()      - written);
+//        m_socket->flush();
+//        if (result <= 0) {
+//            qWarning() << "[TcpConnectionHandler] sendData: failed to write data:"
+//                       << m_socket->errorString();
+//            break;
+//        }
+//        written += result;
+//    }
 }

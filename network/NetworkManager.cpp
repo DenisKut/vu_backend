@@ -1,6 +1,8 @@
 #include "NetworkManager.h"
 #include "utils/env_loader/Settings.h"
 #include <QMetaType>
+#include "common/calculator/Calculator.h"
+#include "network/handlers/EthHandler.h"
 NetworkManager::NetworkManager(QObject *parent)
 	: QObject(parent),
 	  m_tcpHandler(new TcpHandler()),
@@ -49,6 +51,8 @@ NetworkManager::NetworkManager(QObject *parent)
     connect(m_tcpHandler, &TcpHandler::mcfosWriteRequested, m_udpHandler, &UdpHandler::slot_mcfosWrite_DAC_REF, Qt::QueuedConnection);
     connect(m_tcpHandler, &TcpHandler::mcfosStartRequested, m_udpHandler, &UdpHandler::slot_mcfosStart, Qt::QueuedConnection);
 
+    // --- Connect Calculator->ETH routing ---
+    connect(Calculator::instance(), &Calculator::sendMessageETH, m_ethHandler, &EthHandler::sendMessageSlot, Qt::QueuedConnection);
 #ifdef _WIN32
 	// connect(&m_ethTimer, &QTimer::timeout, m_ethHandler,
 	//                                            &EthHandler::checkReceived);

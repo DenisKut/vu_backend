@@ -77,6 +77,7 @@ struct RmoBaseMessage
 struct RmoMessage_TargetPPU : RmoBaseMessage
 {
 	int32_t typeField = static_cast<int32_t>(RmoMsgType::TARGET_PPU);
+    int dataLen = 105;
 	int numPPU = AppConfig::ModulePPU_num_RLMN_1;
 	double azPPU = 0.0;
 	double anPPU = 0.0;
@@ -98,6 +99,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage
 		QDataStream stream(&data, QIODevice::WriteOnly);
 		stream.setByteOrder(Utils::ByteOrder);
 		stream << typeField
+               << dataLen
 			   << numPPU
 			   << azPPU << anPPU
 			   << azC0 << azC1 << azC2
@@ -113,7 +115,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage
 		auto msg = QSharedPointer<RmoMessage_TargetPPU>::create();
 		QDataStream stream(data);
 		stream.setByteOrder(Utils::ByteOrder);
-		stream >> msg->typeField >> msg->numPPU >> msg->azPPU >> msg->anPPU >> msg->azC0 >> msg->azC1 >> msg->azC2 >> msg->anC0 >> msg->anC1 >> msg->anC2 >> msg->azTarget >> msg->anTarget >> msg->azTargetVel >> msg->anTargetVel >> msg->isRemote >> msg->counter;
+        stream >> msg->typeField >> msg->dataLen >> msg->numPPU >> msg->azPPU >> msg->anPPU >> msg->azC0 >> msg->azC1 >> msg->azC2 >> msg->anC0 >> msg->anC1 >> msg->anC2 >> msg->azTarget >> msg->anTarget >> msg->azTargetVel >> msg->anTargetVel >> msg->isRemote >> msg->counter;
 		return msg;
 	}
 
@@ -234,6 +236,7 @@ struct RmoMessage_TargetPPU : RmoBaseMessage
 struct RmoMessage_EnablePPU : RmoBaseMessage
 {
 	int32_t typeField = static_cast<int32_t>(RmoMsgType::ENABLE_PPU);
+    int dataLen = 8;
 	int numPPU = AppConfig::ModulePPU_num_RLMN_1;
 	// Состояние ВКЛ/ВЫКЛ
 	int state = 0;
@@ -249,6 +252,7 @@ struct RmoMessage_EnablePPU : RmoBaseMessage
 		QDataStream stream(&data, QIODevice::WriteOnly);
 		stream.setByteOrder(Utils::ByteOrder);
 		stream << typeField
+               << dataLen
 			   << numPPU
 			   << state;
 		return data;
@@ -259,7 +263,7 @@ struct RmoMessage_EnablePPU : RmoBaseMessage
 		auto msg = QSharedPointer<RmoMessage_EnablePPU>::create();
 		QDataStream stream(data);
 		stream.setByteOrder(Utils::ByteOrder);
-		stream >> msg->typeField >> msg->numPPU >> msg->state;
+        stream >> msg->typeField >> msg->dataLen >> msg->numPPU >> msg->state;
 		return msg;
 	}
 
@@ -308,6 +312,7 @@ struct RmoMessage_EnablePPU : RmoBaseMessage
 struct RmoMessage_ResetPPU : RmoBaseMessage
 {
 	int32_t typeField = static_cast<int32_t>(RmoMsgType::RESET_PPU);
+    int dataLen = 8;
 	int numPPU = AppConfig::ModulePPU_num_RLMN_1;
 	int resetDst = AppConfig::ModulePPU_resetDst_PPU;
 
@@ -319,7 +324,8 @@ struct RmoMessage_ResetPPU : RmoBaseMessage
 		QByteArray data;
 		QDataStream stream(&data, QIODevice::WriteOnly);
 		stream.setByteOrder(Utils::ByteOrder);
-		stream << typeField
+        stream << typeField
+               << dataLen
 			   << numPPU
 			   << resetDst;
 		return data;
@@ -330,7 +336,7 @@ struct RmoMessage_ResetPPU : RmoBaseMessage
 		auto msg = QSharedPointer<RmoMessage_ResetPPU>::create();
 		QDataStream stream(data);
 		stream.setByteOrder(Utils::ByteOrder);
-		stream >> msg->typeField >> msg->numPPU >> msg->resetDst;
+        stream >> msg->typeField >> msg->dataLen >> msg->numPPU >> msg->resetDst;
 		return msg;
 	}
 
@@ -384,6 +390,7 @@ struct RmoMessage_ResetPPU : RmoBaseMessage
 struct RmoMessage_StopPPU : RmoBaseMessage
 {
 	int32_t typeField = static_cast<int32_t>(RmoMsgType::STOP_PPU);
+    int dataLen = 4;
 	int numPPU = AppConfig::ModulePPU_num_RLMN_1;
 
 	int type() const override { return typeField; }
@@ -394,7 +401,8 @@ struct RmoMessage_StopPPU : RmoBaseMessage
 		QByteArray data;
 		QDataStream stream(&data, QIODevice::WriteOnly);
 		stream.setByteOrder(Utils::ByteOrder);
-		stream << typeField
+        stream << typeField
+               << dataLen
 			   << numPPU;
 		return data;
 	}
@@ -404,7 +412,7 @@ struct RmoMessage_StopPPU : RmoBaseMessage
 		auto msg = QSharedPointer<RmoMessage_StopPPU>::create();
 		QDataStream stream(data);
 		stream.setByteOrder(Utils::ByteOrder);
-		stream >> msg->typeField >> msg->numPPU;
+        stream >> msg->typeField >> msg->dataLen >> msg->numPPU;
 		return msg;
 	}
 
@@ -449,6 +457,7 @@ struct RmoMessage_StopPPU : RmoBaseMessage
 struct RmoMessage_SetModePPU : RmoBaseMessage
 {
 	int32_t typeField = static_cast<int32_t>(RmoMsgType::SET_MODE_PPU);
+    int dataLen = 8;
 	int numPPU = AppConfig::ModulePPU_num_RLMN_1;
 	int modePPU = AppConfig::ModulePPU_modePPU_speed;
 
@@ -460,7 +469,8 @@ struct RmoMessage_SetModePPU : RmoBaseMessage
 		QByteArray data;
 		QDataStream stream(&data, QIODevice::WriteOnly);
 		stream.setByteOrder(QDataStream::LittleEndian);
-		stream << typeField
+        stream << typeField
+               << dataLen
 			   << numPPU
 			   << modePPU;
 		return data;
@@ -470,8 +480,8 @@ struct RmoMessage_SetModePPU : RmoBaseMessage
 	{
 		auto msg = QSharedPointer<RmoMessage_SetModePPU>::create();
 		QDataStream stream(data);
-		stream.setByteOrder(QDataStream::LittleEndian);
-		stream >> msg->typeField >> msg->numPPU >> msg->modePPU;
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream >> msg->typeField >> msg->dataLen >> msg->numPPU >> msg->modePPU;
 		return msg;
 	}
 
@@ -523,6 +533,7 @@ struct RmoMessage_SetModePPU : RmoBaseMessage
 struct RmoMessage_MessagePPU : RmoBaseMessage
 {
 	int32_t typeField = static_cast<int32_t>(RmoMsgType::PPU_MSG);
+    int dataLen = 20;
 	int numPPU = AppConfig::ModulePPU_num_RLMN_1;
 	QString direction = "up";
 
@@ -534,7 +545,7 @@ struct RmoMessage_MessagePPU : RmoBaseMessage
 		QByteArray data;
 		QDataStream stream(&data, QIODevice::WriteOnly);
 		stream.setByteOrder(QDataStream::LittleEndian);
-		stream << typeField << numPPU;
+        stream << typeField << dataLen << numPPU;
 		QByteArray dirBytes = direction.toUtf8();
 		stream.writeRawData(dirBytes.constData(), qMin(dirBytes.size(), 16));
 		if (dirBytes.size() < 16)
@@ -550,7 +561,7 @@ struct RmoMessage_MessagePPU : RmoBaseMessage
 		auto msg = QSharedPointer<RmoMessage_MessagePPU>::create();
 		QDataStream stream(data);
 		stream.setByteOrder(QDataStream::LittleEndian);
-		stream >> msg->typeField >> msg->numPPU;
+        stream >> msg->typeField >> msg->dataLen >> msg->numPPU;
 		QByteArray dirBytes(16, 0);
 		stream.readRawData(dirBytes.data(), 16);
 		int realLen = strnlen(dirBytes.constData(), 16);
@@ -601,6 +612,7 @@ struct RmoMessage_MessagePPU : RmoBaseMessage
 struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage
 {
 	int32_t typeField = static_cast<int32_t>(RmoMsgType::MCFOS_WRITE_DAC_REF);
+    int dataLen = 20;
 	float amlitude;
 	float f0;
 	float df;
@@ -615,7 +627,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage
 		QByteArray data;
 		QDataStream stream(&data, QIODevice::WriteOnly);
 		stream.setByteOrder(QDataStream::LittleEndian);
-		stream << typeField << amlitude << f0 << df << pulseSize << windowType;
+        stream << typeField << dataLen << amlitude << f0 << df << pulseSize << windowType;
 		return data;
 	}
 	static QSharedPointer<RmoBaseMessage> fromByteArray(const QByteArray &data)
@@ -623,7 +635,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage
 		auto msg = QSharedPointer<RmoMessage_MCFOS_Write_DAC_REF>::create();
 		QDataStream stream(data);
 		stream.setByteOrder(QDataStream::LittleEndian);
-		stream >> msg->typeField >> msg->amlitude >> msg->f0 >> msg->df >> msg->pulseSize >> msg->windowType;
+        stream >> msg->typeField >> msg->dataLen >> msg->amlitude >> msg->f0 >> msg->df >> msg->pulseSize >> msg->windowType;
 		return msg;
 	}
 	nlohmann::json toJson() const override
@@ -671,6 +683,7 @@ struct RmoMessage_MCFOS_Write_DAC_REF : RmoBaseMessage
 struct RmoMessage_MCFOS_Start : RmoBaseMessage
 {
 	int32_t typeField = static_cast<int32_t>(RmoMsgType::MCFOS_START);
+    int dataLen = 48;
 	quint32 periodSize;
 	quint32 periodCount;
 	quint32 ampOff;
@@ -692,7 +705,8 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage
 		QByteArray data;
 		QDataStream stream(&data, QIODevice::WriteOnly);
 		stream.setByteOrder(QDataStream::LittleEndian);
-		stream << typeField
+        stream << typeField
+               << dataLen
 			   << periodSize
 			   << periodCount
 			   << ampOff
@@ -712,11 +726,11 @@ struct RmoMessage_MCFOS_Start : RmoBaseMessage
 		auto msg = QSharedPointer<RmoMessage_MCFOS_Start>::create();
 		QDataStream stream(data);
 		stream.setByteOrder(QDataStream::LittleEndian);
-        stream >> msg->typeField >> msg->periodSize >> msg->periodCount
-               >> msg->ampOff >> msg->pulseOn >> msg->pulseOff
-               >> msg->procDelay >> msg->procDelta >> msg->windowType
-               >> msg->isCorrelation >> msg->isSignalFromDAC >> msg->isWriteFile
-               >> msg->numRangeCh;
+        stream >> msg->typeField >> msg->dataLen >> msg->periodSize
+               >> msg->periodCount >> msg->ampOff >> msg->pulseOn
+               >> msg->pulseOff >> msg->procDelay >> msg->procDelta
+               >> msg->windowType >> msg->isCorrelation >> msg->isSignalFromDAC
+               >> msg->isWriteFile >> msg->numRangeCh;
 		return msg;
 	}
 	nlohmann::json toJson() const override

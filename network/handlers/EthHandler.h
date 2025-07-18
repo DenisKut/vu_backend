@@ -90,6 +90,8 @@ public slots:
 	void start();
 	void checkReceived();
 
+    void sendMessageSlot(const QByteArray& _data);
+
 signals:
 	/**
 	 * @brief Сигнал о приёме Ethernet-фрейма

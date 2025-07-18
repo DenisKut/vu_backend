@@ -4,6 +4,10 @@
 #include <QVector>
 #include <cmath>
 #include <fftw3.h>
+#include "network/handlers/EthHandler.h"
+#include "network/messages/EthMessage.h"
+#include "utils/time_provider/TimeProvider.h"
+#include <math.h>
 
 // Функция для извлечения 32-битного целого из QByteArray
 inline qint32 extractInt32(const QByteArray& data, int offset) {
@@ -717,23 +721,24 @@ void Calculator::recCU(paramCU cu)
 
     // Сохранение данных в общую структуру:
     //-------------------------------------------------------------------------
-    m_paramRLMN[numRLMN].m_paramCU.timeCeil = cu.timeCeil;
-    m_paramRLMN[numRLMN].m_paramCU.timeSys = cu.timeSys;
-    m_paramRLMN[numRLMN].m_paramCU.timeBs = cu.timeBs;
-    m_paramRLMN[numRLMN].m_paramCU.az = cu.az;
-    m_paramRLMN[numRLMN].m_paramCU.an = cu.an;
-    m_paramRLMN[numRLMN].m_paramCU.r = cu.r;
-    m_paramRLMN[numRLMN].m_paramCU.azV = cu.azV;
-    m_paramRLMN[numRLMN].m_paramCU.anV = cu.anV;
-    m_paramRLMN[numRLMN].m_paramCU.rV = cu.rV;
-    m_paramRLMN[numRLMN].m_paramCU.azEr = cu.azEr;
-    m_paramRLMN[numRLMN].m_paramCU.anEr = cu.anEr;
-    m_paramRLMN[numRLMN].m_paramCU.rEr = cu.rEr;
-    m_paramRLMN[numRLMN].m_paramCU.azVEr = cu.azVEr;
-    m_paramRLMN[numRLMN].m_paramCU.anVEr = cu.anVEr;
-    m_paramRLMN[numRLMN].m_paramCU.rVEr = cu.rVEr;
-    m_paramRLMN[numRLMN].m_paramCU.numRLMN = cu.numRLMN;
-    m_paramRLMN[numRLMN].m_paramCU.mode = cu.mode;
+    paramCU *m_cu = &m_paramRLMN[numRLMN].m_paramCU;
+    m_cu->timeCeil = cu.timeCeil;
+    m_cu->timeSys = cu.timeSys;
+    m_cu->timeBs = cu.timeBs;
+    m_cu->az = cu.az;
+    m_cu->an = cu.an;
+    m_cu->r = cu.r;
+    m_cu->azV = cu.azV;
+    m_cu->anV = cu.anV;
+    m_cu->rV = cu.rV;
+    m_cu->azEr = cu.azEr;
+    m_cu->anEr = cu.anEr;
+    m_cu->rEr = cu.rEr;
+    m_cu->azVEr = cu.azVEr;
+    m_cu->anVEr = cu.anVEr;
+    m_cu->rVEr = cu.rVEr;
+    m_cu->numRLMN = cu.numRLMN;
+    m_cu->mode = cu.mode;
     //-------------------------------------------------------------------------
 
     // Режим работы РЛМН
@@ -745,49 +750,49 @@ void Calculator::recCU(paramCU cu)
 // Принято сообщение синхронизации от БС (2.5)
 void Calculator::recTimeBS()
 {
-    for (int i = 0; i < countRLMN; i++) {
-        // Если есть какое-то задание на РЛМН i
-        switch (m_paramRLMN[i].mode) {
-        case 1: { // 1 - обнаружение
-            // Если последнее ЦУ пришло более 2-х секунд назад,
-            // то сброситься в ожидание команд:
-            const int64_t timeMaxCU = 2000000; // 2 секунды в мкс
-            int64_t timeCurrent = TimeProvider::instance().getMks(); // Текущее время
-            int64_t timeCU = m_paramRLMN[i].m_paramCU.timeSys; // Время получения ЦУ
-            if (timeCurrent - timeCU > timeMaxCU) {
-                m_paramRLMN[i].mode = 0;
+//    for (int i = 0; i < countRLMN; i++) {
+//        // Если есть какое-то задание на РЛМН i
+//        switch (m_paramRLMN[i].mode) {
+//        case 1: { // 1 - обнаружение
+//            // Если последнее ЦУ пришло более 2-х секунд назад,
+//            // то сброситься в ожидание команд:
+//            const int64_t timeMaxCU = 2000000; // 2 секунды в мкс
+//            int64_t timeCurrent = TimeProvider::instance().getMks(); // Текущее время
+//            int64_t timeCU = m_paramRLMN[i].m_paramCU.timeSys; // Время получения ЦУ
+//            if (timeCurrent - timeCU > timeMaxCU) {
+//                m_paramRLMN[i].mode = 0;
 
-                // Отправить нулевой полином на ППУ:
-                // ...
-            } else {
-                // Отправить полином на ППУ по координатам последнего ЦУ:
-                // ...
-            }
+//                // Отправить нулевой полином на ППУ:
+//                // ...
+//            } else {
+//                // Отправить полином на ППУ по координатам последнего ЦУ:
+//                // ...
+//            }
 
-            // Проверка на попадание цели в луч:
-            float azCU = m_paramRLMN[i].m_paramCU.az;
-            float anCU = m_paramRLMN[i].m_paramCU.an;
-            float azEr = m_paramRLMN[i].m_paramCU.azEr;
-            float anEr = m_paramRLMN[i].m_paramCU.anEr;
-            float azPPU = m_paramRLMN[i].m_paramPPU.az;
-            float anPPU = m_paramRLMN[i].m_paramPPU.an;
-            if (azPPU > azCU - azEr - rRay && azPPU < azCU + azEr + rRay &&
-                anPPU > anCU - anEr - rRay && anPPU < anCU + anEr + rRay) {
-                // Если попадаем, то рассчитать параметры для МЦФОС и излучить:
-                // ...
-            }
-            break;
-        }
-        case 2: { // 2 - сопровождение
-            break;
-        }
-        case 3: { // 3 - разовый замер
-            break;
-        }
-        default:
-            break;
-        }
-    }
+//            // Проверка на попадание цели в луч:
+//            float azCU = m_paramRLMN[i].m_paramCU.az;
+//            float anCU = m_paramRLMN[i].m_paramCU.an;
+//            float azEr = m_paramRLMN[i].m_paramCU.azEr;
+//            float anEr = m_paramRLMN[i].m_paramCU.anEr;
+//            float azPPU = m_paramRLMN[i].m_paramPPU.az;
+//            float anPPU = m_paramRLMN[i].m_paramPPU.an;
+//            if (azPPU > azCU - azEr - rRay && azPPU < azCU + azEr + rRay &&
+//                anPPU > anCU - anEr - rRay && anPPU < anCU + anEr + rRay) {
+//                // Если попадаем, то рассчитать параметры для МЦФОС и излучить:
+//                // ...
+//            }
+//            break;
+//        }
+//        case 2: { // 2 - сопровождение
+//            break;
+//        }
+//        case 3: { // 3 - разовый замер
+//            break;
+//        }
+//        default:
+//            break;
+//        }
+//    }
 }
 
 
@@ -812,33 +817,201 @@ void Calculator::recPosPPU(paramPPU ppu)
     }
 
     // Сохранение данных в общую структуру:
+    paramPPU *m_ppu = &m_paramRLMN[numRLMN].m_paramPPU;
     //-------------------------------------------------------------------------
-    m_paramRLMN[numRLMN].m_paramPPU.timeBs = ppu.timeBs;       // Время обновления координат от ППУ (по БС)
-    m_paramRLMN[numRLMN].m_paramPPU.timeSys = ppu.timeSys;     // Время приёма пакета от БС (системное)
-    m_paramRLMN[numRLMN].m_paramPPU.az = ppu.az;               // Текущая горизонтальная координата, град
-    m_paramRLMN[numRLMN].m_paramPPU.an = ppu.an;               // Текущая вертикальная координата, град
-    m_paramRLMN[numRLMN].m_paramPPU.lastCommand = ppu.lastCommand;	 // Код последней полученной команды
-    m_paramRLMN[numRLMN].m_paramPPU.state = ppu.state;			// Состояние
-    m_paramRLMN[numRLMN].m_paramPPU.ispr = ppu.ispr;			// Исправность оборудования
-    m_paramRLMN[numRLMN].m_paramPPU.azDelay = ppu.azDelay;		// Задержка измерения координаты по азимуту, мс
-    m_paramRLMN[numRLMN].m_paramPPU.anDelay = ppu.anDelay;		// Задержка измерения координаты по углу места, мс
-    m_paramRLMN[numRLMN].m_paramPPU.borders = ppu.borders;		// Состояние границ
-    m_paramRLMN[numRLMN].m_paramPPU.waitCommands = ppu.waitCommands; // Время ожидания команд, мс
-    m_paramRLMN[numRLMN].m_paramPPU.waitTarget = ppu.waitTarget;	 // Время ожидания целеуказаний, мс
+    m_ppu->timeBs          = ppu.timeBs;       // Время обновления координат от ППУ (по БС)
+    m_ppu->timeSys         = ppu.timeSys;      // Время приёма пакета от БС (системное)
+    m_ppu->az              = ppu.az;           // Текущая горизонтальная координата, град
+    m_ppu->an              = ppu.an;           // Текущая вертикальная координата, град
+    m_ppu->lastCommand     = ppu.lastCommand;  // Код последней полученной команды
+    m_ppu->state           = ppu.state;		   // Состояние
+    m_ppu->ispr            = ppu.ispr;		   // Исправность оборудования
+    m_ppu->azDelay         = ppu.azDelay;	   // Задержка измерения координаты по азимуту, мс
+    m_ppu->anDelay         = ppu.anDelay;	   // Задержка измерения координаты по углу места, мс
+    m_ppu->borders         = ppu.borders;	   // Состояние границ
+    m_ppu->waitCommands    = ppu.waitCommands; // Время ожидания команд, мс
+    m_ppu->waitTarget      = ppu.waitTarget;   // Время ожидания целеуказаний, мс
 
     // Ошибки драйверов: 0х31-ошибка Аз, 0х32-ошибка Ум
-    m_paramRLMN[numRLMN].m_paramPPU.driverError[0] = ppu.driverError[0];
-    m_paramRLMN[numRLMN].m_paramPPU.driverError[1] = ppu.driverError[1];
-    m_paramRLMN[numRLMN].m_paramPPU.driverError[2] = ppu.driverError[2];
+    m_ppu->driverError[0]  = ppu.driverError[0];
+    m_ppu->driverError[1]  = ppu.driverError[1];
+    m_ppu->driverError[2]  = ppu.driverError[2];
 
     // Признаки срабатывания концевых выключателей
-    m_paramRLMN[numRLMN].m_paramPPU.signsSwithes[0] = ppu.signsSwithes[0];
-    m_paramRLMN[numRLMN].m_paramPPU.signsSwithes[1] = ppu.signsSwithes[1];
-    m_paramRLMN[numRLMN].m_paramPPU.signsSwithes[2] = ppu.signsSwithes[2];
+    m_ppu->signsSwithes[0] = ppu.signsSwithes[0];
+    m_ppu->signsSwithes[1] = ppu.signsSwithes[1];
+    m_ppu->signsSwithes[2] = ppu.signsSwithes[2];
 
-    m_paramRLMN[numRLMN].m_paramPPU.operatingMode = ppu.operatingMode; // Режим работы
-    m_paramRLMN[numRLMN].m_paramPPU.numRLMN = ppu.numRLMN;             // Номер РЛ-канала
+    m_ppu->operatingMode   = ppu.operatingMode; // Режим работы
+    m_ppu->numRLMN         = numRLMN;           // Номер РЛ-канала
     //-------------------------------------------------------------------------
+
+
+
+    // Формирование и отправка ЦУ на ППУ и задания на излучение:
+    paramRLMN *m_rlmn = &m_paramRLMN[numRLMN];
+    //-------------------------------------------------------------------------
+    bool isTaskToPPU = false; // Сформировано ли ЦУ на ППУ
+    static QByteArray ethMessageToPPU; // Сообщение для отправки на ППУ
+    static bool isStoppedPPU = false;
+
+    // Если есть какое-то задание на РЛМН:
+    switch (m_rlmn->mode) {
+    case 1: { // 1 - обнаружение
+        // Если последнее ЦУ пришло более 2-х секунд назад,
+        // то сброситься в ожидание команд:
+        const int64_t timeMaxCU = 2000000; // 2 секунды в мкс
+        int64_t timeCurrent = TimeProvider::instance().getMks(); // Текущее время
+        int64_t timeCU = m_rlmn->m_paramCU.timeSys; // Время получения ЦУ
+        if (timeCurrent - timeCU > timeMaxCU) {
+            m_rlmn->mode = 0;
+            qInfo() << "Last CU on RLMN" << numRLMN << "was over"
+                    << timeMaxCU << "mks. PPU will be stopped";
+
+            // Отправить команду остановки ППУ:
+            if (numRLMN == 0) {
+                ethMessageToPPU = EthMessageFactory::create<EthMessage_PPU_STOP_1>().serializeFull();
+            } else {
+                ethMessageToPPU = EthMessageFactory::create<EthMessage_PPU_STOP_2>().serializeFull();
+            }
+            if (ethMessageToPPU.size() > 0) {
+                qInfo() << "Created command STOP to PPU" << numRLMN;
+                isStoppedPPU = true;
+            }
+            isTaskToPPU = true;
+        } else {
+            // Подготовить полином на ППУ по координатам последнего ЦУ:
+            if (numRLMN == 0) {
+                auto ethMsgPPU = EthMessageFactory ::create<EthMessage_PPU_MOVE_1>();
+
+                static constexpr double INV_SCALE = 65536.0 / 360.0;
+                uint32_t azC0u = static_cast<uint32_t>(m_rlmn->m_paramCU.az * INV_SCALE);
+                uint16_t azC1u = static_cast<uint16_t>(0. * INV_SCALE);
+                uint16_t azC2u = static_cast<uint16_t>(0. * INV_SCALE);
+                uint32_t anC0u = static_cast<uint32_t>(m_rlmn->m_paramCU.an * INV_SCALE);
+                uint16_t anC1u = static_cast<uint16_t>(0. * INV_SCALE);
+                uint16_t anC2u = static_cast<uint16_t>(0. * INV_SCALE);
+
+                ethMsgPPU.azC0[0] = static_cast<uint8_t>(azC0u);
+                ethMsgPPU.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
+                ethMsgPPU.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
+                ethMsgPPU.azC1 = azC1u;
+                ethMsgPPU.azC2 = azC2u;
+
+                ethMsgPPU.anC0[0] = static_cast<uint8_t>(anC0u);
+                ethMsgPPU.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
+                ethMsgPPU.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
+                ethMsgPPU.anC1 = anC1u;
+                ethMsgPPU.anC2 = anC2u;
+
+                ethMsgPPU.azSector = 0;
+                ethMsgPPU.anSector = 0;
+
+                ethMessageToPPU = ethMsgPPU.serializeFull();
+            } else {
+                auto ethMsgPPU = EthMessageFactory::create<EthMessage_PPU_MOVE_2>();
+
+                static constexpr double INV_SCALE = 65536.0 / 360.0;
+                uint32_t azC0u = static_cast<uint32_t>(m_rlmn->m_paramCU.az * INV_SCALE);
+                uint16_t azC1u = static_cast<uint16_t>(0. * INV_SCALE);
+                uint16_t azC2u = static_cast<uint16_t>(0. * INV_SCALE);
+                uint32_t anC0u = static_cast<uint32_t>(m_rlmn->m_paramCU.an * INV_SCALE);
+                uint16_t anC1u = static_cast<uint16_t>(0. * INV_SCALE);
+                uint16_t anC2u = static_cast<uint16_t>(0. * INV_SCALE);
+
+                ethMsgPPU.azC0[0] = static_cast<uint8_t>(azC0u);
+                ethMsgPPU.azC0[1] = static_cast<uint8_t>(azC0u >> 8);
+                ethMsgPPU.azC0[2] = static_cast<uint8_t>(azC0u >> 16);
+                ethMsgPPU.azC1 = azC1u;
+                ethMsgPPU.azC2 = azC2u;
+
+                ethMsgPPU.anC0[0] = static_cast<uint8_t>(anC0u);
+                ethMsgPPU.anC0[1] = static_cast<uint8_t>(anC0u >> 8);
+                ethMsgPPU.anC0[2] = static_cast<uint8_t>(anC0u >> 16);
+                ethMsgPPU.anC1 = anC1u;
+                ethMsgPPU.anC2 = anC2u;
+
+                ethMsgPPU.azSector = 0;
+                ethMsgPPU.anSector = 0;
+
+                ethMessageToPPU = ethMsgPPU.serializeFull();
+            }
+            if (ethMessageToPPU.size() > 0) {
+                qInfo() << "Created command TARGET to PPU" << numRLMN;
+            }
+            isTaskToPPU = true;
+        }
+
+        // Проверка на попадание цели в луч:
+        float azCU  = m_rlmn->m_paramCU.az;
+        float anCU  = m_rlmn->m_paramCU.an;
+        float azEr  = m_rlmn->m_paramCU.azEr;
+        float anEr  = m_rlmn->m_paramCU.anEr;
+        float azPPU = m_rlmn->m_paramPPU.az;
+        float anPPU = m_rlmn->m_paramPPU.an;
+        if (azPPU > azCU - azEr - rRay && azPPU < azCU + azEr + rRay &&
+            anPPU > anCU - anEr - rRay && anPPU < anCU + anEr + rRay) {
+            // Если попадаем, то рассчитать параметры для МЦФОС и излучить:
+            // ...
+
+//            quint32  isSignalFromDAC;
+//            uint16_t periodSize;
+//            uint16_t periodCount;
+//            uint32_t ampOff;
+//            uint16_t pulseOn;
+//            uint16_t pulseOff;
+//            uint16_t procDelay;
+//            uint16_t procDelta;
+//            int      numRangeCh;
+        }
+        break;
+    }
+    case 2: { // 2 - сопровождение
+        break;
+    }
+    case 3: { // 3 - разовый замер
+        break;
+    }
+    default:
+        break;
+    }
+    //-------------------------------------------------------------------------
+
+
+
+    // Отправка сформированной команды на ППУ:
+    //------------------------------------
+    // Декремент счётчика прореживания, если счётчик ненулевой
+    if (m_rlmn->m_paramTargetPPU.cntDecimator > 0) {
+        m_rlmn->m_paramTargetPPU.cntDecimator--;
+        qInfo() << "cntDecimator =" << m_rlmn->m_paramTargetPPU.cntDecimator;
+    }
+
+    // Если счётчик прореживания нулевой, то отправляем ЦУ на ППУ
+    if (m_rlmn->m_paramTargetPPU.cntDecimator <= 0) {
+
+        // Взводим счётчик на максимум:
+        m_rlmn->m_paramTargetPPU.cntDecimator = paramTargetPPU::cntDecimatorMax;
+
+        if (isTaskToPPU || isStoppedPPU) {
+
+            // Если есть сообщение, то отправляем его на ППУ:
+            if (ethMessageToPPU.size() > 0) {
+                qInfo() << "Send command to PPU" << numRLMN;
+                emit sendMessageETH(ethMessageToPPU);
+                isStoppedPPU = false;
+            }
+//            // Если автоматический режим управления ППУ
+//            if (m_rlmn->m_paramCU.mode == PPU_CU_mode_search ||
+//                m_rlmn->m_paramCU.mode == PPU_CU_mode_tracking) {
+//            }
+//            // Если ручной режим управления ППУ
+//            else if (m_rlmn->m_paramCU.mode == PPU_CU_mode_signleTrack ||
+//                     m_rlmn->m_paramCU.mode == PPU_CU_mode_signleTrackShot) {
+//            }
+        }
+    }
+    //------------------------------------
 }
 
 
@@ -875,8 +1048,10 @@ void Calculator::getDV(const QByteArray& inputData,
     //-----------------------------------------------------------------
 
     // Выделение памяти для FFTW
-    fftwf_complex* in = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * impulseCount);
-    fftwf_complex* out = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * impulseCount);
+//    fftwf_complex* in = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * impulseCount);
+//    fftwf_complex* out = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * impulseCount);
+    fftwf_complex* in = fftwf_alloc_complex(impulseCount);
+    fftwf_complex* out = fftwf_alloc_complex(impulseCount);
     fftwf_plan plan = fftwf_plan_dft_1d(impulseCount, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 
     // Инициализация выходных структур
@@ -903,18 +1078,18 @@ void Calculator::getDV(const QByteArray& inputData,
 //                            "MCFOS\\FromDimaFrom_25_06_2025\\resultDVorigin.txt"));
 //    QFile *file1 = new QFile(QString("C:\\Projects\\_Projects_Harrier\\Projects_Xilinx\\"
 //                            "MCFOS\\FromDimaFrom_25_06_2025\\resultDVwindowed.txt"));
-    QFile *file = new QFile(QString("resultForDV_extracted.txt"));
-    QFile *file1 = new QFile(QString("resultForDV_windowed.txt"));
+//    QFile *file = new QFile(QString("resultForDV_extracted.txt"));
+//    QFile *file1 = new QFile(QString("resultForDV_windowed.txt"));
     QFile *file2 = new QFile(QString("resultForDV_origin.txt"));
-    if (file->open(QIODevice::WriteOnly) &&
-        file1->open(QIODevice::WriteOnly) &&
+    if (//file->open(QIODevice::WriteOnly) &&
+        //file1->open(QIODevice::WriteOnly) &&
         file2->open(QIODevice::WriteOnly))
     {
-        QTextStream outS(file);
-        QTextStream outS1(file1);
+//        QTextStream outS(file);
+//        QTextStream outS1(file1);
         QTextStream outS2(file2);
-        outS << QString("%1, %2").arg(corrCount).arg(impulseCount);
-        outS1 << QString("%1, %2").arg(corrCount).arg(impulseCount);
+//        outS << QString("%1, %2").arg(corrCount).arg(impulseCount);
+//        outS1 << QString("%1, %2").arg(corrCount).arg(impulseCount);
         outS2 << QString("%1, %2").arg(corrCount).arg(impulseCount);
 
         for (int i = 0; i < inputData.size(); i += 4) {
@@ -939,13 +1114,13 @@ void Calculator::getDV(const QByteArray& inputData,
                 const float re = static_cast<float>(extractInt32(inputData, byteOffset));
                 const float im = static_cast<float>(extractInt32(inputData, byteOffset + 4));
 
-                outS << QString(", %1, %2").arg(re).arg(im);
+//                outS << QString(", %1, %2").arg(re).arg(im);
 
                 // Умножение на оконную функцию
                 in[pulse][0] = re * windowFunc[pulse];
                 in[pulse][1] = im * windowFunc[pulse];
 
-                outS1 << QString(", %1, %2").arg(re * windowFunc[pulse]).arg(im * windowFunc[pulse]);
+//                outS1 << QString(", %1, %2").arg(re * windowFunc[pulse]).arg(im * windowFunc[pulse]);
             }
 
             // Выполнение БПФ
@@ -967,8 +1142,8 @@ void Calculator::getDV(const QByteArray& inputData,
     {
         qInfo() << "[MCFOS] ERROR: cannot open file for write data from DDR";
     }
-    file->close();
-    file1->close();
+//    file->close();
+//    file1->close();
     file2->close();
     // Освобождение ресурсов FFTW
     fftwf_destroy_plan(plan);
